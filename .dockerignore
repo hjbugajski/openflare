@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+
+# Documentation
+*.md
+LICENSE
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Development
+.env
+.env.local
+.env.*.local
+docker-compose*.yml
+
+# Node.js (installed fresh in Docker)
+node_modules
+.pnpm-store
+
+# PHP vendor (installed fresh in Docker)
+# Note: vendor is intentionally excluded; composer install runs in the build
+vendor
+
+# Testing files
+phpunit.xml
+pint.json
+.phpunit.cache
+.phpunit.result.cache
+coverage
+
+# Build artifacts (built fresh in Docker)
+public/build
+public/hot
+bootstrap/ssr
+
+# Storage (created at runtime)
+storage/app/*
+storage/framework/*
+storage/logs/*
+!storage/app/.gitignore
+!storage/framework/.gitignore
+!storage/logs/.gitignore
+
+# Database (created at runtime)
+database/*.sqlite
+database/*.sqlite-journal
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log
+boost.json
