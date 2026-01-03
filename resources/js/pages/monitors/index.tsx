@@ -1,0 +1,159 @@
+import { Head, Link, usePage } from '@inertiajs/react';
+
+import { IconGrid } from '@/components/icons/grid';
+import { IconTable } from '@/components/icons/table';
+import { MonitorStatusBadge } from '@/components/monitors/monitor-status-badge';
+import { MonitorsTable } from '@/components/monitors/monitors-table';
+import { UptimePercentage } from '@/components/monitors/uptime-percentage';
+import { UptimeSparkline } from '@/components/monitors/uptime-sparkline';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Heading } from '@/components/ui/heading';
+import { ToggleGroup } from '@/components/ui/toggle-group';
+import { Tooltip } from '@/components/ui/tooltip';
+import AppLayout from '@/layouts/app-layout';
+import { formatInterval } from '@/lib/format/interval';
+import { formatRelativeTime } from '@/lib/format/relative-time';
+import { usePreferencePatch } from '@/lib/hooks/use-preference-patch';
+import { create, show } from '@/routes/monitors';
+import { type Monitor, type MonitorViewMode, type PageProps } from '@/types';
+
+interface Props {
+  monitors: Monitor[];
+}
+
+function MonitorCard({ monitor }: { monitor: Monitor }) {
+  const status = monitor.latest_check?.status;
+  const hasIncident = monitor.current_incident !== null;
+  const interval = formatInterval(monitor.interval);
+
+  return (
+    <Link href={show(monitor.id).url} className="w-full">
+      <Card.Root>
+        <Card.Header className="flex flex-row items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <Heading level={2} title={monitor.name} className="truncate" />
+            <Card.Description className="mt-1 truncate text-xs">{monitor.url}</Card.Description>
+          </div>
+          <MonitorStatusBadge
+            status={status}
+            isActive={monitor.is_active}
+            hasIncident={hasIncident}
+          />
+        </Card.Header>
+
+        <Card.Content>
+          {monitor.daily_rollups?.length ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span>
+                  <span aria-hidden className="mr-1 text-accent">
+                    &gt;
+                  </span>
+                  30d uptime
+                </span>
+                <UptimePercentage data={monitor.daily_rollups} className="font-medium" />
+              </div>
+              <UptimeSparkline data={monitor.daily_rollups} height={16} />
+            </div>
+          ) : null}
+        </Card.Content>
+
+        <Card.Footer className="gap-1 whitespace-nowrap">
+          <span>every {interval.formatted}</span>
+          {monitor.latest_check ? (
+            <>
+              <span>•</span>
+              <span>{monitor.latest_check.response_time_ms || 0}ms</span>
+              <span>•</span>
+              <span>{formatRelativeTime(monitor.latest_check.checked_at)}</span>
+            </>
+          ) : (
+            <>
+              <span>•</span>
+              <span>awaiting check</span>
+            </>
+          )}
+        </Card.Footer>
+      </Card.Root>
+    </Link>
+  );
+}
+
+export default function MonitorsIndex({ monitors }: Props) {
+  const { auth } = usePage<PageProps>().props;
+  const defaultView: MonitorViewMode = auth.user!.preferences?.monitors_view ?? 'cards';
+  const [viewMode, setViewMode] = usePreferencePatch('monitors_view', defaultView);
+
+  const handleViewChange = (value: string[]) => {
+    if (value.length > 0) {
+      setViewMode(value[0] as MonitorViewMode);
+    }
+  };
+
+  return (
+    <AppLayout>
+      <Head title="Monitors" />
+
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Heading title="monitors" />
+          <Badge variant="secondary">{monitors.length}</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Tooltip.Provider>
+            <ToggleGroup.Root value={[viewMode]} onValueChange={handleViewChange}>
+              <Tooltip.Root>
+                <Tooltip.Trigger
+                  render={
+                    <ToggleGroup.Item value="cards" aria-label="Card view">
+                      <IconGrid className="size-4" />
+                    </ToggleGroup.Item>
+                  }
+                />
+                <Tooltip.Portal>
+                  <Tooltip.Positioner>
+                    <Tooltip.Popup>card view</Tooltip.Popup>
+                  </Tooltip.Positioner>
+                </Tooltip.Portal>
+              </Tooltip.Root>
+              <Tooltip.Root>
+                <Tooltip.Trigger
+                  render={
+                    <ToggleGroup.Item value="table" aria-label="Table view">
+                      <IconTable className="size-4" />
+                    </ToggleGroup.Item>
+                  }
+                />
+                <Tooltip.Portal>
+                  <Tooltip.Positioner>
+                    <Tooltip.Popup>table view</Tooltip.Popup>
+                  </Tooltip.Positioner>
+                </Tooltip.Portal>
+              </Tooltip.Root>
+            </ToggleGroup.Root>
+          </Tooltip.Provider>
+          <Button render={<Link href={create().url} />}>add monitor</Button>
+        </div>
+      </div>
+
+      {monitors.length === 0 ? (
+        <Card.Root>
+          <EmptyState className="p-8" message="no monitors configured" />
+        </Card.Root>
+      ) : viewMode === 'cards' ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {monitors.map((monitor) => (
+            <MonitorCard key={monitor.id} monitor={monitor} />
+          ))}
+        </div>
+      ) : (
+        <Card.Root className="overflow-hidden">
+          <MonitorsTable monitors={monitors} />
+        </Card.Root>
+      )}
+    </AppLayout>
+  );
+}
