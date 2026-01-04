@@ -106,17 +106,18 @@ RUN mkdir -p \
     storage/framework/views \
     storage/logs \
     bootstrap/cache \
-    database
+    data
 
 # Set environment variables
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
     LOG_LEVEL=info \
-    PORT=8000
+    PORT=8000 \
+    DB_DATABASE=/app/data/database.sqlite
 
 # Declare volumes for persistent data
-VOLUME ["/app/database", "/app/storage"]
+VOLUME ["/app/data", "/app/storage"]
 
 # Expose ports (web server and reverb)
 EXPOSE 8000 8080
