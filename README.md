@@ -1,8 +1,8 @@
-# Openflare
+# OpenFlare
 
-A self-hostable uptime monitoring application.
+A simple self-hostable uptime monitoring application.
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/openflare?referralCode=hjbugajski)
+This project started as a personal desire for a basic, straightforward uptime monitoring tool that I could easily self-host. While I've used and drawn inspiration from [Uptime Kuma](https://github.com/louislam/uptime-kuma) and [openstatus](https://www.openstatus.dev/), I wanted something much simpler with fewer features. Beyond solving a practical problem, this project served as an experiment in agentic development and an opportunity to understand the limits and capabilities of AI-assisted coding. It was built almost entirely (except for UI styling and UX tweaks) using Claude Opus 4.5 through [OpenCode](https://opencode.ai/) with the [Laravel Boost MCP](https://laravel.com/ai/boost), utilizing several custom primary agents and subagents. I chose Laravel for its full-stack capabilities and its first-party MCP support, making it an ideal framework for exploring agentic programming workflows.
 
 ## Features
 
