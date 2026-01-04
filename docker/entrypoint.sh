@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 echo "${GREEN}OpenFlare Docker Entrypoint${NC}"
 echo "================================"
 
-# Ensure storage directories exist and are writable
+# Ensure storage directories exist
 echo "${YELLOW}Checking storage directories...${NC}"
 mkdir -p \
     storage/app/private \
