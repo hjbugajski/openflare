@@ -22,9 +22,12 @@ mkdir -p \
     storage/logs \
     bootstrap/cache
 
-# Create SQLite database if using sqlite and doesn't exist
+# Create SQLite database directory and file if using sqlite
+# Default path is /app/data/database.sqlite (separate from /app/database/migrations)
 if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
-    DB_PATH="${DB_DATABASE:-database/database.sqlite}"
+    DB_PATH="${DB_DATABASE:-data/database.sqlite}"
+    DB_DIR=$(dirname "$DB_PATH")
+    mkdir -p "$DB_DIR"
     if [ ! -f "$DB_PATH" ]; then
         echo "${YELLOW}Creating SQLite database at ${DB_PATH}...${NC}"
         touch "$DB_PATH"
@@ -48,6 +51,15 @@ php artisan event:clear --no-interaction 2>/dev/null || true
 # Run migrations with timeout protection
 echo "${YELLOW}Running database migrations...${NC}"
 php artisan migrate --force --no-interaction
+
+# Verify critical tables exist (catch corrupted migration state)
+if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
+    DB_PATH="${DB_DATABASE:-data/database.sqlite}"
+    if ! sqlite3 "$DB_PATH" "SELECT 1 FROM users LIMIT 1" >/dev/null 2>&1; then
+        echo "${RED}Database schema incomplete - forcing fresh migration...${NC}"
+        php artisan migrate:fresh --force --no-interaction
+    fi
+fi
 
 # Cache configuration for production
 echo "${YELLOW}Caching configuration...${NC}"

@@ -8,6 +8,7 @@ use App\Models\DailyUptimeRollup;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class BackfillMissingRollups
 {
@@ -16,6 +17,10 @@ class BackfillMissingRollups
      */
     public function handle(): void
     {
+        if (! Schema::hasTable('daily_uptime_rollups')) {
+            return;
+        }
+
         $latestRollup = DailyUptimeRollup::query()
             ->orderBy('date', 'desc')
             ->first();

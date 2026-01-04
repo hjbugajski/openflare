@@ -95,6 +95,16 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
+        // Skip during infrastructure commands
+        $command = $_SERVER['argv'][1] ?? '';
+        $skipCommands = ['migrate', 'config:', 'route:', 'view:', 'event:', 'cache:', 'key:', 'storage:'];
+
+        foreach ($skipCommands as $skip) {
+            if (str_starts_with($command, $skip)) {
+                return;
+            }
+        }
+
         app()->booted(function () {
             try {
                 app(BackfillMissingRollups::class)->handle();
