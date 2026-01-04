@@ -81,26 +81,22 @@ RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY docker/php.ini "$PHP_INI_DIR/conf.d/99-openflare.ini"
 
-# Create app user
-RUN addgroup -g 1000 openflare \
-    && adduser -u 1000 -G openflare -h /app -D openflare
-
 WORKDIR /app
 
 # Copy application from composer builder
-COPY --from=composer-builder --chown=openflare:openflare /app /app
+COPY --from=composer-builder /app /app
 
 # Copy built assets from frontend builder
-COPY --from=frontend-builder --chown=openflare:openflare /app/public/build /app/public/build
-COPY --from=frontend-builder --chown=openflare:openflare /app/bootstrap/ssr /app/bootstrap/ssr
+COPY --from=frontend-builder /app/public/build /app/public/build
+COPY --from=frontend-builder /app/bootstrap/ssr /app/bootstrap/ssr
 
 # Copy docker configuration files
-COPY --chown=openflare:openflare docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --chown=openflare:openflare docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Create necessary directories with correct permissions
+# Create necessary directories
 RUN mkdir -p \
     storage/app/private \
     storage/app/public \
@@ -110,14 +106,14 @@ RUN mkdir -p \
     storage/framework/views \
     storage/logs \
     bootstrap/cache \
-    database \
-    && chown -R openflare:openflare storage bootstrap/cache database
+    database
 
 # Set environment variables
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
-    LOG_LEVEL=info
+    LOG_LEVEL=info \
+    PORT=8000
 
 # Declare volumes for persistent data
 VOLUME ["/app/database", "/app/storage"]
@@ -125,11 +121,10 @@ VOLUME ["/app/database", "/app/storage"]
 # Expose ports (web server and reverb)
 EXPOSE 8000 8080
 
-# Health check
+# Health check (uses PORT env var, defaults to 8000)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/up || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/up || exit 1
 
-USER openflare
-
+# Run as root initially, entrypoint will drop to openflare user
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
