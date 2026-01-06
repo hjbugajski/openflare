@@ -125,8 +125,16 @@ export interface Paginated<T> {
   path: string;
 }
 
+export interface ReverbConfig {
+  key: string;
+  host: string;
+  port: number;
+  scheme: 'http' | 'https';
+}
+
 export type PageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
   auth: {
     user: User | null;
   };
+  reverb: ReverbConfig;
 };
