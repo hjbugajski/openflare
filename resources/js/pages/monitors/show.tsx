@@ -208,7 +208,11 @@ export default function MonitorsShow({
           </div>
         </Card.Header>
         <Card.Content>
-          <NotifiersTable monitorId={monitor.id} notifiers={notifiers} />
+          {notifiers.total === 0 ? (
+            <EmptyState message="no notifiers" />
+          ) : (
+            <NotifiersTable monitorId={monitor.id} notifiers={notifiers} />
+          )}
         </Card.Content>
       </Card.Root>
 
