@@ -45,6 +45,9 @@ jobs:
 
       - name: Setup project
         run: composer run setup
+        env:
+          REVERB_APP_KEY: ci-test-key
+          REVERB_APP_SECRET: ci-test-secret
 
       - name: Run PHP linting
         run: composer run lint:check

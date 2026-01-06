@@ -21,8 +21,9 @@ RUN composer install \
 # Copy application code
 COPY . .
 
-# Generate optimized autoloader
-RUN composer dump-autoload --optimize --no-dev
+# Generate optimized autoloader (dummy values for artisan package:discover)
+RUN REVERB_APP_KEY=build-key REVERB_APP_SECRET=build-secret \
+    composer dump-autoload --optimize --no-dev
 
 # =============================================================================
 # Stage 2: Frontend build (PHP + Node for Wayfinder)
@@ -44,8 +45,10 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 # Install Node dependencies
 RUN pnpm install --frozen-lockfile
 
-# Generate Wayfinder routes before build (dummy key for route generation only)
+# Generate Wayfinder routes before build (dummy values for route generation only)
 RUN APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
+    REVERB_APP_KEY=build-key \
+    REVERB_APP_SECRET=build-secret \
     php artisan wayfinder:generate --with-form
 
 # Build frontend assets (including SSR)
