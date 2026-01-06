@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => 'OpenFlare',
 
     /*
     |--------------------------------------------------------------------------
@@ -73,16 +73,15 @@ return [
     |--------------------------------------------------------------------------
     |
     | The application locale determines the default locale that will be used
-    | by Laravel's translation / localization methods. This option can be
-    | set to any locale for which you plan to have translation strings.
+    | by Laravel's translation / localization methods.
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    'locale' => 'en',
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'fallback_locale' => 'en',
 
-    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
+    'faker_locale' => 'en_US',
 
     /*
     |--------------------------------------------------------------------------
@@ -99,11 +98,7 @@ return [
 
     'key' => env('APP_KEY'),
 
-    'previous_keys' => [
-        ...array_filter(
-            explode(',', (string) env('APP_PREVIOUS_KEYS', ''))
-        ),
-    ],
+    'previous_keys' => [],
 
     /*
     |--------------------------------------------------------------------------
@@ -119,20 +114,8 @@ return [
     */
 
     'maintenance' => [
-        'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
-        'store' => env('APP_MAINTENANCE_STORE', 'database'),
+        'driver' => 'file',
+        'store' => 'database',
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Mail Preview
-    |--------------------------------------------------------------------------
-    |
-    | When enabled, mail preview routes are registered at /mail-preview/*
-    | allowing you to view email templates in the browser without sending.
-    |
-    */
-
-    'mail_preview' => (bool) env('MAIL_PREVIEW', false),
 
 ];

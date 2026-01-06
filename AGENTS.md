@@ -33,7 +33,7 @@ Self-hostable uptime monitoring application. Laravel 12 backend, React 19 + Iner
 | Auth       | Laravel Fortify (2FA supported)      |
 | WebSockets | Laravel Reverb                       |
 | Queue      | Database driver                      |
-| Database   | SQLite (MySQL/Postgres compatible)   |
+| Database   | SQLite                               |
 | Testing    | Pest v4                              |
 | Routing    | Laravel Wayfinder (type-safe routes) |
 
@@ -190,13 +190,23 @@ GET /api/monitors/{monitor}/rollups # 30-day rollup data
 
 ## Environment Variables
 
-Key variables (see `.env.example`):
+Essential variables (see `.env.example`):
+
+- `APP_KEY` - Encryption key (required)
+- `APP_URL` - Application URL
+- `APP_ENV` - Environment (local/production)
+- `APP_DEBUG` - Debug mode
+- `MAIL_MAILER` - Email driver (log/resend)
+- `MAIL_FROM_ADDRESS` - Sender email
+- `RESEND_API_KEY` - Resend API key (if using resend mailer)
+- `REVERB_APP_KEY`, `REVERB_APP_SECRET` - WebSocket auth
+- `REVERB_HOST`, `REVERB_PORT`, `REVERB_SCHEME` - WebSocket connection
+
+Optional monitor settings:
 
 - `MONITORS_TEST_MODE` - Disable actual HTTP checks
 - `MONITORS_DISPATCH_LIMIT` - Max checks per scheduler run
-- `MONITORS_USER_AGENT` - User-Agent header for checks
-- `REVERB_*` - WebSocket configuration
-- `VITE_REVERB_*` - Frontend WebSocket connection
+- `MONITORS_RETENTION_DAYS` - Days to keep check history
 
 ## Development Workflow
 

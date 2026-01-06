@@ -10,8 +10,6 @@ import type { ReverbConfig } from '@/types';
 
 import '../css/app.css';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Openflare';
-
 function initializeTheme() {
   const stored = localStorage.getItem('appearance');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -36,7 +34,7 @@ function initializeEcho(reverb: ReverbConfig) {
 }
 
 createInertiaApp({
-  title: (title) => (title ? `${title} - ${appName}` : appName),
+  title: (title) => (title ? `${title} - OpenFlare` : 'OpenFlare'),
   resolve: (name) => {
     return resolvePageComponent(`./pages/${name}.tsx`, import.meta.glob('./pages/**/*.tsx'));
   },
