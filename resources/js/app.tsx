@@ -6,10 +6,9 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
 import { Toast } from '@/components/ui/toast';
+import type { ReverbConfig } from '@/types';
 
 import '../css/app.css';
-
-const appName = import.meta.env.VITE_APP_NAME || 'Openflare';
 
 function initializeTheme() {
   const stored = localStorage.getItem('appearance');
@@ -22,22 +21,30 @@ function initializeTheme() {
   }
 }
 
-configureEcho({
-  broadcaster: 'reverb',
-  key: import.meta.env.VITE_REVERB_APP_KEY,
-  wsHost: import.meta.env.VITE_REVERB_HOST,
-  wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-  wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-  forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-  enabledTransports: ['ws', 'wss'],
-});
+function initializeEcho(reverb: ReverbConfig) {
+  configureEcho({
+    broadcaster: 'reverb',
+    key: reverb.key,
+    wsHost: reverb.host,
+    wsPort: reverb.port ?? 80,
+    wssPort: reverb.port ?? 443,
+    forceTLS: (reverb.scheme ?? 'https') === 'https',
+    enabledTransports: ['ws', 'wss'],
+  });
+}
 
 createInertiaApp({
-  title: (title) => (title ? `${title} - ${appName}` : appName),
+  title: (title) => (title ? `${title} - OpenFlare` : 'OpenFlare'),
   resolve: (name) => {
     return resolvePageComponent(`./pages/${name}.tsx`, import.meta.glob('./pages/**/*.tsx'));
   },
   setup({ el, App, props }) {
+    const reverb = props.initialPage.props.reverb as ReverbConfig | undefined;
+
+    if (reverb?.key) {
+      initializeEcho(reverb);
+    }
+
     const root = createRoot(el);
 
     root.render(

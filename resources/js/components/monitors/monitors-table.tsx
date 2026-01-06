@@ -25,7 +25,7 @@ const columns: ColumnDef<Monitor>[] = [
         <span className="max-w-80 truncate text-xs text-muted-foreground">{row.original.url}</span>
       </div>
     ),
-    meta: { className: 'whitespace-nowrap' },
+    meta: { className: 'whitespace-nowrap min-w-64' },
   },
   {
     id: 'status',
