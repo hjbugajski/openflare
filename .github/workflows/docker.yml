@@ -10,6 +10,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -20,6 +24,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      attestations: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -53,9 +59,9 @@ jobs:
 
       - name: Prepare platform pair
         id: prep
-        run: echo "platform_pair=${platform//\//-}" >> $GITHUB_OUTPUT
-        env:
-          platform: ${{ matrix.platform }}
+        run: |
+          platform=${{ matrix.platform }}
+          echo "platform_pair=${platform//\//-}" >> $GITHUB_OUTPUT
 
       - name: Build and push by digest
         id: build
@@ -67,6 +73,14 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+
+      - name: Generate artifact attestation
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
 
       - name: Export digest
         if: github.event_name != 'pull_request'
@@ -93,15 +107,15 @@ jobs:
       - name: Check build status
         run: |
           if [[ "${{ needs.build.result }}" != "success" ]]; then
-            echo "Build failed"
+            echo "Build failed: ${{ needs.build.result }}"
             exit 1
           fi
-          echo "Build succeeded"
+          echo "All platform builds succeeded"
 
   merge:
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
-    needs: build-complete
+    if: github.event_name != 'pull_request' && needs.build.result == 'success'
+    needs: build
     permissions:
       contents: read
       packages: write
@@ -131,7 +145,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
