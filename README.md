@@ -31,43 +31,6 @@ composer run setup
 composer run dev
 ```
 
-### docker (simple)
-
-single container with sqlite:
-
-```bash
-docker run -d \
-  -p 8000:8000 \
-  -p 8080:8080 \
-  -e APP_KEY=base64:$(openssl rand -base64 32) \
-  -v openflare-data:/app/data \
-  ghcr.io/hjbugajski/openflare:latest
-```
-
-open http://localhost:8000 to get started.
-
-### docker compose with sqlite
-
-```yaml
-services:
-  openflare:
-    image: ghcr.io/hjbugajski/openflare:latest
-    ports:
-      - '8000:8000'
-      - '8080:8080'
-    environment:
-      - APP_KEY=base64:your-generated-key
-      - APP_URL=https://your-domain.com
-      - REVERB_HOST=your-domain.com
-      - REVERB_PORT=443
-      - REVERB_SCHEME=https
-    volumes:
-      - openflare-data:/app/data
-
-volumes:
-  openflare-data:
-```
-
 ### railway
 
 deploy using the "majestic monolith" architecture. see `railway.toml` and `railway/` directory for configuration.
