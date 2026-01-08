@@ -129,13 +129,9 @@ class Monitor extends Model
      */
     public function getEffectiveNotifiers(): \Illuminate\Support\Collection
     {
-        $excludedIds = $this->notifiers()
-            ->wherePivot('is_excluded', true)
-            ->pluck('notifiers.id');
-
-        $explicitIds = $this->notifiers()
-            ->wherePivot('is_excluded', false)
-            ->pluck('notifiers.id');
+        $pivotData = $this->notifiers()->pluck('is_excluded', 'notifiers.id');
+        $excludedIds = $pivotData->filter(fn (bool $excluded) => $excluded)->keys();
+        $explicitIds = $pivotData->filter(fn (bool $excluded) => ! $excluded)->keys();
 
         return Notifier::query()
             ->where('user_id', $this->user_id)
