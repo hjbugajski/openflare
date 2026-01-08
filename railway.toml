@@ -3,7 +3,7 @@
 
 [build]
 builder = "RAILPACK"
-buildCommand = "pnpm install && pnpm run build"
+buildCommand = "php artisan wayfinder:generate --with-form && pnpm install && pnpm run build"
 
 [deploy]
 preDeployCommand = ["sh ./railway/init-app.sh"]
