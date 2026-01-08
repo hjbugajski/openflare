@@ -52,12 +52,12 @@ php artisan event:clear --no-interaction 2>/dev/null || true
 echo "${YELLOW}Running database migrations...${NC}"
 php artisan migrate --force --no-interaction
 
-# Verify critical tables exist (catch corrupted migration state)
 if [ "$DB_CONNECTION" = "sqlite" ] || [ -z "$DB_CONNECTION" ]; then
     DB_PATH="${DB_DATABASE:-data/database.sqlite}"
-    if ! sqlite3 "$DB_PATH" "SELECT 1 FROM users LIMIT 1" >/dev/null 2>&1; then
-        echo "${RED}Database schema incomplete - forcing fresh migration...${NC}"
-        php artisan migrate:fresh --force --no-interaction
+    if [ -s "$DB_PATH" ] && ! sqlite3 "$DB_PATH" "SELECT 1 FROM migrations LIMIT 1" >/dev/null 2>&1; then
+        echo "${RED}ERROR: Database file exists but migrations table is missing or corrupted.${NC}"
+        echo "${RED}Manual intervention required to prevent data loss.${NC}"
+        exit 1
     fi
 fi
 
