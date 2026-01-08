@@ -33,7 +33,22 @@ describe('view', function () {
 });
 
 describe('create', function () {
-    test('it allows any authenticated user to create monitors', function () {
+    test('it allows user to create monitors when under limit', function () {
+        expect($this->policy->create($this->user))->toBeTrue();
+    });
+
+    test('it denies user from creating monitors when at limit', function () {
+        config(['monitors.max_per_user' => 2]);
+        Monitor::factory(2)->create(['user_id' => $this->user->uuid]);
+
+        expect($this->policy->create($this->user))->toBeFalse();
+    });
+
+    test('it allows user to create monitors when other users are at limit', function () {
+        config(['monitors.max_per_user' => 2]);
+        $otherUser = User::factory()->create();
+        Monitor::factory(2)->create(['user_id' => $otherUser->uuid]);
+
         expect($this->policy->create($this->user))->toBeTrue();
     });
 });

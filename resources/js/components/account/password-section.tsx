@@ -4,12 +4,13 @@ import { Card } from '@/components/ui/card';
 import { useInertiaAppForm } from '@/components/ui/form/use-inertia-app-form';
 import { Heading } from '@/components/ui/heading';
 import { toast } from '@/components/ui/toast';
+import { passwordSchema } from '@/lib/schemas/password';
 import { update } from '@/routes/settings/password';
 
-const passwordSchema = z
+const updatePasswordSchema = z
   .object({
     current_password: z.string().min(1, 'current password is required'),
-    password: z.string().min(8, 'password must be at least 8 characters'),
+    password: passwordSchema,
     password_confirmation: z.string().min(1, 'please confirm your password'),
   })
   .refine((data) => data.password === data.password_confirmation, {
@@ -27,7 +28,7 @@ export function PasswordSection() {
     action: update().url,
     method: 'put',
     validators: {
-      onSubmit: passwordSchema,
+      onSubmit: updatePasswordSchema,
     },
     onSuccess: () => {
       form.reset();

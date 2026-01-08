@@ -30,7 +30,7 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
       router.delete(detach({ monitor: monitorId, notifier: notifierToRemove.id }).url, {
         preserveScroll: true,
         onSuccess: () => {
-          toast.success({ title: 'notifier removed' });
+          toast.success({ title: 'notifier disabled' });
         },
         onFinish: () => {
           setNotifierToRemove(null);
@@ -104,22 +104,16 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
     <>
       <ConfirmDeleteDialog
         open={notifierToRemove !== null}
-        title="remove notifier"
-        confirmLabel="remove"
-        confirmingLabel="removing..."
+        title="disable notifier"
+        confirmLabel="disable"
+        confirmingLabel="disabling..."
         onConfirm={handleDetach}
         onOpenChange={(open) => !open && setNotifierToRemove(null)}
       >
         <p>
-          are you sure you want to remove <strong>{notifierToRemove?.name}</strong> from this
+          are you sure you want to disable <strong>{notifierToRemove?.name}</strong> for this
           monitor?
         </p>
-        {notifierToRemove?.apply_to_all ? (
-          <p className="border border-warning px-3 py-2 text-warning">
-            this notifier is set to apply to all monitors. removing it will convert it to manual
-            selection mode.
-          </p>
-        ) : null}
       </ConfirmDeleteDialog>
 
       <ServerDataTable

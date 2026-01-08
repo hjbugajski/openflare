@@ -21,7 +21,9 @@ class MonitorPolicy
 
     public function create(User $user): bool
     {
-        return true;
+        $maxMonitors = config('monitors.max_per_user', 100);
+
+        return $user->monitors()->count() < $maxMonitors;
     }
 
     public function update(User $user, Monitor $monitor): bool

@@ -49,4 +49,16 @@ return [
 
     'retention_days' => env('MONITORS_RETENTION_DAYS', 30),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Max Monitors Per User
+    |--------------------------------------------------------------------------
+    |
+    | Maximum number of monitors a single user can create. This prevents
+    | resource exhaustion from a single user creating too many monitors.
+    |
+    */
+
+    'max_per_user' => env('MONITORS_MAX_PER_USER', 100),
+
 ];

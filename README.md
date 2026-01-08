@@ -1,49 +1,52 @@
-# OpenFlare
+# openflare
 
-A simple self-hostable uptime monitoring application.
+self-hostable uptime monitoring.
 
-This project started as a personal desire for a basic, straightforward uptime monitoring tool that I could easily self-host. While I've used and drawn inspiration from [Uptime Kuma](https://github.com/louislam/uptime-kuma) and [openstatus](https://www.openstatus.dev/), I wanted something much simpler with fewer features. Beyond solving a practical problem, this project served as an experiment in agentic development and an opportunity to understand the limits and capabilities of AI-assisted coding. It was built almost entirely (except for UI styling and UX tweaks) using Claude Opus 4.5 through [OpenCode](https://opencode.ai/) with the [Laravel Boost MCP](https://laravel.com/ai/boost), utilizing several custom primary agents and subagents. I chose Laravel for its full-stack capabilities and its first-party MCP support, making it an ideal framework for exploring agentic programming workflows.
+i built openflare because i wanted a straightforward uptime tool that was easy to self-host. inspired by [uptime kuma](https://github.com/louislam/uptime-kuma) and [openstatus](https://www.openstatus.dev/), openflare focuses on the essentials. this project also served as an experiment in agentic programming; it was written almost entirely by claude opus 4.5 using [opencode](https://opencode.ai/) and the [laravel boost mcp](https://laravel.com/ai/boost). laravel's full-stack capabilities and first-party mcp support made it a natural fit for exploring ai-native development workflows.
 
-## Features
+## features
 
-- Monitor website uptime and response times
-- Automatic incident tracking and resolution
-- Discord and email notifications
-- Real-time dashboard via WebSockets
+- monitor website uptime and response times
+- automatic incident tracking and resolution
+- discord and email notifications
+- real-time dashboard via websockets
 - 30-day uptime history charts
-- Two-factor authentication
+- two-factor authentication
+- secure by default (security headers, encrypted config, rate limiting)
 
-## Tech Stack
+## tech stack
 
-- Laravel 12, PHP 8.4
-- React 19, Inertia.js v2, TypeScript
-- Tailwind CSS v4
-- SQLite (MySQL/PostgreSQL compatible)
-- Laravel Reverb (WebSockets)
+- laravel 12, php 8.4
+- react 19, inertia.js v2, typescript
+- tailwind css v4
+- sqlite or postgresql
+- laravel reverb (websockets)
 
-## Quick Start
+## deployment
 
-### Development
+### development
 
 ```bash
 composer run setup
 composer run dev
 ```
 
-### Docker
+### docker (simple)
+
+single container with sqlite:
 
 ```bash
 docker run -d \
   -p 8000:8000 \
   -p 8080:8080 \
   -e APP_KEY=base64:$(openssl rand -base64 32) \
-  -v openflare-data:/app/database \
+  -v openflare-data:/app/data \
   ghcr.io/hjbugajski/openflare:latest
 ```
 
-Open http://localhost:8000 to get started.
+open http://localhost:8000 to get started.
 
-### Docker Compose
+### docker compose with sqlite
 
 ```yaml
 services:
@@ -59,28 +62,27 @@ services:
       - REVERB_PORT=443
       - REVERB_SCHEME=https
     volumes:
-      - openflare-data:/app/database
+      - openflare-data:/app/data
 
 volumes:
   openflare-data:
 ```
 
-## Environment Variables
+### railway
 
-| Variable         | Description                   | Default            |
-| ---------------- | ----------------------------- | ------------------ |
-| `APP_KEY`        | Encryption key (required)     | -                  |
-| `APP_URL`        | Public URL                    | `http://localhost` |
-| `REVERB_HOST`    | WebSocket hostname            | `localhost`        |
-| `REVERB_PORT`    | WebSocket port                | `8080`             |
-| `REVERB_SCHEME`  | WebSocket protocol            | `http`             |
-| `MAIL_MAILER`    | Mail driver (`log`, `resend`) | `log`              |
-| `RESEND_API_KEY` | Resend API key                | -                  |
+deploy using the "majestic monolith" architecture. see `railway.toml` and `railway/` directory for configuration.
 
-Generate `APP_KEY`:
+## environment variables
 
-```bash
-openssl rand -base64 32 | sed 's/^/base64:/'
-```
+| variable                | description                         | default            |
+| ----------------------- | ----------------------------------- | ------------------ |
+| `APP_KEY`               | encryption key (required)           | -                  |
+| `APP_URL`               | public url                          | `http://localhost` |
+| `DB_CONNECTION`         | database driver (`sqlite`, `pgsql`) | `sqlite`           |
+| `REVERB_HOST`           | websocket hostname                  | `localhost`        |
+| `REVERB_PORT`           | websocket port                      | `8080`             |
+| `REVERB_SCHEME`         | websocket protocol                  | `http`             |
+| `MAIL_MAILER`           | mail driver (`log`, `resend`)       | `log`              |
+| `MONITORS_MAX_PER_USER` | maximum monitors per user           | `100`              |
 
-See [.env.example](.env.example) for all options.
+see [.env.example](.env.example) for all options.

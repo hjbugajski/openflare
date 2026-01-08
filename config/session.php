@@ -147,7 +147,7 @@ return [
     |
     */
 
-    'secure' => null,
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

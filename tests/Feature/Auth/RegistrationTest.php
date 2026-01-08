@@ -12,8 +12,8 @@ describe('registration when no users exist', function () {
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Xk9#mP2$vL5@nQ8w',
+            'password_confirmation' => 'Xk9#mP2$vL5@nQ8w',
         ]);
 
         $this->assertAuthenticated();

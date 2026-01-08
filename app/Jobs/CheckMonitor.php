@@ -13,6 +13,7 @@ use App\Models\MonitorCheck;
 use App\Models\Notifier;
 use App\MonitorStatus;
 use GuzzleHttp\TransferStats;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,7 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
-class CheckMonitor implements ShouldQueue
+class CheckMonitor implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
@@ -31,10 +32,8 @@ class CheckMonitor implements ShouldQueue
 
     public int $maxExceptions = 3;
 
-    /**
-     * IPv4 ranges that are blocked for SSRF protection.
-     * Validated at request time to prevent DNS rebinding attacks.
-     */
+    public int $uniqueFor = 300;
+
     private const BLOCKED_IPV4_RANGES = [
         '10.0.0.0/8',        // Private (RFC 1918)
         '172.16.0.0/12',     // Private (RFC 1918)
@@ -61,6 +60,11 @@ class CheckMonitor implements ShouldQueue
     public function backoff(): array
     {
         return [10, 30, 60];
+    }
+
+    public function uniqueId(): string
+    {
+        return (string) $this->monitor->id;
     }
 
     /**
@@ -219,10 +223,6 @@ class CheckMonitor implements ShouldQueue
         return "Connection failed: {$message}";
     }
 
-    /**
-     * Check if an IP address is blocked (private/internal networks).
-     * Used at request time to prevent DNS rebinding attacks.
-     */
     protected function isBlockedIp(string $ip): bool
     {
         // Check IPv4
@@ -314,7 +314,6 @@ class CheckMonitor implements ShouldQueue
         $isUp = $newCheck->isUp();
 
         if ($wasUp && ! $isUp) {
-            // Use firstOrCreate to prevent race condition with concurrent workers
             $incident = Incident::firstOrCreate(
                 [
                     'monitor_id' => $this->monitor->id,
@@ -348,9 +347,7 @@ class CheckMonitor implements ShouldQueue
 
     protected function sendNotifications(MonitorStatus $status, MonitorCheck $check): void
     {
-        $notifiers = $this->monitor->notifiers()
-            ->where('is_active', true)
-            ->get()
+        $notifiers = $this->monitor->getEffectiveNotifiers()
             ->filter(fn (Notifier $notifier) => $this->notifierHasValidConfig($notifier));
 
         foreach ($notifiers as $notifier) {
@@ -378,17 +375,11 @@ class CheckMonitor implements ShouldQueue
         };
     }
 
-    /**
-     * Calculate the next check time based on the scheduled time, not execution time.
-     *
-     * This prevents timing drift when job execution is delayed by queue processing.
-     */
     protected function calculateNextCheckAt(): \Carbon\Carbon
     {
         $scheduledAt = $this->monitor->next_check_at ?? now();
         $nextCheck = $scheduledAt->copy()->addSeconds($this->monitor->interval);
 
-        // If we've drifted behind (next check is in the past), catch up to the next future slot
         while ($nextCheck->isPast()) {
             $nextCheck->addSeconds($this->monitor->interval);
         }

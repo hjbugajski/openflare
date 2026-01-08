@@ -15,45 +15,48 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Route;
 
 if (config('app.mail_preview') && ! app()->isProduction()) {
-    Route::prefix('mail-preview')->name('mail-preview.')->group(function () {
-        Route::get('/monitor-down', function () {
-            return new MonitorStatusChanged(
-                Monitor::factory()->make(),
-                MonitorCheck::factory()->make(),
-                MonitorStatus::Down
-            );
-        })->name('monitor-down');
+    Route::prefix('mail-preview')
+        ->name('mail-preview.')
+        ->middleware(['auth', 'verified'])
+        ->group(function () {
+            Route::get('/monitor-down', function () {
+                return new MonitorStatusChanged(
+                    Monitor::factory()->make(),
+                    MonitorCheck::factory()->make(),
+                    MonitorStatus::Down
+                );
+            })->name('monitor-down');
 
-        Route::get('/monitor-up', function () {
-            return new MonitorStatusChanged(
-                Monitor::factory()->make(),
-                MonitorCheck::factory()->make(),
-                MonitorStatus::Up
-            );
-        })->name('monitor-up');
+            Route::get('/monitor-up', function () {
+                return new MonitorStatusChanged(
+                    Monitor::factory()->make(),
+                    MonitorCheck::factory()->make(),
+                    MonitorStatus::Up
+                );
+            })->name('monitor-up');
 
-        Route::get('/verify-email', function () {
-            $user = User::first();
-            if (! $user) {
-                abort(404, 'No user found for preview');
-            }
+            Route::get('/verify-email', function () {
+                $user = User::first();
+                if (! $user) {
+                    abort(404, 'No user found for preview');
+                }
 
-            return (new VerifyEmail)->toMail($user);
-        })->name('verify-email');
+                return (new VerifyEmail)->toMail($user);
+            })->name('verify-email');
 
-        Route::get('/reset-password', function () {
-            $user = User::first();
-            if (! $user) {
-                abort(404, 'No user found for preview');
-            }
+            Route::get('/reset-password', function () {
+                $user = User::first();
+                if (! $user) {
+                    abort(404, 'No user found for preview');
+                }
 
-            return (new ResetPassword('fake-token-for-preview'))->toMail($user);
-        })->name('reset-password');
+                return (new ResetPassword('fake-token-for-preview'))->toMail($user);
+            })->name('reset-password');
 
-        Route::get('/test-notification', function () {
-            return new TestNotification;
-        })->name('test-notification');
-    });
+            Route::get('/test-notification', function () {
+                return new TestNotification;
+            })->name('test-notification');
+        });
 }
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -77,7 +80,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:notifications');
 
     // API endpoints for real-time data
-    Route::prefix('api')->name('api.')->group(function () {
+    Route::prefix('api')->name('api.')->middleware('throttle:api')->group(function () {
         Route::get('monitors/{monitor}', [ApiMonitorController::class, 'show'])->name('monitors.show');
         Route::get('monitors/{monitor}/checks', [ApiMonitorController::class, 'checks'])->name('monitors.checks');
         Route::get('monitors/{monitor}/rollups', [ApiMonitorController::class, 'rollups'])->name('monitors.rollups');

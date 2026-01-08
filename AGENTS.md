@@ -17,7 +17,7 @@ Self-hostable uptime monitoring application. Laravel 12 backend, React 19 + Iner
 
 **Key Flows**:
 
-1. Scheduler dispatches `CheckMonitor` jobs every minute for due monitors
+1. Scheduler dispatches `CheckMonitor` jobs every minute for due monitors (using `ShouldBeUnique` and scheduler claim pattern)
 2. Job performs HTTP request, records check, creates/resolves incidents
 3. Status changes trigger `SendMonitorNotification` jobs
 4. `MonitorChecked`, `IncidentOpened`, `IncidentResolved` events broadcast via Reverb
@@ -30,61 +30,47 @@ Self-hostable uptime monitoring application. Laravel 12 backend, React 19 + Iner
 | Backend    | Laravel 12, PHP 8.4                  |
 | Frontend   | React 19, Inertia v2, TypeScript     |
 | Styling    | Tailwind CSS v4                      |
-| Auth       | Laravel Fortify (2FA supported)      |
+| Auth       | Fortify (2FA, 12+ char secure pass)  |
 | WebSockets | Laravel Reverb                       |
 | Queue      | Database driver                      |
 | Database   | SQLite                               |
 | Testing    | Pest v4                              |
 | Routing    | Laravel Wayfinder (type-safe routes) |
+| Security   | Headers middleware, rate limiting    |
 
 ## Directory Structure
 
 ```
 app/
-  Actions/          # Reusable business logic (rollup computation)
-  Console/Commands/ # Artisan commands (auto-registered)
-  Events/           # Broadcast events (MonitorChecked, Incident*)
+  Actions/          # Business logic
+  Console/Commands/ # Artisan commands
+  Events/           # Broadcast events
   Http/
     Controllers/    # Web & API controllers
-    Middleware/     # Appearance, Inertia handlers
+    Middleware/     # Security headers, appearance, inertia
     Requests/       # Form request validation
   Jobs/             # CheckMonitor, SendMonitorNotification
   Mail/             # Mailable classes
-  Models/           # Eloquent models (UUID primary keys)
+  Models/           # Eloquent models (UUIDv7)
   Observers/        # MonitorObserver
-  Policies/         # Authorization policies
+  Policies/         # Authorization
   Providers/        # Service providers
   Rules/            # Custom validation rules
-  MonitorStatus.php # Up/Down enum
-
-resources/js/
-  components/       # Reusable React components
-    ui/             # Base UI components (Button, Card, Dialog, etc.)
-    icons/          # SVG icon components
-  layouts/          # AppLayout, AuthLayout
-  lib/              # Utilities, schemas (Zod), constants
-  pages/            # Inertia page components
-  types/            # TypeScript interfaces
-
-tests/
-  Feature/          # Integration tests (controllers, jobs, events)
-  Unit/             # Unit tests
+  MonitorStatus.php # Status enum
 ```
 
 ## Conventions
 
 ### PHP/Laravel
 
-- `declare(strict_types=1);` at top of every PHP file
-- PHP 8 constructor property promotion
-- Explicit return type declarations
-- PHPDoc for complex methods, no inline comments unless necessary
-- Model UUIDs via `uuid7()` in `creating` event
-- Casts defined in `casts()` method, not `$casts` property
-- Form Request classes for validation (check sibling files for array vs string rules)
-- Actions for complex business logic
+- `declare(strict_types=1);` in all PHP files
+- PHP 8.4 features where applicable
+- UUIDv7 primary keys
+- Encrypted casts for sensitive model attributes (notifier config)
+- Form Requests for validation
+- Actions for complex logic
 - Policies for authorization
-- Queued jobs for background work
+- Queued jobs for background work (`ShouldBeUnique` for checks)
 
 ### Database
 
@@ -207,6 +193,7 @@ Optional monitor settings:
 - `MONITORS_TEST_MODE` - Disable actual HTTP checks
 - `MONITORS_DISPATCH_LIMIT` - Max checks per scheduler run
 - `MONITORS_RETENTION_DAYS` - Days to keep check history
+- `MONITORS_MAX_PER_USER` - Max monitors per user
 
 ## Development Workflow
 
