@@ -5,13 +5,14 @@ import { Card } from '@/components/ui/card';
 import { useInertiaAppForm } from '@/components/ui/form/use-inertia-app-form';
 import { Heading } from '@/components/ui/heading';
 import AuthLayout from '@/layouts/auth-layout';
+import { passwordSchema } from '@/lib/schemas/password';
 import { update } from '@/routes/password';
 
 const resetPasswordSchema = z
   .object({
     token: z.string(),
     email: z.email('invalid email address'),
-    password: z.string().min(8, 'password must be at least 8 characters'),
+    password: passwordSchema,
     password_confirmation: z.string().min(1, 'please confirm your password'),
   })
   .refine((data) => data.password === data.password_confirmation, {
