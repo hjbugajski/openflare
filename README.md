@@ -2,6 +2,8 @@
 
 self-hostable uptime monitoring.
 
+i built openflare because i wanted a straightforward uptime tool that was easy to self-host. inspired by [uptime kuma](https://github.com/louislam/uptime-kuma) and [openstatus](https://www.openstatus.dev/), openflare focuses on the essentials. this project also served as an experiment in agentic programming; it was written almost entirely by claude opus 4.5 using [opencode](https://opencode.ai/) and the [laravel boost mcp](https://laravel.com/ai/boost). laravel's full-stack capabilities and first-party mcp support made it a natural fit for exploring ai-native development workflows.
+
 ## features
 
 - monitor website uptime and response times
