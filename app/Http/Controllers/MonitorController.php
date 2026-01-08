@@ -208,10 +208,12 @@ class MonitorController extends Controller
         $this->authorize('update', $monitor);
         $this->authorize('view', $notifier);
 
-        $monitor->notifiers()->syncWithoutDetaching([$notifier->id]);
+        $monitor->notifiers()->syncWithoutDetaching([
+            $notifier->id => ['is_excluded' => false],
+        ]);
 
         return redirect()->back()
-            ->with('success', 'Notifier attached successfully.');
+            ->with('success', 'Notifier enabled for this monitor.');
     }
 
     public function detachNotifier(Monitor $monitor, Notifier $notifier): RedirectResponse
@@ -219,14 +221,15 @@ class MonitorController extends Controller
         $this->authorize('update', $monitor);
         $this->authorize('view', $notifier);
 
-        $monitor->notifiers()->detach($notifier->id);
-
-        // If the notifier was set to "apply to all", convert it to manual mode
         if ($notifier->apply_to_all) {
-            $notifier->update(['apply_to_all' => false]);
+            $monitor->notifiers()->syncWithoutDetaching([
+                $notifier->id => ['is_excluded' => true],
+            ]);
+        } else {
+            $monitor->notifiers()->detach($notifier->id);
         }
 
         return redirect()->back()
-            ->with('success', 'Notifier detached successfully.');
+            ->with('success', 'Notifier disabled for this monitor.');
     }
 }

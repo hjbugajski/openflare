@@ -480,7 +480,7 @@ describe('detachNotifier', function () {
             ->assertForbidden();
     });
 
-    it('sets apply_to_all to false when detaching an apply-to-all notifier', function () {
+    it('excludes apply-to-all notifier instead of detaching', function () {
         $monitor = Monitor::factory()->create(['user_id' => $this->user->uuid]);
         $notifier = Notifier::factory()->create([
             'user_id' => $this->user->uuid,
@@ -488,12 +488,52 @@ describe('detachNotifier', function () {
         ]);
         $monitor->notifiers()->attach($notifier);
 
-        expect($notifier->apply_to_all)->toBeTrue();
+        $this->actingAs($this->user)
+            ->delete(route('monitors.notifiers.detach', [$monitor, $notifier]))
+            ->assertRedirect();
+
+        expect($notifier->fresh()->apply_to_all)->toBeTrue();
+        $this->assertDatabaseHas('monitor_notifier', [
+            'monitor_id' => $monitor->id,
+            'notifier_id' => $notifier->id,
+            'is_excluded' => true,
+        ]);
+    });
+
+    it('detaches non-apply-to-all notifier completely', function () {
+        $monitor = Monitor::factory()->create(['user_id' => $this->user->uuid]);
+        $notifier = Notifier::factory()->create([
+            'user_id' => $this->user->uuid,
+            'apply_to_all' => false,
+        ]);
+        $monitor->notifiers()->attach($notifier);
 
         $this->actingAs($this->user)
             ->delete(route('monitors.notifiers.detach', [$monitor, $notifier]))
             ->assertRedirect();
 
-        expect($notifier->fresh()->apply_to_all)->toBeFalse();
+        $this->assertDatabaseMissing('monitor_notifier', [
+            'monitor_id' => $monitor->id,
+            'notifier_id' => $notifier->id,
+        ]);
+    });
+
+    it('clears exclusion when re-attaching notifier', function () {
+        $monitor = Monitor::factory()->create(['user_id' => $this->user->uuid]);
+        $notifier = Notifier::factory()->create([
+            'user_id' => $this->user->uuid,
+            'apply_to_all' => true,
+        ]);
+        $monitor->notifiers()->attach($notifier, ['is_excluded' => true]);
+
+        $this->actingAs($this->user)
+            ->post(route('monitors.notifiers.attach', [$monitor, $notifier]))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('monitor_notifier', [
+            'monitor_id' => $monitor->id,
+            'notifier_id' => $notifier->id,
+            'is_excluded' => false,
+        ]);
     });
 });

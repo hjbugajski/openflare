@@ -62,9 +62,8 @@ describe('show', function () {
 
     it('includes current incident when active', function () {
         $monitor = Monitor::factory()->create(['user_id' => $this->user->uuid]);
-        $incident = Incident::factory()->create([
+        $incident = Incident::factory()->ongoing()->create([
             'monitor_id' => $monitor->id,
-            'ended_at' => null,
             'cause' => 'timeout',
         ]);
 

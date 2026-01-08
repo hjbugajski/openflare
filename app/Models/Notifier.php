@@ -52,7 +52,7 @@ class Notifier extends Model
     protected function casts(): array
     {
         return [
-            'config' => 'array',
+            'config' => 'encrypted:array',
             'is_active' => 'boolean',
             'is_default' => 'boolean',
             'apply_to_all' => 'boolean',
@@ -72,7 +72,7 @@ class Notifier extends Model
      */
     public function monitors(): BelongsToMany
     {
-        return $this->belongsToMany(Monitor::class);
+        return $this->belongsToMany(Monitor::class)->withPivot('is_excluded');
     }
 
     public function getWebhookUrl(): ?string

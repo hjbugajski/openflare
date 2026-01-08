@@ -118,7 +118,34 @@ class Monitor extends Model
      */
     public function notifiers(): BelongsToMany
     {
-        return $this->belongsToMany(Notifier::class);
+        return $this->belongsToMany(Notifier::class)->withPivot('is_excluded');
+    }
+
+    /**
+     * Get notifiers that should receive notifications for this monitor.
+     * Includes: explicitly attached (not excluded) + apply_to_all (not excluded).
+     *
+     * @return \Illuminate\Support\Collection<int, Notifier>
+     */
+    public function getEffectiveNotifiers(): \Illuminate\Support\Collection
+    {
+        $excludedIds = $this->notifiers()
+            ->wherePivot('is_excluded', true)
+            ->pluck('notifiers.id');
+
+        $explicitIds = $this->notifiers()
+            ->wherePivot('is_excluded', false)
+            ->pluck('notifiers.id');
+
+        return Notifier::query()
+            ->where('user_id', $this->user_id)
+            ->where('is_active', true)
+            ->where(function ($query) use ($explicitIds) {
+                $query->whereIn('id', $explicitIds)
+                    ->orWhere('apply_to_all', true);
+            })
+            ->whereNotIn('id', $excludedIds)
+            ->get();
     }
 
     /**
