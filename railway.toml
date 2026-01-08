@@ -1,0 +1,13 @@
+# Railway configuration for OpenFlare App service
+# Other services (worker, cron, reverb) should override startCommand in Railway dashboard
+
+[build]
+builder = "RAILPACK"
+buildCommand = "pnpm install && pnpm run build"
+
+[deploy]
+preDeployCommand = ["sh ./railway/init-app.sh"]
+healthcheckPath = "/up"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
