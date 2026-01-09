@@ -1,41 +1,35 @@
 <?php
 
+/*
+|--------------------------------------------------------------------------
+| Broadcasting Configuration
+|--------------------------------------------------------------------------
+|
+| Laravel broadcasts events to Reverb's internal HTTP API.
+| Production: 127.0.0.1:6001 (behind Nginx)
+| Development: 127.0.0.1:8080 (direct)
+|
+*/
+
+$isProduction = str_starts_with(env('APP_URL', 'http://localhost'), 'https://');
+$serverPort = env('REVERB_SERVER_PORT', $isProduction ? 6001 : 8080);
+
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Default Broadcaster
-    |--------------------------------------------------------------------------
-    |
-    | This option controls the default broadcaster that will be used by the
-    | framework when an event needs to be broadcast.
-    |
-    */
-
     'default' => 'reverb',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Broadcast Connections
-    |--------------------------------------------------------------------------
-    |
-    | Here you may define all of the broadcast connections that will be used
-    | to broadcast events to other systems or over WebSockets.
-    |
-    */
 
     'connections' => [
 
         'reverb' => [
             'driver' => 'reverb',
-            'key' => env('REVERB_APP_KEY'),
-            'secret' => env('REVERB_APP_SECRET'),
+            'key' => env('REVERB_APP_KEY', 'openflare-key'),
+            'secret' => env('REVERB_APP_SECRET', 'openflare-secret'),
             'app_id' => 'openflare',
             'options' => [
-                'host' => env('REVERB_HOST'),
-                'port' => env('REVERB_PORT', 443),
-                'scheme' => env('REVERB_SCHEME', 'https'),
-                'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
+                'host' => '127.0.0.1',
+                'port' => $serverPort,
+                'scheme' => 'http',
+                'useTLS' => false,
             ],
         ],
 
