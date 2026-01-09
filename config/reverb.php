@@ -74,7 +74,7 @@ return [
                     'scheme' => $externalScheme,
                     'useTLS' => $externalScheme === 'https',
                 ],
-                'allowed_origins' => $isProduction ? [$appUrl] : ['*'],
+                'allowed_origins' => $isProduction ? [$externalHost] : ['*'],
                 'ping_interval' => 60,
                 'activity_timeout' => 30,
                 'max_message_size' => 10_000,
