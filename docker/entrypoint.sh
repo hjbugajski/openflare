@@ -20,13 +20,19 @@ DB_CONNECTION="${DB_CONNECTION:-sqlite}"
 
 if [ "$DB_CONNECTION" = "sqlite" ]; then
     DB_PATH="${DB_DATABASE:-database/database.sqlite}"
+    DB_DIR="$(dirname "$DB_PATH")"
+
+    # Ensure directory exists and is writable (for WAL mode -wal/-shm files)
+    echo "==> Setting up SQLite directory at $DB_DIR..."
+    mkdir -p "$DB_DIR"
+    chown www-data:www-data "$DB_DIR"
+    chmod 775 "$DB_DIR"
 
     if [ ! -f "$DB_PATH" ]; then
         echo "==> Creating SQLite database at $DB_PATH..."
-        mkdir -p "$(dirname "$DB_PATH")"
         touch "$DB_PATH"
-        chown www-data:www-data "$DB_PATH"
     fi
+    chown www-data:www-data "$DB_PATH"
 
     # Enable WAL mode for better concurrent access and crash recovery
     echo "==> Configuring SQLite for production..."
