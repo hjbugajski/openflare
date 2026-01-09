@@ -7,7 +7,9 @@
 .github
 
 # Documentation
-*.md
+README.md
+AGENTS.md
+CHANGELOG.md
 LICENSE
 
 # IDE
@@ -27,10 +29,10 @@ node_modules
 .pnpm-store
 
 # PHP vendor (installed fresh in Docker)
-# Note: vendor is intentionally excluded; composer install runs in the build
 vendor
 
 # Testing files
+tests
 phpunit.xml
 pint.json
 .phpunit.cache
@@ -41,6 +43,7 @@ coverage
 public/build
 public/hot
 bootstrap/ssr
+bootstrap/cache
 
 # Storage (created at runtime)
 storage/app/*
@@ -59,3 +62,9 @@ database/*.sqlite-journal
 Thumbs.db
 *.log
 boost.json
+
+# Development scripts (not needed in production)
+.editorconfig
+.prettierrc
+.eslintrc*
+eslint.config.*

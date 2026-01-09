@@ -60,6 +60,16 @@
       "Composer\\Config::disableProcessTimeout",
       "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74,#fde047,#86efac\" \"php artisan serve\" \"php artisan queue:work --queue=default,monitors,notifications --tries=3 --timeout=120\" \"php artisan pail --timeout=0\" \"php artisan schedule:work\" \"php artisan inertia:start-ssr\" \"php artisan reverb:start\" --names=server,queue,logs,scheduler,ssr,reverb --kill-others"
     ],
+    "prod:migrate": "@php artisan migrate --force",
+    "prod:optimize": [
+      "@php artisan optimize",
+      "@php artisan route:cache",
+      "@php artisan view:cache"
+    ],
+    "prod:clear": "@php artisan optimize:clear",
+    "prod:queue": "@php artisan queue:work --queue=default,monitors,notifications --tries=3 --timeout=120 --sleep=3 --max-jobs=1000 --max-time=3600",
+    "prod:scheduler": "@php artisan schedule:work",
+    "prod:reverb": "@php artisan reverb:start --host=127.0.0.1 --port=6001",
     "test": [
       "@php artisan config:clear --ansi",
       "@php artisan test"
