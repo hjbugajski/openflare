@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Symfony\Component\Mime\Email;
@@ -22,10 +23,18 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->configureHttps();
         $this->configureRateLimiting();
         $this->configureAuthNotifications();
         $this->validateProductionSecuritySettings();
         $this->computeMissingRollups();
+    }
+
+    protected function configureHttps(): void
+    {
+        if (str_starts_with(config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
     }
 
     protected function configureRateLimiting(): void

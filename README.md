@@ -12,7 +12,6 @@ i built openflare because i wanted a straightforward uptime tool that was easy t
 - real-time dashboard via websockets
 - 30-day uptime history charts
 - two-factor authentication
-- secure by default (security headers, encrypted config, rate limiting)
 
 ## tech stack
 
@@ -22,18 +21,14 @@ i built openflare because i wanted a straightforward uptime tool that was easy t
 - sqlite or postgresql
 - laravel reverb (websockets)
 
-## deployment
+## development
 
-### development
+[installing php and the laravel installer](https://laravel.com/docs/12.x/installation).
 
 ```bash
 composer run setup
 composer run dev
 ```
-
-### railway
-
-deploy using the "majestic monolith" architecture. see `railway.toml` and `railway/` directory for configuration.
 
 ## environment variables
 
