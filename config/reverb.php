@@ -19,7 +19,7 @@
 */
 
 $appUrl = env('APP_URL', 'http://localhost');
-$parsedUrl = parse_url($appUrl);
+$parsedUrl = parse_url($appUrl) ?: [];
 $isProduction = ($parsedUrl['scheme'] ?? 'http') === 'https';
 
 // External connection (frontend WebSocket clients)

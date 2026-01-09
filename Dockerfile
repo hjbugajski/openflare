@@ -157,7 +157,7 @@ RUN mkdir -p \
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://127.0.0.1:${PORT:-8080}/up || exit 1
+    CMD curl -f http://127.0.0.1:8080/up || exit 1
 
 # Expose the port (Railway provides $PORT)
 EXPOSE 8080
