@@ -78,6 +78,13 @@ export default function NotifiersIndex({ notifiers }: Props) {
       accessorKey: 'monitors_count',
       header: 'monitors',
       cell: ({ row }) => row.original.monitors_count ?? 0,
+      meta: { className: 'whitespace-nowrap' },
+    },
+    {
+      id: 'excluded',
+      accessorFn: (notifier) => notifier.excluded_monitors_count ?? 0,
+      header: 'excluded',
+      cell: ({ row }) => row.original.excluded_monitors_count ?? 0,
       meta: { className: 'whitespace-nowrap w-full' },
     },
     {

@@ -168,6 +168,7 @@ class MonitorController extends Controller
         $notifiersSort = $notifiersSortMap[$notifiersSort] ?? $notifiersSortMap['name'];
 
         $notifiers = $monitor->notifiers()
+            ->wherePivot('is_excluded', false)
             ->orderBy($notifiersSort, $notifiersDirection)
             ->paginate(10, ['*'], 'notifiers_page')
             ->withQueryString();

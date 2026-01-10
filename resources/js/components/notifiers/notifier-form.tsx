@@ -65,6 +65,8 @@ export function NotifierForm({
     form.setFieldValue('apply_to_existing', value === 'all');
     if (value === 'all') {
       form.setFieldValue('monitors', []);
+    } else {
+      form.setFieldValue('excluded_monitors', []);
     }
   };
 
@@ -150,6 +152,28 @@ export function NotifierForm({
               <Label>monitors</Label>
               <MonitorModeRadio value={monitorMode} onValueChange={handleModeChange} />
             </div>
+          ) : null}
+
+          {monitorMode === 'all' ? (
+            <form.AppField name="excluded_monitors">
+              {(field) => (
+                <field.Field
+                  label="excluded monitors"
+                  description="exclude specific monitors from this notifier"
+                  serverError={getServerError('excluded_monitors')}
+                >
+                  <field.ComboboxField
+                    items={monitors.map((monitor) => ({
+                      id: monitor.id,
+                      label: monitor.name,
+                      description: monitor.url,
+                    }))}
+                    emptyMessage="no monitors found."
+                    placeholder="exclude monitors..."
+                  />
+                </field.Field>
+              )}
+            </form.AppField>
           ) : null}
 
           {monitorMode === 'manual' ? (

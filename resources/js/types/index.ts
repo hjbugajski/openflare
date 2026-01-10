@@ -66,6 +66,9 @@ export interface NotifierSummary {
   is_active: boolean;
   is_default?: boolean;
   apply_to_all?: boolean;
+  pivot?: {
+    is_excluded: boolean;
+  };
 }
 
 /** Summary type for monitor when used in lists/associations */
@@ -73,6 +76,9 @@ export interface MonitorSummary {
   id: string;
   name: string;
   url: string;
+  pivot?: {
+    is_excluded: boolean;
+  };
 }
 
 /** Full notifier with config details */
@@ -88,6 +94,7 @@ export interface Notifier {
   is_default: boolean;
   apply_to_all: boolean;
   monitors_count?: number;
+  excluded_monitors_count?: number;
   monitors?: MonitorSummary[];
   created_at?: string;
   updated_at?: string;

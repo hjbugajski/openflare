@@ -52,11 +52,17 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
       id: 'status',
       accessorFn: (notifier) => notifier.is_active,
       header: 'status',
-      cell: ({ row }) => (
-        <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
-          {row.original.is_active ? 'active' : 'inactive'}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        if (row.original.pivot?.is_excluded) {
+          return <Badge variant="secondary">excluded</Badge>;
+        }
+
+        return (
+          <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
+            {row.original.is_active ? 'active' : 'inactive'}
+          </Badge>
+        );
+      },
       meta: {
         className: 'whitespace-nowrap',
       },

@@ -13,6 +13,9 @@ interface Props {
 }
 
 export default function NotifiersEdit({ notifier, monitors, types }: Props) {
+  const excludedMonitors = notifier.monitors.filter((monitor) => monitor.pivot?.is_excluded);
+  const includedMonitors = notifier.monitors.filter((monitor) => !monitor.pivot?.is_excluded);
+
   return (
     <AppLayout size="sm">
       <Head title={`Edit ${notifier.name}`} />
@@ -28,7 +31,8 @@ export default function NotifiersEdit({ notifier, monitors, types }: Props) {
           is_active: notifier.is_active,
           is_default: notifier.is_default,
           apply_to_existing: notifier.apply_to_all,
-          monitors: notifier.monitors.map((m) => m.id),
+          monitors: includedMonitors.map((monitor) => monitor.id),
+          excluded_monitors: excludedMonitors.map((monitor) => monitor.id),
         }}
         monitors={monitors}
         types={types}

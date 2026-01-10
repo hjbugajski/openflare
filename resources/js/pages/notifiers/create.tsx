@@ -28,6 +28,7 @@ export default function NotifiersCreate({ monitors, types }: Props) {
           is_default: false,
           apply_to_existing: true,
           monitors: [],
+          excluded_monitors: [],
         }}
         monitors={monitors}
         types={types}

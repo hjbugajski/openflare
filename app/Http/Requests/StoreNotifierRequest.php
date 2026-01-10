@@ -31,6 +31,11 @@ class StoreNotifierRequest extends FormRequest
                 'string',
                 Rule::exists(Monitor::class, 'id')->where('user_id', Auth::user()->uuid),
             ],
+            'excluded_monitors' => ['array'],
+            'excluded_monitors.*' => [
+                'string',
+                Rule::exists(Monitor::class, 'id')->where('user_id', Auth::user()->uuid),
+            ],
 
             // Discord-specific
             'config.webhook_url' => [
