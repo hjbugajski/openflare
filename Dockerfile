@@ -92,7 +92,7 @@ RUN mkdir -p bootstrap/cache && \
 FROM php:8.4-fpm-alpine
 
 # Install system dependencies
-RUN apk add --no-cache \
+RUN apk add --no-cache --upgrade \
     nginx \
     supervisor \
     sqlite \
@@ -101,6 +101,7 @@ RUN apk add --no-cache \
     libzip-dev \
     oniguruma-dev \
     libpq-dev \
+    libsodium \
     && docker-php-ext-install \
     pdo_pgsql \
     pdo_sqlite \
