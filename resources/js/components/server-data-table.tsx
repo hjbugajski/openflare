@@ -176,7 +176,7 @@ export function ServerDataTable<TData, TValue>({
                   <th
                     key={header.id}
                     className={cn(
-                      'px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase',
+                      'px-3 py-2 text-left text-xs font-medium break-words whitespace-normal text-muted-foreground uppercase',
                       header.column.columnDef.meta?.className,
                     )}
                   >
@@ -214,7 +214,10 @@ export function ServerDataTable<TData, TValue>({
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className={cn('px-3 py-2', cell.column.columnDef.meta?.className)}
+                      className={cn(
+                        'px-3 py-2 break-words whitespace-normal',
+                        cell.column.columnDef.meta?.className,
+                      )}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
