@@ -95,10 +95,12 @@ export default function NotifiersIndex({ notifiers }: Props) {
           <Button variant="secondary" size="sm" render={<Link href={edit(row.original.id).url} />}>
             edit
           </Button>
-          <Dialog.Trigger handle={deleteDialog} payload={row.original}>
-            <Button variant="destructive" size="sm">
-              delete
-            </Button>
+          <Dialog.Trigger
+            handle={deleteDialog}
+            payload={row.original}
+            render={<Button variant="destructive" size="sm" />}
+          >
+            delete
           </Dialog.Trigger>
         </div>
       ),
