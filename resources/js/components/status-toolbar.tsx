@@ -1,10 +1,8 @@
 import { useEffect, useRef } from 'react';
 
-import type { StatusToolbarSummary } from '@/types';
-
 import { cva } from 'class-variance-authority';
 
-import { cn } from '@/lib/cn';
+import type { StatusToolbarSummary } from '@/types';
 
 const stateLabel = {
   operational: 'fully operational',
@@ -40,10 +38,9 @@ const labelVariants = cva('font-semibold', {
 
 interface StatusToolbarProps {
   summary: StatusToolbarSummary | null | undefined;
-  size?: 'sm' | 'default';
 }
 
-export function StatusToolbar({ summary, size = 'default' }: StatusToolbarProps) {
+export function StatusToolbar({ summary }: StatusToolbarProps) {
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

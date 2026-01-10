@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Models\Incident;
 use App\Models\Monitor;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -53,17 +54,26 @@ class DashboardController extends Controller
             ->where('started_at', '>=', $sevenDaysAgo)
             ->with('monitor:id,name,url');
 
+        $directionKeyword = $direction === 'asc' ? 'asc' : 'desc';
+
         if ($sort === 'monitor') {
             $incidentsQuery->orderBy(
                 Monitor::query()->select('name')->whereColumn('monitors.id', 'incidents.monitor_id'),
                 $direction,
             );
         } elseif ($sort === 'status') {
-            $incidentsQuery->orderByRaw("ended_at is null {$direction}");
+            $incidentsQuery->orderByRaw('CASE WHEN ended_at IS NULL THEN 0 ELSE 1 END '.$directionKeyword);
         } elseif ($sort === 'duration') {
-            $incidentsQuery->orderByRaw(
-                "(julianday(coalesce(ended_at, CURRENT_TIMESTAMP)) - julianday(started_at)) {$direction}",
-            );
+            $driver = DB::connection()->getDriverName();
+
+            $durationExpression = match ($driver) {
+                'sqlite' => '(julianday(COALESCE(ended_at, CURRENT_TIMESTAMP)) - julianday(started_at))',
+                'pgsql' => 'EXTRACT(EPOCH FROM (COALESCE(ended_at, NOW()) - started_at))',
+                'mysql' => 'TIMESTAMPDIFF(SECOND, started_at, COALESCE(ended_at, NOW()))',
+                default => '(COALESCE(ended_at, NOW()) - started_at)',
+            };
+
+            $incidentsQuery->orderByRaw($durationExpression.' '.$directionKeyword);
         } else {
             $incidentsQuery->orderBy($sort, $direction);
         }

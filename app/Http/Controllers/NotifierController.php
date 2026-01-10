@@ -32,6 +32,7 @@ class NotifierController extends Controller
             'type' => 'type',
             'default' => 'is_default',
             'monitors_count' => 'monitors_count',
+            'excluded' => 'excluded_monitors_count',
         ];
         $sort = $sortMap[$sort] ?? $sortMap['name'];
 

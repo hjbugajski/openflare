@@ -18,11 +18,16 @@ export function formatInterval(
   seconds: number,
   options?: FormatIntervalOptions | boolean,
 ): IntervalParts | string {
-  const normalizedOptions =
-    typeof options === 'boolean'
-      ? { verbose: options, format: 'parts' }
-      : { verbose: false, format: 'parts', ...options };
-  const { verbose, format } = normalizedOptions;
+  let verbose: boolean;
+  let format: 'parts' | 'string';
+
+  if (typeof options === 'boolean' || options === undefined) {
+    verbose = typeof options === 'boolean' ? options : false;
+    format = 'parts';
+  } else {
+    verbose = options.verbose ?? false;
+    format = options.format ?? 'parts';
+  }
 
   let parts: IntervalParts;
   if (seconds < 60) {

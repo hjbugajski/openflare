@@ -23,7 +23,7 @@ export function formatRelativeTime(
   const diff = Date.now() - new Date(date).getTime();
   const seconds = Math.floor(diff / 1000);
 
-  if (seconds < 0 || seconds < 60) {
+  if (seconds < 60) {
     return options?.format ? null : 'just now';
   }
 

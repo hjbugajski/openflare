@@ -28,7 +28,7 @@ export default function AppLayout({ children, size = 'default' }: AppLayoutProps
       >
         {children}
       </main>
-      <StatusToolbar summary={statusToolbar} size={size} />
+      <StatusToolbar summary={statusToolbar} />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { cn } from '@/lib/cn';
 
 type InputSize = 'default' | 'sm';
 
-type InputProps = Omit<ComponentProps<'input'>, 'size'> & {
+type InputProps = ComponentProps<'input'> & {
   inputSize?: InputSize;
 };
 

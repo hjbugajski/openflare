@@ -142,12 +142,21 @@ class MonitorController extends Controller
         $incidentsSort = in_array($incidentsSort, $incidentsSortOptions, true) ? $incidentsSort : 'started_at';
 
         $incidentsQuery = $monitor->incidents();
+        $incidentsDirectionKeyword = $incidentsDirection === 'asc' ? 'asc' : 'desc';
+
         if ($incidentsSort === 'status') {
-            $incidentsQuery->orderByRaw("ended_at is null {$incidentsDirection}");
+            $incidentsQuery->orderByRaw('CASE WHEN ended_at IS NULL THEN 0 ELSE 1 END '.$incidentsDirectionKeyword);
         } elseif ($incidentsSort === 'duration') {
-            $incidentsQuery->orderByRaw(
-                "(julianday(coalesce(ended_at, CURRENT_TIMESTAMP)) - julianday(started_at)) {$incidentsDirection}",
-            );
+            $driver = DB::connection()->getDriverName();
+
+            $durationExpression = match ($driver) {
+                'sqlite' => '(julianday(COALESCE(ended_at, CURRENT_TIMESTAMP)) - julianday(started_at))',
+                'pgsql' => 'EXTRACT(EPOCH FROM (COALESCE(ended_at, NOW()) - started_at))',
+                'mysql' => 'TIMESTAMPDIFF(SECOND, started_at, COALESCE(ended_at, NOW()))',
+                default => '(COALESCE(ended_at, NOW()) - started_at)',
+            };
+
+            $incidentsQuery->orderByRaw($durationExpression.' '.$incidentsDirectionKeyword);
         } else {
             $incidentsQuery->orderBy($incidentsSort, $incidentsDirection);
         }
