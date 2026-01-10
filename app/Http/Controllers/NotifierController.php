@@ -23,11 +23,24 @@ class NotifierController extends Controller
 {
     public function index(): Response
     {
+        $sort = request()->string('sort', 'name')->toString();
+        $direction = strtolower(request()->string('direction', 'asc')->toString());
+        $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : 'asc';
+        $sortMap = [
+            'name' => 'name',
+            'status' => 'is_active',
+            'type' => 'type',
+            'default' => 'is_default',
+            'monitors_count' => 'monitors_count',
+        ];
+        $sort = $sortMap[$sort] ?? $sortMap['name'];
+
         $notifiers = Notifier::query()
             ->where('user_id', Auth::user()->uuid)
             ->withCount('monitors')
-            ->latest()
-            ->paginate(10);
+            ->orderBy($sort, $direction)
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('notifiers/index', [
             'notifiers' => $notifiers,

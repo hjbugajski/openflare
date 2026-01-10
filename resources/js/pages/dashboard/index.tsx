@@ -25,9 +25,17 @@ interface Props {
   incidents: Paginated<IncidentWithMonitor>;
 }
 
+const getIncidentDurationMs = (incident: IncidentWithMonitor) => {
+  const start = new Date(incident.started_at).getTime();
+  const end = incident.ended_at ? new Date(incident.ended_at).getTime() : Date.now();
+
+  return end - start;
+};
+
 const columns: ColumnDef<IncidentWithMonitor>[] = [
   {
     id: 'monitor',
+    accessorFn: (incident) => incident.monitor.name,
     header: 'monitor',
     cell: ({ row }) => (
       <Link
@@ -42,7 +50,8 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
     },
   },
   {
-    accessorKey: 'ended_at',
+    id: 'status',
+    accessorFn: (incident) => (incident.ended_at ? 'resolved' : 'active'),
     header: 'status',
     cell: ({ row }) => (
       <Badge variant={row.original.ended_at ? 'secondary' : 'danger'}>
@@ -63,6 +72,7 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
   },
   {
     id: 'duration',
+    accessorFn: (incident) => getIncidentDurationMs(incident),
     header: 'duration',
     cell: ({ row }) => formatDuration(row.original.started_at, row.original.ended_at),
     meta: {
@@ -79,7 +89,7 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
   },
   {
     accessorKey: 'ended_at',
-    id: 'ended_at_display',
+    id: 'ended_at',
     header: 'ended',
     cell: ({ row }) =>
       row.original.ended_at ? formatDateTime(row.original.ended_at) : <>&ndash;</>,
@@ -125,7 +135,12 @@ export default function DashboardIndex({ counts, incidents }: Props) {
         {incidents.data.length === 0 ? (
           <EmptyState className="p-8" message="no incidents" />
         ) : (
-          <ServerDataTable columns={columns} paginated={incidents} queryParam="page" />
+          <ServerDataTable
+            columns={columns}
+            paginated={incidents}
+            queryParam="page"
+            initialSorting={[{ id: 'started_at', desc: true }]}
+          />
         )}
       </Card.Root>
     </AppLayout>

@@ -118,17 +118,57 @@ class MonitorController extends Controller
 
         $monitor->load(['latestCheck', 'currentIncident']);
 
+        $checksSort = request()->string('checks_sort', 'checked_at')->toString();
+        $checksDirection = strtolower(request()->string('checks_direction', 'desc')->toString());
+        $checksDirection = in_array($checksDirection, ['asc', 'desc'], true) ? $checksDirection : 'desc';
+        $checksSortMap = [
+            'status' => 'status',
+            'status_code' => 'status_code',
+            'response_time_ms' => 'response_time_ms',
+            'error_message' => 'error_message',
+            'checked_at' => 'checked_at',
+        ];
+        $checksSort = $checksSortMap[$checksSort] ?? $checksSortMap['checked_at'];
+
         $checks = $monitor->checks()
-            ->latest('checked_at')
+            ->orderBy($checksSort, $checksDirection)
             ->paginate(10, ['*'], 'checks_page')
             ->withQueryString();
 
-        $incidents = $monitor->incidents()
-            ->latest('started_at')
+        $incidentsSort = request()->string('incidents_sort', 'started_at')->toString();
+        $incidentsDirection = strtolower(request()->string('incidents_direction', 'desc')->toString());
+        $incidentsDirection = in_array($incidentsDirection, ['asc', 'desc'], true) ? $incidentsDirection : 'desc';
+        $incidentsSortOptions = ['status', 'cause', 'duration', 'started_at', 'ended_at'];
+        $incidentsSort = in_array($incidentsSort, $incidentsSortOptions, true) ? $incidentsSort : 'started_at';
+
+        $incidentsQuery = $monitor->incidents();
+        if ($incidentsSort === 'status') {
+            $incidentsQuery->orderByRaw("ended_at is null {$incidentsDirection}");
+        } elseif ($incidentsSort === 'duration') {
+            $incidentsQuery->orderByRaw(
+                "(julianday(coalesce(ended_at, CURRENT_TIMESTAMP)) - julianday(started_at)) {$incidentsDirection}",
+            );
+        } else {
+            $incidentsQuery->orderBy($incidentsSort, $incidentsDirection);
+        }
+
+        $incidents = $incidentsQuery
             ->paginate(10, ['*'], 'incidents_page')
             ->withQueryString();
 
+        $notifiersSort = request()->string('notifiers_sort', 'name')->toString();
+        $notifiersDirection = strtolower(request()->string('notifiers_direction', 'asc')->toString());
+        $notifiersDirection = in_array($notifiersDirection, ['asc', 'desc'], true) ? $notifiersDirection : 'asc';
+        $notifiersSortMap = [
+            'name' => 'name',
+            'status' => 'is_active',
+            'type' => 'type',
+            'apply_to_all' => 'apply_to_all',
+        ];
+        $notifiersSort = $notifiersSortMap[$notifiersSort] ?? $notifiersSortMap['name'];
+
         $notifiers = $monitor->notifiers()
+            ->orderBy($notifiersSort, $notifiersDirection)
             ->paginate(10, ['*'], 'notifiers_page')
             ->withQueryString();
 

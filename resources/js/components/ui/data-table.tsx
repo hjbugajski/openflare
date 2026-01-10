@@ -1,18 +1,40 @@
-import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { useState } from 'react';
 
+import {
+  type ColumnDef,
+  type SortingState,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
+
+import { IconArrowDown } from '@/components/icons/arrow-down';
+import { IconArrowUp } from '@/components/icons/arrow-up';
+import { IconArrowsSort } from '@/components/icons/arrows-sort';
 import { cn } from '@/lib/cn';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  initialSorting?: SortingState;
 }
 
-export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  initialSorting = [],
+}: DataTableProps<TData, TValue>) {
+  const [sorting, setSorting] = useState<SortingState>(initialSorting);
+
   // eslint-disable-next-line react-hooks/incompatible-library -- compiler auto-skips, acknowledged
   const table = useReactTable({
     data,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   return (
@@ -29,9 +51,26 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
                     header.column.columnDef.meta?.className,
                   )}
                 >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
+                  {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                      <span aria-hidden className="text-muted-foreground">
+                        {header.column.getIsSorted() === 'asc' ? (
+                          <IconArrowUp className="size-3" />
+                        ) : header.column.getIsSorted() === 'desc' ? (
+                          <IconArrowDown className="size-3" />
+                        ) : (
+                          <IconArrowsSort className="size-3" />
+                        )}
+                      </span>
+                    </button>
+                  ) : (
+                    flexRender(header.column.columnDef.header, header.getContext())
+                  )}
                 </th>
               ))}
             </tr>

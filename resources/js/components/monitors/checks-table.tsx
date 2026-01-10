@@ -58,7 +58,10 @@ export function ChecksTable({ checks }: ChecksTableProps) {
       columns={columns}
       paginated={checks}
       queryParam="checks_page"
+      sortParam="checks_sort"
+      directionParam="checks_direction"
       reloadOnly={['checks']}
+      initialSorting={[{ id: 'checked_at', desc: true }]}
     />
   );
 }

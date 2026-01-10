@@ -47,7 +47,8 @@ export default function NotifiersIndex({ notifiers }: Props) {
       meta: { className: 'whitespace-nowrap font-medium' },
     },
     {
-      accessorKey: 'is_active',
+      id: 'status',
+      accessorFn: (notifier) => notifier.is_active,
       header: 'status',
       cell: ({ row }) => (
         <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
@@ -67,7 +68,8 @@ export default function NotifiersIndex({ notifiers }: Props) {
       meta: { className: 'whitespace-nowrap' },
     },
     {
-      accessorKey: 'is_default',
+      id: 'default',
+      accessorFn: (notifier) => notifier.is_default,
       header: 'default',
       cell: ({ row }) => (row.original.is_default ? <Badge variant="secondary">yes</Badge> : null),
       meta: { className: 'whitespace-nowrap' },
@@ -80,6 +82,7 @@ export default function NotifiersIndex({ notifiers }: Props) {
     },
     {
       id: 'actions',
+      enableSorting: false,
       cell: ({ row }) => (
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" render={<Link href={edit(row.original.id).url} />}>
@@ -113,7 +116,12 @@ export default function NotifiersIndex({ notifiers }: Props) {
         </Card.Root>
       ) : (
         <Card.Root>
-          <ServerDataTable columns={columns} paginated={notifiers} queryParam="page" />
+          <ServerDataTable
+            columns={columns}
+            paginated={notifiers}
+            queryParam="page"
+            initialSorting={[{ id: 'name', desc: false }]}
+          />
         </Card.Root>
       )}
 

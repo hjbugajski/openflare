@@ -87,6 +87,10 @@ export default function MonitorsIndex({ monitors }: Props) {
   const defaultView: MonitorViewMode = auth.user!.preferences?.monitors_view ?? 'cards';
   const [viewMode, setViewMode] = usePreferencePatch('monitors_view', defaultView);
 
+  const sortedMonitors = [...monitors].sort((left, right) =>
+    left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
+  );
+
   const handleViewChange = (value: string[]) => {
     if (value.length > 0) {
       setViewMode(value[0] as MonitorViewMode);
@@ -145,13 +149,13 @@ export default function MonitorsIndex({ monitors }: Props) {
         </Card.Root>
       ) : viewMode === 'cards' ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {monitors.map((monitor) => (
+          {sortedMonitors.map((monitor) => (
             <MonitorCard key={monitor.id} monitor={monitor} />
           ))}
         </div>
       ) : (
         <Card.Root className="overflow-hidden">
-          <MonitorsTable monitors={monitors} />
+          <MonitorsTable monitors={sortedMonitors} />
         </Card.Root>
       )}
     </AppLayout>
