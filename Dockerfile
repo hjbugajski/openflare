@@ -89,10 +89,10 @@ RUN mkdir -p bootstrap/cache && \
 # ==============================================================================
 # Stage 4: Production image
 # ==============================================================================
-FROM php:8.4-fpm-alpine
+FROM php:8.4-fpm-alpine3.21
 
 # Install system dependencies
-RUN apk add --no-cache --upgrade \
+RUN apk add --no-cache \
     nginx \
     supervisor \
     sqlite \
