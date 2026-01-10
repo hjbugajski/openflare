@@ -1,21 +1,40 @@
 import type { StatusToolbarSummary } from '@/types';
 
+import { cva } from 'class-variance-authority';
+
 import { cn } from '@/lib/cn';
 
-const stateStyles = {
-  operational: {
-    label: 'fully operational',
-    dot: 'bg-emerald-400',
-  },
-  degraded: {
-    label: 'potential incident',
-    dot: 'bg-yellow-400',
-  },
-  incident: {
-    label: 'active incident',
-    dot: 'bg-red-500',
-  },
+const stateLabel = {
+  operational: 'fully operational',
+  degraded: 'potential incident',
+  incident: 'active incident',
 } as const;
+
+const dotVariants = cva('inline-flex h-2 w-2 shrink-0 animate-pulse rounded-full', {
+  variants: {
+    state: {
+      operational: 'bg-success',
+      degraded: 'bg-warning',
+      incident: 'bg-danger',
+    },
+  },
+  defaultVariants: {
+    state: 'operational',
+  },
+});
+
+const labelVariants = cva('font-semibold', {
+  variants: {
+    state: {
+      operational: 'text-success',
+      degraded: 'text-warning',
+      incident: 'text-danger',
+    },
+  },
+  defaultVariants: {
+    state: 'operational',
+  },
+});
 
 interface StatusToolbarProps {
   summary: StatusToolbarSummary | null | undefined;
@@ -27,7 +46,7 @@ export function StatusToolbar({ summary, size = 'default' }: StatusToolbarProps)
     return null;
   }
 
-  const state = stateStyles[summary.state];
+  const label = stateLabel[summary.state];
   const monitorLabel =
     summary.totalMonitors === 0
       ? 'no monitors configured'
@@ -48,11 +67,9 @@ export function StatusToolbar({ summary, size = 'default' }: StatusToolbarProps)
           },
         )}
       >
-        <div className="flex items-center gap-2 text-foreground">
-          <span
-            className={cn('inline-flex h-2 w-2 shrink-0 animate-pulse rounded-full', state.dot)}
-          />
-          <span className="font-semibold">{state.label}</span>
+        <div className="flex items-center gap-2">
+          <span className={dotVariants({ state: summary.state })} />
+          <span className={labelVariants({ state: summary.state })}>{label}</span>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
           <span>{monitorLabel}</span>
