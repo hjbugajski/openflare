@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Actions\GetStatusToolbarSummary;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -54,6 +55,9 @@ class HandleInertiaRequests extends Middleware
                 'port' => (int) config('reverb.apps.apps.0.options.port', 443),
                 'scheme' => config('reverb.apps.apps.0.options.scheme', 'https'),
             ],
+            'statusToolbar' => $request->user()
+                ? fn () => app(GetStatusToolbarSummary::class)->forUser($request->user())
+                : null,
         ];
     }
 }

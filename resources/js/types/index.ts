@@ -19,6 +19,16 @@ export type HttpMethod = 'GET' | 'HEAD';
 
 export type MonitorStatus = 'up' | 'down';
 
+export type StatusToolbarState = 'operational' | 'degraded' | 'incident';
+
+export interface StatusToolbarSummary {
+  state: StatusToolbarState;
+  totalMonitors: number;
+  activeMonitors: number;
+  activeIncidentCount: number;
+  recentFailureCount: number;
+}
+
 export interface Monitor {
   id: string;
   name: string;
@@ -144,4 +154,5 @@ export type PageProps<T extends Record<string, unknown> = Record<string, unknown
     user: User | null;
   };
   reverb: ReverbConfig;
+  statusToolbar?: StatusToolbarSummary | null;
 };
