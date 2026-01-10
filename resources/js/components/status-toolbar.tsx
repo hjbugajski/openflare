@@ -47,6 +47,11 @@ export function StatusToolbar({ summary, size = 'default' }: StatusToolbarProps)
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!summary) {
+      document.documentElement.style.removeProperty('--status-toolbar-height');
+      return;
+    }
+
     const element = toolbarRef.current;
     if (!element) {
       return;
@@ -69,7 +74,7 @@ export function StatusToolbar({ summary, size = 'default' }: StatusToolbarProps)
       observer.disconnect();
       document.documentElement.style.removeProperty('--status-toolbar-height');
     };
-  }, []);
+  }, [summary]);
 
   if (!summary) {
     return null;
