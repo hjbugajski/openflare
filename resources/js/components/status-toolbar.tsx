@@ -93,15 +93,7 @@ export function StatusToolbar({ summary, size = 'default' }: StatusToolbarProps)
       aria-live="polite"
       className="fixed bottom-0 left-0 z-40 w-full border-t border-border bg-background-secondary/95 backdrop-blur"
     >
-      <div
-        className={cn(
-          'mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs',
-          {
-            'max-w-2xl': size === 'sm',
-            'max-w-6xl': size === 'default',
-          },
-        )}
-      >
+      <div className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs">
         <div className="flex items-center gap-2">
           <span className={dotVariants({ state: summary.state })} />
           <span className={labelVariants({ state: summary.state })}>{label}</span>
