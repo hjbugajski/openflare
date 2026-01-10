@@ -49,7 +49,9 @@ export function StatusToolbar({ summary, size = 'default' }: StatusToolbarProps)
         )}
       >
         <div className="flex items-center gap-2 text-foreground">
-          <span className={cn('size-2 animate-pulse rounded-full', state.dot)} />
+          <span
+            className={cn('inline-flex size-2 shrink-0 animate-pulse rounded-full', state.dot)}
+          />
           <span className="font-semibold">{state.label}</span>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
