@@ -1,4 +1,7 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { useCallback, useRef } from 'react';
+
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 
 import { IconGrid } from '@/components/icons/grid';
 import { IconTable } from '@/components/icons/table';
@@ -13,15 +16,42 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Heading } from '@/components/ui/heading';
 import { ToggleGroup } from '@/components/ui/toggle-group';
 import { Tooltip } from '@/components/ui/tooltip';
+import { ValueUnit } from '@/components/ui/value-unit';
 import AppLayout from '@/layouts/app-layout';
 import { formatInterval } from '@/lib/format/interval';
 import { formatRelativeTime } from '@/lib/format/relative-time';
+import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { usePreferencePatch } from '@/lib/hooks/use-preference-patch';
 import { create, show } from '@/routes/monitors';
 import { type Monitor, type MonitorViewMode, type PageProps } from '@/types';
+import type {
+  IncidentOpenedEvent,
+  IncidentResolvedEvent,
+  MonitorCheckedEvent,
+} from '@/types/events';
 
 interface Props {
   monitors: Monitor[];
+}
+
+const RELOAD_DEBOUNCE_MS = 2000;
+
+function MonitorChannelListener({
+  monitorId,
+  onMonitorChecked,
+  onIncidentOpened,
+  onIncidentResolved,
+}: {
+  monitorId: string;
+  onMonitorChecked: (event: MonitorCheckedEvent) => void;
+  onIncidentOpened: (event: IncidentOpenedEvent) => void;
+  onIncidentResolved: (event: IncidentResolvedEvent) => void;
+}) {
+  useEcho<MonitorCheckedEvent>(`monitors.${monitorId}`, '.monitor.checked', onMonitorChecked);
+  useEcho<IncidentOpenedEvent>(`monitors.${monitorId}`, '.incident.opened', onIncidentOpened);
+  useEcho<IncidentResolvedEvent>(`monitors.${monitorId}`, '.incident.resolved', onIncidentResolved);
+
+  return null;
 }
 
 function MonitorCard({ monitor }: { monitor: Monitor }) {
@@ -45,30 +75,46 @@ function MonitorCard({ monitor }: { monitor: Monitor }) {
         </Card.Header>
 
         <Card.Content>
-          {monitor.daily_rollups?.length ? (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span>
-                  <span aria-hidden className="mr-1 text-accent">
-                    &gt;
-                  </span>
-                  30d uptime
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="inline-flex items-center gap-1">
+                <span aria-hidden className="text-accent">
+                  &gt;
                 </span>
-                <UptimePercentage data={monitor.daily_rollups} className="font-medium" />
-              </div>
-              <UptimeSparkline data={monitor.daily_rollups} height={16} />
+                <ValueUnit value={30} unit="d" />
+                <span>uptime</span>
+              </span>
+              <UptimePercentage data={monitor.daily_rollups ?? []} className="font-medium" />
             </div>
-          ) : null}
+            <UptimeSparkline data={monitor.daily_rollups ?? []} height={16} />
+          </div>
         </Card.Content>
 
-        <Card.Footer className="gap-1 whitespace-nowrap">
-          <span>every {interval.formatted}</span>
+        <Card.Footer className="gap-1 whitespace-nowrap text-foreground">
+          <span className="inline-flex items-baseline gap-1">
+            <span>every</span>
+            <ValueUnit value={interval.value} unit={interval.unit} />
+          </span>
           {monitor.latest_check ? (
             <>
               <span>•</span>
-              <span>{monitor.latest_check.response_time_ms || 0}ms</span>
+              <ValueUnit value={monitor.latest_check.response_time_ms || 0} unit="ms" />
               <span>•</span>
-              <span>{formatRelativeTime(monitor.latest_check.checked_at)}</span>
+              {(() => {
+                const relativeTime = formatRelativeTime(monitor.latest_check.checked_at, {
+                  format: 'parts',
+                });
+
+                return relativeTime ? (
+                  <ValueUnit
+                    value={relativeTime.value}
+                    unit={relativeTime.unit}
+                    suffix={relativeTime.suffix}
+                  />
+                ) : (
+                  <span>{formatRelativeTime(monitor.latest_check.checked_at)}</span>
+                );
+              })()}
             </>
           ) : (
             <>
@@ -87,6 +133,43 @@ export default function MonitorsIndex({ monitors }: Props) {
   const defaultView: MonitorViewMode = auth.user!.preferences?.monitors_view ?? 'cards';
   const [viewMode, setViewMode] = usePreferencePatch('monitors_view', defaultView);
 
+  const sortedMonitors = [...monitors].sort((left, right) =>
+    left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
+  );
+
+  const pendingReloads = useRef<Set<string>>(new Set());
+
+  const flushReloads = useDebouncedCallback(() => {
+    if (pendingReloads.current.size === 0) {
+      return;
+    }
+
+    const only = Array.from(pendingReloads.current);
+    pendingReloads.current.clear();
+
+    router.reload({ only });
+  }, RELOAD_DEBOUNCE_MS);
+
+  const scheduleReload = useCallback(
+    (key: string) => {
+      pendingReloads.current.add(key);
+      flushReloads();
+    },
+    [flushReloads],
+  );
+
+  const handleMonitorChecked = useCallback(() => {
+    scheduleReload('monitors');
+  }, [scheduleReload]);
+
+  const handleIncidentOpened = useCallback(() => {
+    scheduleReload('monitors');
+  }, [scheduleReload]);
+
+  const handleIncidentResolved = useCallback(() => {
+    scheduleReload('monitors');
+  }, [scheduleReload]);
+
   const handleViewChange = (value: string[]) => {
     if (value.length > 0) {
       setViewMode(value[0] as MonitorViewMode);
@@ -96,6 +179,16 @@ export default function MonitorsIndex({ monitors }: Props) {
   return (
     <AppLayout>
       <Head title="Monitors" />
+
+      {sortedMonitors.map((monitor) => (
+        <MonitorChannelListener
+          key={monitor.id}
+          monitorId={monitor.id}
+          onMonitorChecked={handleMonitorChecked}
+          onIncidentOpened={handleIncidentOpened}
+          onIncidentResolved={handleIncidentResolved}
+        />
+      ))}
 
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -145,13 +238,13 @@ export default function MonitorsIndex({ monitors }: Props) {
         </Card.Root>
       ) : viewMode === 'cards' ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {monitors.map((monitor) => (
+          {sortedMonitors.map((monitor) => (
             <MonitorCard key={monitor.id} monitor={monitor} />
           ))}
         </div>
       ) : (
         <Card.Root className="overflow-hidden">
-          <MonitorsTable monitors={monitors} />
+          <MonitorsTable monitors={sortedMonitors} />
         </Card.Root>
       )}
     </AppLayout>

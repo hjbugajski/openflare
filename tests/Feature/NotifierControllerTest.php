@@ -218,6 +218,7 @@ describe('store', function () {
     it('attaches all monitors when apply_to_existing is true', function () {
         $monitors = Monitor::factory(3)->create(['user_id' => $this->user->uuid]);
         Monitor::factory()->create(); // other user's monitor
+        $excludedMonitor = $monitors->first();
 
         $this->actingAs($this->user)
             ->post(route('notifiers.store'), [
@@ -228,6 +229,7 @@ describe('store', function () {
                 ],
                 'is_active' => true,
                 'apply_to_existing' => true,
+                'excluded_monitors' => [(string) $excludedMonitor->id],
             ])
             ->assertRedirect(route('notifiers.index'));
 
@@ -236,6 +238,12 @@ describe('store', function () {
         expect($notifier->monitors)->toHaveCount(3);
         expect($notifier->monitors->pluck('id')->sort()->values())
             ->toEqual($monitors->pluck('id')->sort()->values());
+
+        $this->assertDatabaseHas('monitor_notifier', [
+            'notifier_id' => $notifier->id,
+            'monitor_id' => $excludedMonitor->id,
+            'is_excluded' => true,
+        ]);
     });
 
     it('does not attach monitors when none provided', function () {
@@ -408,6 +416,39 @@ describe('update', function () {
         expect($notifier->monitors)->toHaveCount(3);
         expect($notifier->monitors->pluck('id')->sort()->values())
             ->toEqual($monitors->pluck('id')->sort()->values());
+    });
+
+    it('syncs excluded monitors when apply_to_existing is true on update', function () {
+        $notifier = Notifier::factory()->discord()->create([
+            'user_id' => $this->user->uuid,
+        ]);
+        $monitors = Monitor::factory(2)->create(['user_id' => $this->user->uuid]);
+        $notifier->monitors()->sync([
+            (string) $monitors[0]->id => ['is_excluded' => true],
+            (string) $monitors[1]->id => ['is_excluded' => false],
+        ]);
+
+        $this->actingAs($this->user)
+            ->put(route('notifiers.update', $notifier), [
+                'name' => $notifier->name,
+                'config' => [
+                    'webhook_url' => $notifier->config['webhook_url'],
+                ],
+                'apply_to_existing' => true,
+                'excluded_monitors' => [(string) $monitors[1]->id],
+            ])
+            ->assertRedirect(route('notifiers.index'));
+
+        $this->assertDatabaseHas('monitor_notifier', [
+            'notifier_id' => $notifier->id,
+            'monitor_id' => $monitors[1]->id,
+            'is_excluded' => true,
+        ]);
+        $this->assertDatabaseHas('monitor_notifier', [
+            'notifier_id' => $notifier->id,
+            'monitor_id' => $monitors[0]->id,
+            'is_excluded' => false,
+        ]);
     });
 });
 

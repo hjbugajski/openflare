@@ -101,6 +101,7 @@ RUN apk add --no-cache \
     libzip-dev \
     oniguruma-dev \
     libpq-dev \
+    libsodium \
     && docker-php-ext-install \
     pdo_pgsql \
     pdo_sqlite \

@@ -1,4 +1,7 @@
-import { Head, Link } from '@inertiajs/react';
+import { useCallback, useRef } from 'react';
+
+import { Head, Link, router } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { ServerDataTable } from '@/components/server-data-table';
@@ -11,8 +14,14 @@ import { Stats } from '@/components/ui/stats';
 import AppLayout from '@/layouts/app-layout';
 import { formatDateTime } from '@/lib/format/date-time';
 import { formatDuration } from '@/lib/format/duration';
+import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { show } from '@/routes/monitors';
 import type { IncidentWithMonitor, Paginated } from '@/types';
+import type {
+  IncidentOpenedEvent,
+  IncidentResolvedEvent,
+  MonitorCheckedEvent,
+} from '@/types/events';
 
 interface MonitorCounts {
   up: number;
@@ -23,11 +32,40 @@ interface MonitorCounts {
 interface Props {
   counts: MonitorCounts;
   incidents: Paginated<IncidentWithMonitor>;
+  monitorIds: string[];
 }
+
+const RELOAD_DEBOUNCE_MS = 2000;
+
+function MonitorChannelListener({
+  monitorId,
+  onMonitorChecked,
+  onIncidentOpened,
+  onIncidentResolved,
+}: {
+  monitorId: string;
+  onMonitorChecked: (event: MonitorCheckedEvent) => void;
+  onIncidentOpened: (event: IncidentOpenedEvent) => void;
+  onIncidentResolved: (event: IncidentResolvedEvent) => void;
+}) {
+  useEcho<MonitorCheckedEvent>(`monitors.${monitorId}`, '.monitor.checked', onMonitorChecked);
+  useEcho<IncidentOpenedEvent>(`monitors.${monitorId}`, '.incident.opened', onIncidentOpened);
+  useEcho<IncidentResolvedEvent>(`monitors.${monitorId}`, '.incident.resolved', onIncidentResolved);
+
+  return null;
+}
+
+const getIncidentDurationMs = (incident: IncidentWithMonitor) => {
+  const start = new Date(incident.started_at).getTime();
+  const end = incident.ended_at ? new Date(incident.ended_at).getTime() : Date.now();
+
+  return end - start;
+};
 
 const columns: ColumnDef<IncidentWithMonitor>[] = [
   {
     id: 'monitor',
+    accessorFn: (incident) => incident.monitor.name,
     header: 'monitor',
     cell: ({ row }) => (
       <Link
@@ -42,7 +80,8 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
     },
   },
   {
-    accessorKey: 'ended_at',
+    id: 'status',
+    accessorFn: (incident) => (incident.ended_at ? 'resolved' : 'active'),
     header: 'status',
     cell: ({ row }) => (
       <Badge variant={row.original.ended_at ? 'secondary' : 'danger'}>
@@ -63,6 +102,7 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
   },
   {
     id: 'duration',
+    accessorFn: (incident) => getIncidentDurationMs(incident),
     header: 'duration',
     cell: ({ row }) => formatDuration(row.original.started_at, row.original.ended_at),
     meta: {
@@ -79,7 +119,7 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
   },
   {
     accessorKey: 'ended_at',
-    id: 'ended_at_display',
+    id: 'ended_at',
     header: 'ended',
     cell: ({ row }) =>
       row.original.ended_at ? formatDateTime(row.original.ended_at) : <>&ndash;</>,
@@ -89,12 +129,57 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
   },
 ];
 
-export default function DashboardIndex({ counts, incidents }: Props) {
+export default function DashboardIndex({ counts, incidents, monitorIds }: Props) {
   const total = counts.up + counts.down + counts.inactive;
+
+  const pendingReloads = useRef<Set<string>>(new Set());
+
+  const flushReloads = useDebouncedCallback(() => {
+    if (pendingReloads.current.size === 0) {
+      return;
+    }
+
+    const only = Array.from(pendingReloads.current);
+    pendingReloads.current.clear();
+
+    router.reload({ only });
+  }, RELOAD_DEBOUNCE_MS);
+
+  const scheduleReload = useCallback(
+    (key: string) => {
+      pendingReloads.current.add(key);
+      flushReloads();
+    },
+    [flushReloads],
+  );
+
+  const handleMonitorChecked = useCallback(() => {
+    scheduleReload('counts');
+  }, [scheduleReload]);
+
+  const handleIncidentOpened = useCallback(() => {
+    scheduleReload('counts');
+    scheduleReload('incidents');
+  }, [scheduleReload]);
+
+  const handleIncidentResolved = useCallback(() => {
+    scheduleReload('counts');
+    scheduleReload('incidents');
+  }, [scheduleReload]);
 
   return (
     <AppLayout>
       <Head title="Overview" />
+
+      {monitorIds.map((monitorId) => (
+        <MonitorChannelListener
+          key={monitorId}
+          monitorId={monitorId}
+          onMonitorChecked={handleMonitorChecked}
+          onIncidentOpened={handleIncidentOpened}
+          onIncidentResolved={handleIncidentResolved}
+        />
+      ))}
 
       <Heading title="overview" />
       <Stats.Root>
@@ -125,7 +210,12 @@ export default function DashboardIndex({ counts, incidents }: Props) {
         {incidents.data.length === 0 ? (
           <EmptyState className="p-8" message="no incidents" />
         ) : (
-          <ServerDataTable columns={columns} paginated={incidents} queryParam="page" />
+          <ServerDataTable
+            columns={columns}
+            paginated={incidents}
+            queryParam="page"
+            initialSorting={[{ id: 'started_at', desc: true }]}
+          />
         )}
       </Card.Root>
     </AppLayout>

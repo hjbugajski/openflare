@@ -49,13 +49,20 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
       },
     },
     {
-      accessorKey: 'is_active',
+      id: 'status',
+      accessorFn: (notifier) => notifier.is_active,
       header: 'status',
-      cell: ({ row }) => (
-        <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
-          {row.original.is_active ? 'active' : 'inactive'}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        if (row.original.pivot?.is_excluded) {
+          return <Badge variant="secondary">excluded</Badge>;
+        }
+
+        return (
+          <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
+            {row.original.is_active ? 'active' : 'inactive'}
+          </Badge>
+        );
+      },
       meta: {
         className: 'whitespace-nowrap',
       },
@@ -88,6 +95,7 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
     {
       id: 'actions',
       header: '',
+      enableSorting: false,
       cell: ({ row }) => (
         <Button variant="tertiary" size="icon" onClick={() => setNotifierToRemove(row.original)}>
           <span className="sr-only">remove</span>
@@ -120,7 +128,10 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
         columns={columns}
         paginated={notifiers}
         queryParam="notifiers_page"
+        sortParam="notifiers_sort"
+        directionParam="notifiers_direction"
         reloadOnly={['notifiers']}
+        initialSorting={[{ id: 'name', desc: false }]}
       />
     </>
   );

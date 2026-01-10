@@ -23,11 +23,28 @@ class NotifierController extends Controller
 {
     public function index(): Response
     {
+        $sort = request()->string('sort', 'name')->toString();
+        $direction = strtolower(request()->string('direction', 'asc')->toString());
+        $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : 'asc';
+        $sortMap = [
+            'name' => 'name',
+            'status' => 'is_active',
+            'type' => 'type',
+            'default' => 'is_default',
+            'monitors_count' => 'monitors_count',
+            'excluded' => 'excluded_monitors_count',
+        ];
+        $sort = $sortMap[$sort] ?? $sortMap['name'];
+
         $notifiers = Notifier::query()
             ->where('user_id', Auth::user()->uuid)
             ->withCount('monitors')
-            ->latest()
-            ->paginate(10);
+            ->withCount([
+                'monitors as excluded_monitors_count' => fn ($query) => $query->where('monitor_notifier.is_excluded', true),
+            ])
+            ->orderBy($sort, $direction)
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('notifiers/index', [
             'notifiers' => $notifiers,
@@ -65,7 +82,11 @@ class NotifierController extends Controller
 
         if ($applyToAll) {
             $allMonitorIds = Monitor::where('user_id', Auth::user()->uuid)->pluck('id');
-            $notifier->monitors()->sync($allMonitorIds);
+            $excludedMonitorIds = collect($request->validated('excluded_monitors', []));
+            $syncData = $allMonitorIds->mapWithKeys(fn (string $id) => [
+                $id => ['is_excluded' => $excludedMonitorIds->contains($id)],
+            ]);
+            $notifier->monitors()->sync($syncData);
         } else {
             $monitorIds = collect($request->validated('monitors', []));
             if ($monitorIds->isNotEmpty()) {
@@ -101,13 +122,17 @@ class NotifierController extends Controller
         $applyToAll = $request->validated('apply_to_existing', false);
 
         $notifier->update([
-            ...$request->safe()->except(['monitors', 'apply_to_existing']),
+            ...$request->safe()->except(['monitors', 'apply_to_existing', 'excluded_monitors']),
             'apply_to_all' => $applyToAll,
         ]);
 
         if ($applyToAll) {
             $allMonitorIds = Monitor::where('user_id', Auth::user()->uuid)->pluck('id');
-            $notifier->monitors()->sync($allMonitorIds);
+            $excludedMonitorIds = collect($request->validated('excluded_monitors', []));
+            $syncData = $allMonitorIds->mapWithKeys(fn (string $id) => [
+                $id => ['is_excluded' => $excludedMonitorIds->contains($id)],
+            ]);
+            $notifier->monitors()->sync($syncData);
         } elseif ($request->has('monitors')) {
             $notifier->monitors()->sync($request->validated('monitors'));
         }

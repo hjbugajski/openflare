@@ -68,6 +68,7 @@ export const notifierSchema = z
     is_default: z.boolean(),
     apply_to_existing: z.boolean().optional(),
     monitors: z.array(z.string()),
+    excluded_monitors: z.array(z.string()).optional(),
   })
   .superRefine((data, ctx) => {
     const result = validateNotifierConfig(data.type, data.config);

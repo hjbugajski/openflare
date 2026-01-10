@@ -19,6 +19,16 @@ export type HttpMethod = 'GET' | 'HEAD';
 
 export type MonitorStatus = 'up' | 'down';
 
+export type StatusToolbarState = 'operational' | 'degraded' | 'incident';
+
+export interface StatusToolbarSummary {
+  state: StatusToolbarState;
+  totalMonitors: number;
+  activeMonitors: number;
+  activeIncidentCount: number;
+  recentFailureCount: number;
+}
+
 export interface Monitor {
   id: string;
   name: string;
@@ -66,6 +76,9 @@ export interface NotifierSummary {
   is_active: boolean;
   is_default?: boolean;
   apply_to_all?: boolean;
+  pivot?: {
+    is_excluded: boolean;
+  };
 }
 
 /** Summary type for monitor when used in lists/associations */
@@ -73,6 +86,9 @@ export interface MonitorSummary {
   id: string;
   name: string;
   url: string;
+  pivot?: {
+    is_excluded: boolean;
+  };
 }
 
 /** Full notifier with config details */
@@ -88,6 +104,7 @@ export interface Notifier {
   is_default: boolean;
   apply_to_all: boolean;
   monitors_count?: number;
+  excluded_monitors_count?: number;
   monitors?: MonitorSummary[];
   created_at?: string;
   updated_at?: string;
@@ -137,4 +154,5 @@ export type PageProps<T extends Record<string, unknown> = Record<string, unknown
     user: User | null;
   };
   reverb: ReverbConfig;
+  statusToolbar?: StatusToolbarSummary | null;
 };

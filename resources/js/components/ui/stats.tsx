@@ -20,7 +20,7 @@ function Card({ className, ...props }: ComponentProps<'div'>) {
 
 function Term({ className, ...props }: ComponentProps<'dt'>) {
   return (
-    <dt className={cn('text-base text-muted-foreground', className)} {...props}>
+    <dt className={cn('text-sm font-medium text-muted-foreground uppercase', className)} {...props}>
       <span aria-hidden className="text-accent">
         &gt;
       </span>{' '}

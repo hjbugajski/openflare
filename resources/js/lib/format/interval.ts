@@ -1,31 +1,63 @@
+export interface IntervalParts {
+  value: number;
+  unit: string;
+  formatted: string;
+}
+
+interface FormatIntervalOptions {
+  verbose?: boolean;
+  format?: 'parts' | 'string';
+}
+
+export function formatInterval(seconds: number, verbose?: boolean): IntervalParts;
 export function formatInterval(
   seconds: number,
-  verbose = false,
-): { value: number; unit: string; formatted: string } {
+  options: FormatIntervalOptions & { format: 'string' },
+): string;
+export function formatInterval(
+  seconds: number,
+  options?: FormatIntervalOptions | boolean,
+): IntervalParts | string {
+  let verbose: boolean;
+  let format: 'parts' | 'string';
+
+  if (typeof options === 'boolean' || options === undefined) {
+    verbose = typeof options === 'boolean' ? options : false;
+    format = 'parts';
+  } else {
+    verbose = options.verbose ?? false;
+    format = options.format ?? 'parts';
+  }
+
+  let parts: IntervalParts;
   if (seconds < 60) {
     const unit = verbose ? `second${seconds !== 1 ? 's' : ''}` : 's';
-    return {
+    parts = {
       value: seconds,
       unit,
       formatted: `${seconds}${verbose ? ' ' : ''}${unit}`,
     };
-  }
-
-  if (seconds < 3600) {
+  } else if (seconds < 3600) {
     const minutes = Math.floor(seconds / 60);
     const unit = verbose ? `minute${minutes !== 1 ? 's' : ''}` : 'm';
-    return {
+    parts = {
       value: minutes,
       unit,
       formatted: `${minutes}${verbose ? ' ' : ''}${unit}`,
     };
+  } else {
+    const hours = Math.floor(seconds / 3600);
+    const unit = verbose ? `hour${hours !== 1 ? 's' : ''}` : 'h';
+    parts = {
+      value: hours,
+      unit,
+      formatted: `${hours}${verbose ? ' ' : ''}${unit}`,
+    };
   }
 
-  const hours = Math.floor(seconds / 3600);
-  const unit = verbose ? `hour${hours !== 1 ? 's' : ''}` : 'h';
-  return {
-    value: hours,
-    unit,
-    formatted: `${hours}${verbose ? ' ' : ''}${unit}`,
-  };
+  if (format === 'string') {
+    return parts.formatted;
+  }
+
+  return parts;
 }

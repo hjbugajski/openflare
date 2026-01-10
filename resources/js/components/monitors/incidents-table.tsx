@@ -6,9 +6,17 @@ import { formatDateTime } from '@/lib/format/date-time';
 import { formatDuration } from '@/lib/format/duration';
 import type { Incident, Paginated } from '@/types';
 
+const getIncidentDurationMs = (incident: Incident) => {
+  const start = new Date(incident.started_at).getTime();
+  const end = incident.ended_at ? new Date(incident.ended_at).getTime() : Date.now();
+
+  return end - start;
+};
+
 const columns: ColumnDef<Incident>[] = [
   {
-    accessorKey: 'ended_at',
+    id: 'status',
+    accessorFn: (incident) => (incident.ended_at ? 'resolved' : 'active'),
     header: 'status',
     cell: ({ row }) => (
       <Badge variant={row.original.ended_at ? 'secondary' : 'danger'}>
@@ -29,6 +37,7 @@ const columns: ColumnDef<Incident>[] = [
   },
   {
     id: 'duration',
+    accessorFn: (incident) => getIncidentDurationMs(incident),
     header: 'duration',
     cell: ({ row }) => formatDuration(row.original.started_at, row.original.ended_at),
     meta: {
@@ -45,7 +54,7 @@ const columns: ColumnDef<Incident>[] = [
   },
   {
     accessorKey: 'ended_at',
-    id: 'ended_at_display',
+    id: 'ended_at',
     header: 'ended',
     cell: ({ row }) =>
       row.original.ended_at ? formatDateTime(row.original.ended_at) : <>&ndash;</>,
@@ -65,7 +74,10 @@ export function IncidentsTable({ incidents }: IncidentsTableProps) {
       columns={columns}
       paginated={incidents}
       queryParam="incidents_page"
+      sortParam="incidents_sort"
+      directionParam="incidents_direction"
       reloadOnly={['incidents']}
+      initialSorting={[{ id: 'started_at', desc: true }]}
     />
   );
 }
