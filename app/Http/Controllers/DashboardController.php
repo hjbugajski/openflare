@@ -75,6 +75,7 @@ class DashboardController extends Controller
         return Inertia::render('dashboard/index', [
             'counts' => $counts,
             'incidents' => $incidents,
+            'monitorIds' => $monitorIds->values(),
         ]);
     }
 }

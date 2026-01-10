@@ -1,4 +1,7 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { useCallback, useRef } from 'react';
+
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 
 import { IconGrid } from '@/components/icons/grid';
 import { IconTable } from '@/components/icons/table';
@@ -16,12 +19,38 @@ import { Tooltip } from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/app-layout';
 import { formatInterval } from '@/lib/format/interval';
 import { formatRelativeTime } from '@/lib/format/relative-time';
+import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { usePreferencePatch } from '@/lib/hooks/use-preference-patch';
 import { create, show } from '@/routes/monitors';
 import { type Monitor, type MonitorViewMode, type PageProps } from '@/types';
+import type {
+  IncidentOpenedEvent,
+  IncidentResolvedEvent,
+  MonitorCheckedEvent,
+} from '@/types/events';
 
 interface Props {
   monitors: Monitor[];
+}
+
+const RELOAD_DEBOUNCE_MS = 2000;
+
+function MonitorChannelListener({
+  monitorId,
+  onMonitorChecked,
+  onIncidentOpened,
+  onIncidentResolved,
+}: {
+  monitorId: string;
+  onMonitorChecked: (event: MonitorCheckedEvent) => void;
+  onIncidentOpened: (event: IncidentOpenedEvent) => void;
+  onIncidentResolved: (event: IncidentResolvedEvent) => void;
+}) {
+  useEcho<MonitorCheckedEvent>(`monitors.${monitorId}`, '.monitor.checked', onMonitorChecked);
+  useEcho<IncidentOpenedEvent>(`monitors.${monitorId}`, '.incident.opened', onIncidentOpened);
+  useEcho<IncidentResolvedEvent>(`monitors.${monitorId}`, '.incident.resolved', onIncidentResolved);
+
+  return null;
 }
 
 function MonitorCard({ monitor }: { monitor: Monitor }) {
@@ -91,6 +120,39 @@ export default function MonitorsIndex({ monitors }: Props) {
     left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
   );
 
+  const pendingReloads = useRef<Set<string>>(new Set());
+
+  const flushReloads = useDebouncedCallback(() => {
+    if (pendingReloads.current.size === 0) {
+      return;
+    }
+
+    const only = Array.from(pendingReloads.current);
+    pendingReloads.current.clear();
+
+    router.reload({ only });
+  }, RELOAD_DEBOUNCE_MS);
+
+  const scheduleReload = useCallback(
+    (key: string) => {
+      pendingReloads.current.add(key);
+      flushReloads();
+    },
+    [flushReloads],
+  );
+
+  const handleMonitorChecked = useCallback(() => {
+    scheduleReload('monitors');
+  }, [scheduleReload]);
+
+  const handleIncidentOpened = useCallback(() => {
+    scheduleReload('monitors');
+  }, [scheduleReload]);
+
+  const handleIncidentResolved = useCallback(() => {
+    scheduleReload('monitors');
+  }, [scheduleReload]);
+
   const handleViewChange = (value: string[]) => {
     if (value.length > 0) {
       setViewMode(value[0] as MonitorViewMode);
@@ -100,6 +162,16 @@ export default function MonitorsIndex({ monitors }: Props) {
   return (
     <AppLayout>
       <Head title="Monitors" />
+
+      {sortedMonitors.map((monitor) => (
+        <MonitorChannelListener
+          key={monitor.id}
+          monitorId={monitor.id}
+          onMonitorChecked={handleMonitorChecked}
+          onIncidentOpened={handleIncidentOpened}
+          onIncidentResolved={handleIncidentResolved}
+        />
+      ))}
 
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
