@@ -16,6 +16,7 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Heading } from '@/components/ui/heading';
 import { Stats } from '@/components/ui/stats';
+import { ValueUnit } from '@/components/ui/value-unit';
 import AppLayout from '@/layouts/app-layout';
 import { formatInterval } from '@/lib/format/interval';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
@@ -163,11 +164,11 @@ export default function MonitorsShow({
         <Card.Header>
           <div className="flex items-center justify-between">
             <Heading level={2} title="Uptime" />
-            <UptimePercentage data={dailyRollups} className="font-medium" />
+            <UptimePercentage data={dailyRollups ?? []} className="font-medium" />
           </div>
         </Card.Header>
         <Card.Content>
-          <UptimeSparkline data={dailyRollups} height={32} className="w-full" />
+          <UptimeSparkline data={dailyRollups ?? []} height={32} className="w-full" />
           <div className="mt-2 flex justify-between text-xs text-muted-foreground">
             <span>30d ago</span>
             <span>today</span>
@@ -183,15 +184,13 @@ export default function MonitorsShow({
         <Stats.Card>
           <Stats.Term>interval</Stats.Term>
           <Stats.Value>
-            {interval.value}
-            <span className="text-muted-foreground">{interval.unit}</span>
+            <ValueUnit value={interval.value} unit={interval.unit} />
           </Stats.Value>
         </Stats.Card>
         <Stats.Card>
           <Stats.Term>timeout</Stats.Term>
           <Stats.Value>
-            {monitor.timeout}
-            <span className="text-muted-foreground">s</span>
+            <ValueUnit value={monitor.timeout} unit="s" />
           </Stats.Value>
         </Stats.Card>
         <Stats.Card>

@@ -2,6 +2,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
+import { ValueUnit } from '@/components/ui/value-unit';
 import { formatDateTime } from '@/lib/format/date-time';
 import type { MonitorCheck, Paginated } from '@/types';
 
@@ -23,12 +24,7 @@ const columns: ColumnDef<MonitorCheck>[] = [
   {
     accessorKey: 'response_time_ms',
     header: 'latency',
-    cell: ({ row }) => (
-      <>
-        {row.original.response_time_ms}
-        <span className="text-muted-foreground">ms</span>
-      </>
-    ),
+    cell: ({ row }) => <ValueUnit value={row.original.response_time_ms} unit="ms" />,
   },
   {
     accessorKey: 'error_message',

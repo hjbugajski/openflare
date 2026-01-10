@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Heading } from '@/components/ui/heading';
 import { ToggleGroup } from '@/components/ui/toggle-group';
 import { Tooltip } from '@/components/ui/tooltip';
+import { ValueUnit } from '@/components/ui/value-unit';
 import AppLayout from '@/layouts/app-layout';
 import { formatInterval } from '@/lib/format/interval';
 import { formatRelativeTime } from '@/lib/format/relative-time';
@@ -74,30 +75,46 @@ function MonitorCard({ monitor }: { monitor: Monitor }) {
         </Card.Header>
 
         <Card.Content>
-          {monitor.daily_rollups?.length ? (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span>
-                  <span aria-hidden className="mr-1 text-accent">
-                    &gt;
-                  </span>
-                  30d uptime
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="inline-flex items-center gap-1">
+                <span aria-hidden className="text-accent">
+                  &gt;
                 </span>
-                <UptimePercentage data={monitor.daily_rollups} className="font-medium" />
-              </div>
-              <UptimeSparkline data={monitor.daily_rollups} height={16} />
+                <ValueUnit value={30} unit="d" />
+                <span>uptime</span>
+              </span>
+              <UptimePercentage data={monitor.daily_rollups ?? []} className="font-medium" />
             </div>
-          ) : null}
+            <UptimeSparkline data={monitor.daily_rollups ?? []} height={16} />
+          </div>
         </Card.Content>
 
-        <Card.Footer className="gap-1 whitespace-nowrap">
-          <span>every {interval.formatted}</span>
+        <Card.Footer className="gap-1 whitespace-nowrap text-foreground">
+          <span className="inline-flex items-baseline gap-1">
+            <span>every</span>
+            <ValueUnit value={interval.value} unit={interval.unit} />
+          </span>
           {monitor.latest_check ? (
             <>
               <span>•</span>
-              <span>{monitor.latest_check.response_time_ms || 0}ms</span>
+              <ValueUnit value={monitor.latest_check.response_time_ms || 0} unit="ms" />
               <span>•</span>
-              <span>{formatRelativeTime(monitor.latest_check.checked_at)}</span>
+              {(() => {
+                const relativeTime = formatRelativeTime(monitor.latest_check.checked_at, {
+                  format: 'parts',
+                });
+
+                return relativeTime ? (
+                  <ValueUnit
+                    value={relativeTime.value}
+                    unit={relativeTime.unit}
+                    suffix={relativeTime.suffix}
+                  />
+                ) : (
+                  <span>{formatRelativeTime(monitor.latest_check.checked_at)}</span>
+                );
+              })()}
             </>
           ) : (
             <>

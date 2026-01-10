@@ -5,6 +5,7 @@ import { MonitorStatusBadge } from '@/components/monitors/monitor-status-badge';
 import { UptimePercentage } from '@/components/monitors/uptime-percentage';
 import { UptimeSparkline } from '@/components/monitors/uptime-sparkline';
 import { DataTable } from '@/components/ui/data-table';
+import { ValueUnit } from '@/components/ui/value-unit';
 import { formatInterval } from '@/lib/format/interval';
 import { formatRelativeTime } from '@/lib/format/relative-time';
 import { show } from '@/routes/monitors';
@@ -83,10 +84,7 @@ const columns: ColumnDef<Monitor>[] = [
     id: 'sparkline',
     header: '',
     enableSorting: false,
-    cell: ({ row }) =>
-      row.original.daily_rollups?.length ? (
-        <UptimeSparkline data={row.original.daily_rollups} height={16} />
-      ) : null,
+    cell: ({ row }) => <UptimeSparkline data={row.original.daily_rollups ?? []} height={16} />,
     meta: { className: 'w-full min-w-24' },
   },
   {
@@ -94,12 +92,7 @@ const columns: ColumnDef<Monitor>[] = [
     header: 'interval',
     cell: ({ row }) => {
       const interval = formatInterval(row.original.interval);
-      return (
-        <>
-          {interval.value}
-          <span className="text-muted-foreground">{interval.unit}</span>
-        </>
-      );
+      return <ValueUnit value={interval.value} unit={interval.unit} />;
     },
     meta: { className: 'whitespace-nowrap' },
   },
@@ -110,10 +103,7 @@ const columns: ColumnDef<Monitor>[] = [
     cell: ({ row }) => {
       const latency = row.original.latest_check?.response_time_ms;
       return latency != null ? (
-        <>
-          {latency}
-          <span className="text-muted-foreground">ms</span>
-        </>
+        <ValueUnit value={latency} unit="ms" />
       ) : (
         <span className="text-muted-foreground">&ndash;</span>
       );
@@ -124,12 +114,25 @@ const columns: ColumnDef<Monitor>[] = [
     id: 'last_check',
     accessorFn: (monitor) => monitor.latest_check?.checked_at ?? '',
     header: 'last check',
-    cell: ({ row }) =>
-      row.original.latest_check ? (
-        formatRelativeTime(row.original.latest_check.checked_at)
+    cell: ({ row }) => {
+      if (!row.original.latest_check) {
+        return <span className="text-muted-foreground">pending</span>;
+      }
+
+      const relativeTime = formatRelativeTime(row.original.latest_check.checked_at, {
+        format: 'parts',
+      });
+
+      return relativeTime ? (
+        <ValueUnit
+          value={relativeTime.value}
+          unit={relativeTime.unit}
+          suffix={relativeTime.suffix}
+        />
       ) : (
-        <span className="text-muted-foreground">pending</span>
-      ),
+        <span>{formatRelativeTime(row.original.latest_check.checked_at)}</span>
+      );
+    },
     meta: { className: 'whitespace-nowrap' },
   },
 ];
