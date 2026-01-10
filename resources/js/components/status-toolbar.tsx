@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import type { StatusToolbarSummary } from '@/types';
 
 import { cva } from 'class-variance-authority';
@@ -42,6 +44,33 @@ interface StatusToolbarProps {
 }
 
 export function StatusToolbar({ summary, size = 'default' }: StatusToolbarProps) {
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = toolbarRef.current;
+    if (!element) {
+      return;
+    }
+
+    const updateHeight = () => {
+      const height = element.getBoundingClientRect().height;
+      document.documentElement.style.setProperty(
+        '--status-toolbar-height',
+        `${Math.ceil(height)}px`,
+      );
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty('--status-toolbar-height');
+    };
+  }, []);
+
   if (!summary) {
     return null;
   }
@@ -54,6 +83,7 @@ export function StatusToolbar({ summary, size = 'default' }: StatusToolbarProps)
 
   return (
     <div
+      ref={toolbarRef}
       role="status"
       aria-live="polite"
       className="fixed bottom-0 left-0 z-40 w-full border-t border-border bg-background-secondary/95 backdrop-blur"

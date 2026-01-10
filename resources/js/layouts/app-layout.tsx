@@ -18,10 +18,13 @@ export default function AppLayout({ children, size = 'default' }: AppLayoutProps
     <div className="flex w-full flex-col">
       <Navigation />
       <main
-        className={cn('mx-auto mt-12 flex w-full flex-col gap-4 p-4 pb-20', {
-          'max-w-2xl': size === 'sm',
-          'max-w-6xl': size === 'default',
-        })}
+        className={cn(
+          'mx-auto mt-12 flex w-full flex-col gap-4 p-4 pb-[calc(var(--status-toolbar-height,0px)+1rem)]',
+          {
+            'max-w-2xl': size === 'sm',
+            'max-w-6xl': size === 'default',
+          },
+        )}
       >
         {children}
       </main>
