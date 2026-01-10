@@ -89,7 +89,7 @@ RUN mkdir -p bootstrap/cache && \
 # ==============================================================================
 # Stage 4: Production image
 # ==============================================================================
-FROM php:8.4-fpm-alpine3.21
+FROM php:8.4-fpm-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
