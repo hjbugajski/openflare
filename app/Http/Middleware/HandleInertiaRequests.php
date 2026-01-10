@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use App\Actions\GetStatusToolbarSummary;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -56,7 +57,11 @@ class HandleInertiaRequests extends Middleware
                 'scheme' => config('reverb.apps.apps.0.options.scheme', 'https'),
             ],
             'statusToolbar' => $request->user()
-                ? fn () => app(GetStatusToolbarSummary::class)->forUser($request->user())
+                ? fn () => Cache::remember(
+                    'status-toolbar:'.$request->user()->uuid,
+                    now()->addMinute(),
+                    fn () => app(GetStatusToolbarSummary::class)->forUser($request->user()),
+                )
                 : null,
         ];
     }
