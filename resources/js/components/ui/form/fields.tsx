@@ -11,6 +11,7 @@ import {
 import { type AnyFieldMeta } from '@tanstack/react-form';
 
 import { IconChevronGrabberVertical } from '@/components/icons/chevron-grabber-vertical';
+import { IconSearchOptions } from '@/components/icons/search-options';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox } from '@/components/ui/combobox';
 import { useFieldContext } from '@/components/ui/form/form-context';
@@ -263,6 +264,9 @@ export function ComboboxField<T extends ComboboxItem>({
             </>
           )}
         </Combobox.Value>
+        <span aria-hidden className="ml-auto text-muted-foreground">
+          <IconSearchOptions className="size-4" />
+        </span>
       </Combobox.Chips>
 
       <Combobox.Portal>

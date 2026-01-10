@@ -5,6 +5,7 @@ import { PasswordSection } from '@/components/account/password-section';
 import { ProfileSection } from '@/components/account/profile-section';
 import { TwoFactorSection } from '@/components/account/two-factor-section';
 import { MonitorViewPreference } from '@/components/settings/monitor-view-preference';
+import { TimezonePreference } from '@/components/settings/timezone-preference';
 import { Divider } from '@/components/ui/divider';
 import { Heading } from '@/components/ui/heading';
 import AppLayout from '@/layouts/app-layout';
@@ -20,6 +21,9 @@ interface Props {
 
 export default function Settings({ auth, mustVerifyEmail, twoFactorEnabled }: Props) {
   const monitorsView: MonitorViewMode = auth.user.preferences?.monitors_view ?? 'cards';
+  const browserTimezone =
+    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
+  const timezone = auth.user.preferences?.timezone ?? browserTimezone;
 
   return (
     <AppLayout size="sm">
@@ -27,6 +31,7 @@ export default function Settings({ auth, mustVerifyEmail, twoFactorEnabled }: Pr
 
       <Heading title="Settings" description="configure your preferences" />
       <MonitorViewPreference value={monitorsView} />
+      <TimezonePreference value={timezone} />
 
       <Divider />
 

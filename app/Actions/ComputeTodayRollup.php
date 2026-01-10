@@ -15,15 +15,17 @@ class ComputeTodayRollup
      * @param  Collection<int, string>|array<string>  $monitorIds
      * @return Collection<string, DailyUptimeRollup>
      */
-    public function handle(Collection|array $monitorIds): Collection
+    public function handle(Collection|array $monitorIds, ?string $timezone = null): Collection
     {
         if (empty($monitorIds)) {
             return collect();
         }
 
-        $today = now()->toDateString();
-        $startOfDay = now()->startOfDay();
-        $endOfDay = now()->endOfDay();
+        $timezone = $timezone ?? config('app.timezone');
+        $now = now($timezone);
+        $today = $now->toDateString();
+        $startOfDay = $now->copy()->startOfDay()->utc();
+        $endOfDay = $now->copy()->endOfDay()->utc();
 
         $stats = MonitorCheck::query()
             ->whereIn('monitor_id', $monitorIds)

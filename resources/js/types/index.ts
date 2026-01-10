@@ -2,6 +2,9 @@ export type MonitorViewMode = 'cards' | 'table';
 
 export interface UserPreferences {
   monitors_view?: MonitorViewMode;
+  timezone?: string;
+  timezone_rollups_timezone?: string;
+  timezone_rollups_ran_at?: string;
 }
 
 export interface User {

@@ -32,8 +32,10 @@ class MonitorController extends Controller
             ->get();
 
         $monitorIds = $monitors->pluck('id');
-        $today = now()->toDateString();
-        $thirtyDaysAgo = now()->subDays(30)->toDateString();
+        $timezone = Auth::user()->getPreference('timezone', config('app.timezone'));
+        $now = now($timezone);
+        $today = $now->toDateString();
+        $thirtyDaysAgo = $now->copy()->subDays(30)->toDateString();
 
         // Get historical rollups (excluding today)
         $rollups = DailyUptimeRollup::query()
@@ -45,7 +47,7 @@ class MonitorController extends Controller
             ->groupBy('monitor_id');
 
         // Compute today's rollups on-the-fly
-        $todayRollups = $this->computeTodayRollup->handle($monitorIds);
+        $todayRollups = $this->computeTodayRollup->handle($monitorIds, $timezone);
 
         // Attach rollups to monitors
         $monitorsWithRollups = $monitors->map(function ($monitor) use ($rollups, $todayRollups) {
@@ -182,8 +184,10 @@ class MonitorController extends Controller
             ->paginate(10, ['*'], 'notifiers_page')
             ->withQueryString();
 
-        $today = now()->toDateString();
-        $thirtyDaysAgo = now()->subDays(30)->toDateString();
+        $timezone = Auth::user()->getPreference('timezone', config('app.timezone'));
+        $now = now($timezone);
+        $today = $now->toDateString();
+        $thirtyDaysAgo = $now->copy()->subDays(30)->toDateString();
 
         // Get historical rollups (excluding today)
         $dailyRollups = $monitor->dailyUptimeRollups()
@@ -195,7 +199,7 @@ class MonitorController extends Controller
             ->toArray();
 
         // Compute today's rollup on-the-fly
-        $todayRollups = $this->computeTodayRollup->handle([$monitor->id]);
+        $todayRollups = $this->computeTodayRollup->handle([$monitor->id], $timezone);
         if ($todayRollups->has($monitor->id)) {
             $dailyRollups[] = $todayRollups->get($monitor->id);
         }
