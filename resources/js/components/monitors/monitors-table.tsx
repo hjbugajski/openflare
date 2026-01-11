@@ -38,7 +38,7 @@ const getMonitorUptimeAverage = (monitor: Monitor) => {
   return total / rollups.length;
 };
 
-const columns: ColumnDef<Monitor>[] = [
+const getColumns = (timezone: string): ColumnDef<Monitor>[] => [
   {
     accessorKey: 'name',
     header: 'name',
@@ -84,7 +84,9 @@ const columns: ColumnDef<Monitor>[] = [
     id: 'sparkline',
     header: '',
     enableSorting: false,
-    cell: ({ row }) => <UptimeSparkline data={row.original.daily_rollups ?? []} height={16} />,
+    cell: ({ row }) => (
+      <UptimeSparkline data={row.original.daily_rollups ?? []} height={16} timezone={timezone} />
+    ),
     meta: { className: 'w-full min-w-24' },
   },
   {
@@ -139,10 +141,15 @@ const columns: ColumnDef<Monitor>[] = [
 
 interface MonitorsTableProps {
   monitors: Monitor[];
+  timezone: string;
 }
 
-export function MonitorsTable({ monitors }: MonitorsTableProps) {
+export function MonitorsTable({ monitors, timezone }: MonitorsTableProps) {
   return (
-    <DataTable columns={columns} data={monitors} initialSorting={[{ id: 'name', desc: false }]} />
+    <DataTable
+      columns={getColumns(timezone)}
+      data={monitors}
+      initialSorting={[{ id: 'name', desc: false }]}
+    />
   );
 }

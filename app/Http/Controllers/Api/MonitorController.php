@@ -64,7 +64,9 @@ class MonitorController extends Controller
     {
         $this->authorize('view', $monitor);
 
-        $thirtyDaysAgo = now()->subDays(30)->toDateString();
+        $timezone = request()->user()->getPreference('timezone', config('app.timezone'));
+        $now = now($timezone);
+        $thirtyDaysAgo = $now->copy()->subDays(30)->toDateString();
 
         $rollups = $monitor->dailyUptimeRollups()
             ->where('date', '>=', $thirtyDaysAgo)

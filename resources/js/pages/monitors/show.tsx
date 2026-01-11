@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 
 import { ChecksTable } from '@/components/monitors/checks-table';
@@ -27,6 +27,7 @@ import {
   type Monitor,
   type MonitorCheck,
   type NotifierSummary,
+  type PageProps,
   type Paginated,
 } from '@/types';
 import type {
@@ -52,6 +53,12 @@ export default function MonitorsShow({
   notifiers,
   dailyRollups,
 }: Props) {
+  const { auth } = usePage<PageProps>().props;
+  const browserTimezone =
+    typeof Intl !== 'undefined'
+      ? (Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC')
+      : 'UTC';
+  const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
   const [currentIncident, setCurrentIncident] = useState(monitor.current_incident);
   const [latestCheck, setLatestCheck] = useState(monitor.latest_check);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -168,7 +175,12 @@ export default function MonitorsShow({
           </div>
         </Card.Header>
         <Card.Content>
-          <UptimeSparkline data={dailyRollups ?? []} height={32} className="w-full" />
+          <UptimeSparkline
+            data={dailyRollups ?? []}
+            height={32}
+            className="w-full"
+            timezone={timezone}
+          />
           <div className="mt-2 flex justify-between text-xs text-muted-foreground">
             <span>30d ago</span>
             <span>today</span>

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Actions\BackfillMissingRollups;
+use App\Actions\RecomputeAllUserRollups;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
@@ -121,6 +123,10 @@ class AppServiceProvider extends ServiceProvider
         app()->booted(function () {
             try {
                 app(BackfillMissingRollups::class)->handle();
+
+                if (Cache::add('startup:timezone-rollup-recompute', true, now()->addDay())) {
+                    app(RecomputeAllUserRollups::class)->handle();
+                }
             } catch (\Throwable $e) {
                 report($e);
             }

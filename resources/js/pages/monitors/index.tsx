@@ -54,7 +54,7 @@ function MonitorChannelListener({
   return null;
 }
 
-function MonitorCard({ monitor }: { monitor: Monitor }) {
+function MonitorCard({ monitor, timezone }: { monitor: Monitor; timezone: string }) {
   const status = monitor.latest_check?.status;
   const hasIncident = monitor.current_incident !== null;
   const interval = formatInterval(monitor.interval);
@@ -86,7 +86,7 @@ function MonitorCard({ monitor }: { monitor: Monitor }) {
               </span>
               <UptimePercentage data={monitor.daily_rollups ?? []} className="font-medium" />
             </div>
-            <UptimeSparkline data={monitor.daily_rollups ?? []} height={16} />
+            <UptimeSparkline data={monitor.daily_rollups ?? []} height={16} timezone={timezone} />
           </div>
         </Card.Content>
 
@@ -131,6 +131,11 @@ function MonitorCard({ monitor }: { monitor: Monitor }) {
 export default function MonitorsIndex({ monitors }: Props) {
   const { auth } = usePage<PageProps>().props;
   const defaultView: MonitorViewMode = auth.user!.preferences?.monitors_view ?? 'cards';
+  const browserTimezone =
+    typeof Intl !== 'undefined'
+      ? (Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC')
+      : 'UTC';
+  const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
   const [viewMode, setViewMode] = usePreferencePatch('monitors_view', defaultView);
 
   const sortedMonitors = [...monitors].sort((left, right) =>
@@ -239,12 +244,12 @@ export default function MonitorsIndex({ monitors }: Props) {
       ) : viewMode === 'cards' ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sortedMonitors.map((monitor) => (
-            <MonitorCard key={monitor.id} monitor={monitor} />
+            <MonitorCard key={monitor.id} monitor={monitor} timezone={timezone} />
           ))}
         </div>
       ) : (
         <Card.Root className="overflow-hidden">
-          <MonitorsTable monitors={sortedMonitors} />
+          <MonitorsTable monitors={sortedMonitors} timezone={timezone} />
         </Card.Root>
       )}
     </AppLayout>

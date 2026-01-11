@@ -7,6 +7,7 @@ interface UptimeSparklineProps {
   days?: number;
   height?: number;
   className?: string;
+  timezone?: string;
 }
 
 function getBarStyle(upPercent: number, height: number) {
@@ -35,23 +36,59 @@ function getBarStyle(upPercent: number, height: number) {
   };
 }
 
-export function UptimeSparkline({ data, days = 30, height = 24, className }: UptimeSparklineProps) {
-  const rollupMap = new Map(data.map((r) => [r.date.slice(0, 10), r]));
+function getTodayString(timezone: string) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
 
+function buildDateRange(days: number, timezone: string) {
+  const today = getTodayString(timezone);
+  const parts = today.split('-');
+
+  if (parts.length !== 3) {
+    return [];
+  }
+
+  const [yearPart, monthPart, dayPart] = parts;
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  const day = Number(dayPart);
+
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+    return [];
+  }
+
+  const baseDate = new Date(Date.UTC(year, month - 1, day));
   const dates: string[] = [];
 
   for (let i = days - 1; i >= 0; i--) {
-    const date = new Date();
+    const date = new Date(baseDate);
+    date.setUTCDate(baseDate.getUTCDate() - i);
 
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - i);
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
 
     dates.push(`${year}-${month}-${day}`);
   }
+
+  return dates;
+}
+
+export function UptimeSparkline({
+  data,
+  days = 30,
+  height = 24,
+  className,
+  timezone,
+}: UptimeSparklineProps) {
+  const rollupMap = new Map(data.map((r) => [r.date.slice(0, 10), r]));
+  const resolvedTimezone = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+  const dates = buildDateRange(days, resolvedTimezone);
 
   return (
     <Tooltip.Provider>

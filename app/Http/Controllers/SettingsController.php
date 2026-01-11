@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\RecomputeUserRollups;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -53,19 +54,25 @@ class SettingsController extends Controller
         return back()->with('status', 'password-updated');
     }
 
-    public function updatePreferences(Request $request): RedirectResponse
+    public function updatePreferences(Request $request, RecomputeUserRollups $recomputeUserRollups): RedirectResponse
     {
         $validated = $request->validate([
             'monitors_view' => ['sometimes', 'string', 'in:cards,table'],
+            'timezone' => ['sometimes', 'string', 'timezone'],
         ]);
 
         $user = $request->user();
+        $previousTimezone = $user->getPreference('timezone', config('app.timezone'));
 
         foreach ($validated as $key => $value) {
             $user->setPreference($key, $value);
         }
 
         $user->save();
+
+        if (array_key_exists('timezone', $validated) && $validated['timezone'] !== $previousTimezone) {
+            $recomputeUserRollups->handle($user, $validated['timezone']);
+        }
 
         return back()->with('status', 'preferences-updated');
     }
