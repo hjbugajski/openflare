@@ -1,54 +1,84 @@
-# openflare
+# OpenFlare
 
-self-hostable uptime monitoring.
+A self-hostable uptime monitoring application.
 
-i built openflare because i wanted a straightforward uptime tool that was easy to self-host. inspired by [uptime kuma](https://github.com/louislam/uptime-kuma) and [openstatus](https://www.openstatus.dev/), openflare focuses on the essentials. this project also served as an experiment in agentic programming; it was written almost entirely by claude opus 4.5 using [opencode](https://opencode.ai/) and the [laravel boost mcp](https://laravel.com/ai/boost), with additional assistance from openai gpt-5.2 and gpt-5.2 codex. laravel's full-stack capabilities and first-party mcp support made it a natural fit for exploring ai-native development workflows.
+I built OpenFlare because I wanted a basic uptime tool that was easy to self-host. I took inspiration from [Uptime Kuma](https://github.com/louislam/uptime-kuma) and [OpenStatus](https://www.openstatus.dev/) while keeping OpenFlare as minimal as possible. This project also served as an experiment in agentic programming; it was written almost entirely by Claude Opus 4.5, GPT-5.2, and GPT-5.2 Codex using [OpenCode](https://opencode.ai/) with the [Laravel Boost MCP](https://laravel.com/ai/boost). Laravel's full-stack capabilities and first-party MCP support made it a natural fit for exploring AI-native development workflows.
 
-## features
+## Features
 
-- monitor website uptime and response times
-- automatic incident tracking and resolution
-- discord and email notifications
-- real-time dashboard via websockets
+- Monitor REST API uptime and response times
+- Automatic incident tracking and resolution
+- Discord and email notifications
+- Real-time dashboard via WebSockets
 - 30-day uptime history charts
-- two-factor authentication
+- Two-factor authentication
 
-## tech stack
+## Tech Stack
 
-- laravel 12, php 8.4
-- react 19, inertia.js v2, typescript
-- tailwind css v4
-- sqlite or postgresql
-- laravel reverb (websockets)
+- Laravel 12, PHP 8.4
+- React 19, Inertia.js v2, TypeScript
+- Tailwind CSS v4
+- SQLite or PostgreSQL
+- Laravel Reverb (WebSockets)
 
-## development
+## Development
 
-[installing php and the laravel installer](https://laravel.com/docs/12.x/installation).
+[Install PHP and the Laravel installer](https://laravel.com/docs/12.x/installation).
 
 ```bash
 composer run setup
 composer run dev
 ```
 
-## environment variables
+## Environment Variables
 
-required
+Required
 
-- `APP_KEY` (encryption key). generate: `php artisan key:generate --show`
-- `APP_URL` (public url). default: `http://localhost:8000`
-- `REVERB_APP_KEY` (websocket key). generate: `openssl rand -hex 16`
-- `REVERB_APP_SECRET` (websocket secret). generate: `openssl rand -hex 32`
+| Variable            | Description      | Notes                                       |
+| ------------------- | ---------------- | ------------------------------------------- |
+| `APP_KEY`           | Encryption key   | Generate: `php artisan key:generate --show` |
+| `APP_URL`           | Public URL       | Default: `http://localhost:8000`            |
+| `REVERB_APP_KEY`    | WebSocket key    | Generate: `openssl rand -hex 16`            |
+| `REVERB_APP_SECRET` | WebSocket secret | Generate: `openssl rand -hex 32`            |
 
-email notifications (optional)
+Email notifications (optional)
 
-- `MAIL_MAILER` (`log` default, or `resend` for production)
-- `MAIL_FROM_ADDRESS` (sender address)
-- `RESEND_API_KEY` (required when `MAIL_MAILER=resend`)
+| Variable            | Description    | Notes                                     |
+| ------------------- | -------------- | ----------------------------------------- |
+| `MAIL_MAILER`       | Mail driver    | `log` default, or `resend` for production |
+| `MAIL_FROM_ADDRESS` | Sender address |                                           |
+| `RESEND_API_KEY`    | Resend API key | Required when `MAIL_MAILER=resend`        |
 
-database (optional)
+Database (optional)
 
-- `DB_CONNECTION` (`sqlite` default, `pgsql` for postgres)
-- `DB_DATABASE` (sqlite path, local `database/database.sqlite`, production `/data/database.sqlite`)
-- `DATABASE_URL` (postgres connection url alternative)
+| Variable        | Description             | Notes                                                                |
+| --------------- | ----------------------- | -------------------------------------------------------------------- |
+| `DB_CONNECTION` | Database driver         | `sqlite` default, `pgsql` for Postgres                               |
+| `DB_DATABASE`   | SQLite path             | Local `database/database.sqlite`, production `/data/database.sqlite` |
+| `DATABASE_URL`  | Postgres connection URL | Alternative to `DB_CONNECTION`/`DB_DATABASE`                         |
 
-see [.env.example](.env.example) for full list and deployment notes.
+See [.env.example](.env.example) for full list and deployment notes.
+
+## Screenshots
+
+![OpenFlare overview](media/openflare-overview.png)
+
+---
+
+![OpenFlare monitors table](media/openflare-monitors-table.png)
+
+---
+
+![OpenFlare monitors grid](media/openflare-monitors-grid.png)
+
+---
+
+![OpenFlare create monitor](media/openflare-create-monitor.png)
+
+---
+
+![OpenFlare notifiers list](media/openflare-notifiers-list.png)
+
+---
+
+![OpenFlare create notifier](media/openflare-create-notifier.png)
