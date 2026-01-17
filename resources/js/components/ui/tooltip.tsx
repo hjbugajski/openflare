@@ -1,6 +1,5 @@
-import type { ComponentProps } from 'react';
-
 import { Tooltip as BaseTooltip } from '@base-ui/react/tooltip';
+import type { ComponentProps } from 'react';
 
 import { cn } from '@/lib/cn';
 

@@ -1,7 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
-
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
+import { useCallback, useRef, useState } from 'react';
 
 import { ChecksTable } from '@/components/monitors/checks-table';
 import { DeleteMonitorDialog } from '@/components/monitors/delete-monitor-dialog';

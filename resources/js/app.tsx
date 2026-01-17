@@ -1,8 +1,7 @@
-import { StrictMode } from 'react';
-
 import { createInertiaApp } from '@inertiajs/react';
 import { configureEcho } from '@laravel/echo-react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { Toast } from '@/components/ui/toast';
@@ -33,7 +32,7 @@ function initializeEcho(reverb: ReverbConfig) {
   });
 }
 
-createInertiaApp({
+void createInertiaApp({
   title: (title) => (title ? `${title} - OpenFlare` : 'OpenFlare'),
   resolve: (name) => {
     return resolvePageComponent(`./pages/${name}.tsx`, import.meta.glob('./pages/**/*.tsx'));

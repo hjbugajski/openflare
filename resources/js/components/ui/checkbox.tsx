@@ -1,6 +1,5 @@
-import type { ComponentProps } from 'react';
-
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox';
+import type { ComponentProps } from 'react';
 
 import { IconCheck } from '@/components/icons/check';
 import { cn } from '@/lib/cn';

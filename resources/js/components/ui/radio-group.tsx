@@ -1,7 +1,6 @@
-import type { ComponentProps, ReactNode } from 'react';
-
 import { Radio } from '@base-ui/react/radio';
 import { RadioGroup as BaseRadioGroup } from '@base-ui/react/radio-group';
+import type { ComponentProps, ReactNode } from 'react';
 
 import { cn } from '@/lib/cn';
 
@@ -35,7 +34,7 @@ function Item({ value, children, checked, disabled, className }: ItemProps) {
       className={cn(
         'group flex cursor-pointer items-center gap-2 border border-border bg-background px-3 py-2 transition',
         'data-[checked="false"]:hover:border-border-hover data-[checked="true"]:border-accent data-[checked="true"]:text-accent',
-        'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        'data-disabled:pointer-events-none data-disabled:opacity-50',
         className,
       )}
     >

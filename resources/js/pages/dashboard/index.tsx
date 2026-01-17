@@ -1,8 +1,7 @@
-import { useCallback, useRef } from 'react';
-
 import { Head, Link, router } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { useCallback, useRef } from 'react';
 
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';

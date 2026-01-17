@@ -1,7 +1,6 @@
-import { useCallback, useRef } from 'react';
-
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
+import { useCallback, useRef } from 'react';
 
 import { IconGrid } from '@/components/icons/grid';
 import { IconTable } from '@/components/icons/table';

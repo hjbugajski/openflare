@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react';
-
 import { router } from '@inertiajs/react';
+import { useCallback, useState } from 'react';
 
 import { update } from '@/routes/settings/preferences';
 import type { UserPreferences } from '@/types';

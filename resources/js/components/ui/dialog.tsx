@@ -1,7 +1,6 @@
-import { type ComponentProps, createContext, useContext } from 'react';
-
 import { Dialog as BaseDialog, type DialogRootProps } from '@base-ui/react/dialog';
 import { type VariantProps, cva } from 'class-variance-authority';
+import { type ComponentProps, createContext, useContext } from 'react';
 
 import { IconClose } from '@/components/icons/close';
 import { Button } from '@/components/ui/button';

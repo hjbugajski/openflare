@@ -1,7 +1,6 @@
-import { type ComponentProps, type ReactNode, createContext, useContext } from 'react';
-
 import { Toast as BaseToast } from '@base-ui/react/toast';
 import { type VariantProps, cva } from 'class-variance-authority';
+import { type ComponentProps, type ReactNode, createContext, useContext } from 'react';
 
 import { IconClose } from '@/components/icons/close';
 import { cn } from '@/lib/cn';
