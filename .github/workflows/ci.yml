@@ -52,11 +52,11 @@ jobs:
       - name: Run PHP linting
         run: composer run lint:check
 
-      - name: Run ESLint
-        run: pnpm run eslint
+      - name: Run Oxlint
+        run: pnpm run lint
 
-      - name: Run Prettier
-        run: pnpm run prettier
+      - name: Run Oxfmt
+        run: pnpm run format:check
 
       - name: Run TypeScript check
         run: pnpm run typecheck

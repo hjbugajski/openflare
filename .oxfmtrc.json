@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "singleQuote": true,
+  "experimentalTailwindcss": {
+    "functions": ["cn", "cva"],
+    "stylesheet": "resources/css/app.css"
+  },
+  "experimentalSortImports": {
+    "groups": [
+      ["builtin"],
+      ["external", "external-type"],
+      ["internal", "internal-type"],
+      ["parent", "parent-type", "sibling", "sibling-type"],
+      ["index", "index-type"],
+      ["side-effect"]
+    ],
+    "internalPattern": ["@/"],
+    "newlinesBetween": true
+  },
+  "ignorePatterns": [
+    "resources/js/actions",
+    "resources/js/routes",
+    "resources/js/wayfinder",
+    "resources/views"
+  ]
+}
