@@ -1,6 +1,5 @@
-import type { ComponentProps } from 'react';
-
 import { Combobox as BaseCombobox } from '@base-ui/react/combobox';
+import type { ComponentProps } from 'react';
 
 import { cn } from '@/lib/cn';
 

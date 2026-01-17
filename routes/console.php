@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::call(function () {
+    if (config('monitors.test_mode')) {
+        return;
+    }
+
     $maxPerRun = (int) config('monitors.dispatch_limit', 500);
     $dispatched = 0;
     $skipped = 0;

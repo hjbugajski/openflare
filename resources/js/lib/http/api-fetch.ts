@@ -18,6 +18,22 @@ function getXsrfToken(): string {
   return match ? decodeURIComponent(match) : '';
 }
 
+function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
+  if (!headers) {
+    return {};
+  }
+
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+
+  return headers;
+}
+
 /**
  * Fetch utility for JSON API endpoints with automatic CSRF handling.
  * Use for non-Inertia JSON endpoints (e.g., notifier test).
@@ -28,6 +44,7 @@ export async function apiFetch<T = unknown>(
   options: ApiFetchOptions = {},
 ): Promise<ApiResponse<T>> {
   const { body, headers, ...rest } = options;
+  const resolvedHeaders = normalizeHeaders(headers);
 
   const response = await fetch(url, {
     ...rest,
@@ -35,7 +52,7 @@ export async function apiFetch<T = unknown>(
       'Content-Type': 'application/json',
       Accept: 'application/json',
       'X-XSRF-TOKEN': getXsrfToken(),
-      ...headers,
+      ...resolvedHeaders,
     },
     body: body ? JSON.stringify(body) : undefined,
   });

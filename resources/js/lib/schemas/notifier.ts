@@ -30,7 +30,7 @@ export type NotifierConfig = z.infer<typeof notifierConfigSchema>;
  * Used by both form submission and test notification.
  */
 export function validateNotifierConfig(
-  type: NotifierType | string,
+  type: string,
   config: NotifierConfig,
 ): { valid: true } | { valid: false; message: string } {
   if (type === 'discord') {
@@ -43,7 +43,10 @@ export function validateNotifierConfig(
       return { valid: false, message: 'invalid webhook URL' };
     }
     if (!DISCORD_WEBHOOK_REGEX.test(config.webhook_url)) {
-      return { valid: false, message: 'URL must be a valid Discord webhook URL' };
+      return {
+        valid: false,
+        message: 'URL must be a valid Discord webhook URL',
+      };
     }
   }
 

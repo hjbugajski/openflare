@@ -1,6 +1,5 @@
-import type { PropsWithChildren } from 'react';
-
 import { usePage } from '@inertiajs/react';
+import type { PropsWithChildren } from 'react';
 
 import { Navigation } from '@/components/navigation';
 import { StatusToolbar } from '@/components/status-toolbar';

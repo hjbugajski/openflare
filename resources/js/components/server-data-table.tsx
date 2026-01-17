@@ -1,5 +1,3 @@
-import { type ChangeEvent, type KeyboardEvent, useEffect, useState } from 'react';
-
 import { router } from '@inertiajs/react';
 import {
   type ColumnDef,
@@ -8,6 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { type ChangeEvent, type KeyboardEvent, useEffect, useState } from 'react';
 
 import { IconArrowDown } from '@/components/icons/arrow-down';
 import { IconArrowUp } from '@/components/icons/arrow-up';
