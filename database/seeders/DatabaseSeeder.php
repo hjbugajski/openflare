@@ -213,7 +213,6 @@ class DatabaseSeeder extends Seeder
                 now()
             );
 
-
             $this->createRollups(
                 $monitor,
                 30,
