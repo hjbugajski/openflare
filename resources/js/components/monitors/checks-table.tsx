@@ -4,7 +4,7 @@ import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
 import { ValueUnit } from '@/components/ui/value-unit';
 import { formatDateTime } from '@/lib/format/date-time';
-import type { MonitorCheck, Paginated } from '@/types';
+import type { CursorPaginated, MonitorCheck } from '@/types';
 
 const columns: ColumnDef<MonitorCheck>[] = [
   {
@@ -45,7 +45,7 @@ const columns: ColumnDef<MonitorCheck>[] = [
 ];
 
 interface ChecksTableProps {
-  checks: Paginated<MonitorCheck>;
+  checks: CursorPaginated<MonitorCheck>;
 }
 
 export function ChecksTable({ checks }: ChecksTableProps) {
@@ -53,7 +53,7 @@ export function ChecksTable({ checks }: ChecksTableProps) {
     <ServerDataTable
       columns={columns}
       paginated={checks}
-      queryParam="checks_page"
+      cursorParam="checks_cursor"
       sortParam="checks_sort"
       directionParam="checks_direction"
       reloadOnly={['checks']}

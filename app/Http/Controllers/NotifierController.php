@@ -36,18 +36,22 @@ class NotifierController extends Controller
         ];
         $sort = $sortMap[$sort] ?? $sortMap['name'];
 
-        $notifiers = Notifier::query()
+        $notifiersQuery = Notifier::query()
             ->where('user_id', Auth::user()->uuid)
             ->withCount('monitors')
             ->withCount([
                 'monitors as excluded_monitors_count' => fn ($query) => $query->where('monitor_notifier.is_excluded', true),
-            ])
+            ]);
+        $notifiersTotal = (clone $notifiersQuery)->count();
+
+        $notifiers = $notifiersQuery
             ->orderBy($sort, $direction)
-            ->paginate(10)
+            ->orderBy('notifiers.id', $direction)
+            ->cursorPaginate(10, ['*'], 'notifiers_cursor')
             ->withQueryString();
 
         return Inertia::render('notifiers/index', [
-            'notifiers' => $notifiers,
+            'notifiers' => array_merge($notifiers->toArray(), ['total' => $notifiersTotal]),
             'types' => Notifier::TYPES,
         ]);
     }

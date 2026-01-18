@@ -15,7 +15,7 @@ import { formatDateTime } from '@/lib/format/date-time';
 import { formatDuration } from '@/lib/format/duration';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { show } from '@/routes/monitors';
-import type { IncidentWithMonitor, Paginated } from '@/types';
+import type { CursorPaginated, IncidentWithMonitor } from '@/types';
 import type {
   IncidentOpenedEvent,
   IncidentResolvedEvent,
@@ -30,7 +30,7 @@ interface MonitorCounts {
 
 interface Props {
   counts: MonitorCounts;
-  incidents: Paginated<IncidentWithMonitor>;
+  incidents: CursorPaginated<IncidentWithMonitor>;
   monitorIds: string[];
 }
 
@@ -212,7 +212,6 @@ export default function DashboardIndex({ counts, incidents, monitorIds }: Props)
           <ServerDataTable
             columns={columns}
             paginated={incidents}
-            queryParam="page"
             initialSorting={[{ id: 'started_at', desc: true }]}
           />
         )}

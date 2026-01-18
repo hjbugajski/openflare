@@ -9,11 +9,11 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { toast } from '@/components/ui/toast';
 import { detach } from '@/routes/monitors/notifiers';
-import type { NotifierSummary, Paginated } from '@/types';
+import type { CursorPaginated, NotifierSummary } from '@/types';
 
 interface NotifiersTableProps {
   monitorId: string;
-  notifiers: Paginated<NotifierSummary>;
+  notifiers: CursorPaginated<NotifierSummary>;
 }
 
 export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
@@ -126,7 +126,7 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
       <ServerDataTable
         columns={columns}
         paginated={notifiers}
-        queryParam="notifiers_page"
+        cursorParam="notifiers_cursor"
         sortParam="notifiers_sort"
         directionParam="notifiers_direction"
         reloadOnly={['notifiers']}

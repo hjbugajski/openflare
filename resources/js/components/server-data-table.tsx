@@ -6,19 +6,16 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { type ChangeEvent, type KeyboardEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { IconArrowDown } from '@/components/icons/arrow-down';
 import { IconArrowUp } from '@/components/icons/arrow-up';
 import { IconArrowsSort } from '@/components/icons/arrows-sort';
-import { IconChevronDoubleLeft } from '@/components/icons/chevron-double-left';
-import { IconChevronDoubleRight } from '@/components/icons/chevron-double-right';
 import { IconChevronLeft } from '@/components/icons/chevron-left';
 import { IconChevronRight } from '@/components/icons/chevron-right';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
-import type { Paginated } from '@/types';
+import type { CursorPaginated } from '@/types';
 
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -29,8 +26,8 @@ declare module '@tanstack/react-table' {
 
 interface ServerDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
-  paginated: Paginated<TData>;
-  queryParam?: string;
+  paginated: CursorPaginated<TData>;
+  cursorParam?: string;
   sortParam?: string;
   directionParam?: string;
   reloadOnly?: string[];
@@ -40,7 +37,7 @@ interface ServerDataTableProps<TData, TValue> {
 export function ServerDataTable<TData, TValue>({
   columns,
   paginated,
-  queryParam = 'page',
+  cursorParam = 'cursor',
   sortParam = 'sort',
   directionParam = 'direction',
   reloadOnly,
@@ -74,68 +71,38 @@ export function ServerDataTable<TData, TValue>({
     url.searchParams.set(directionParam, sortEntry.desc ? 'desc' : 'asc');
   };
 
-  const goToPage = (page: number, nextSorting: SortingState = sorting) => {
+  const goToCursor = (cursor: string | null, nextSorting: SortingState = sorting) => {
     const url = new URL(window.location.href);
-    url.searchParams.set(queryParam, String(page));
     applySortingParams(url, nextSorting);
 
     router.visit(url.pathname + url.search, {
+      data: cursor ? { [cursorParam]: cursor } : {},
       preserveState: true,
       preserveScroll: true,
+      preserveUrl: true,
       only: reloadOnly,
     });
   };
 
-  const canPreviousPage = paginated.current_page > 1;
-  const canNextPage = paginated.current_page < paginated.last_page;
+  const canPreviousPage = Boolean(paginated.prev_cursor);
+  const canNextPage = Boolean(paginated.next_cursor);
 
-  const [pageInput, setPageInput] = useState(String(paginated.current_page));
+  const totalPages = Math.max(1, Math.ceil(paginated.total / paginated.per_page));
+  const [pageIndex, setPageIndex] = useState(1);
 
   useEffect(() => {
-    setPageInput(String(paginated.current_page));
-  }, [paginated.current_page]);
-
-  const commitPageInput = (value: string) => {
-    const trimmedValue = value.trim();
-
-    if (trimmedValue === '') {
-      setPageInput(String(paginated.current_page));
+    if (!paginated.prev_cursor) {
+      setPageIndex(1);
       return;
     }
 
-    const nextPage = Number(trimmedValue);
-
-    if (Number.isNaN(nextPage)) {
-      setPageInput(String(paginated.current_page));
-      return;
-    }
-
-    const clampedPage = Math.min(Math.max(nextPage, 1), paginated.last_page);
-    setPageInput(String(clampedPage));
-
-    if (clampedPage !== paginated.current_page) {
-      goToPage(clampedPage);
-    }
-  };
-
-  const handlePageInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setPageInput(event.target.value);
-  };
+    setPageIndex((current) => Math.min(current, totalPages));
+  }, [paginated.prev_cursor, totalPages]);
 
   const handleSortingChange = (nextSorting: SortingState) => {
     setSorting(nextSorting);
-    goToPage(1, nextSorting);
-  };
-
-  const handlePageInputBlur = () => {
-    commitPageInput(pageInput);
-  };
-
-  const handlePageInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      commitPageInput(pageInput);
-    }
+    setPageIndex(1);
+    goToCursor(null, nextSorting);
   };
 
   const handleSortingChangeWrapper = (
@@ -153,10 +120,10 @@ export function ServerDataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
-    pageCount: paginated.last_page,
+    pageCount: -1,
     state: {
       pagination: {
-        pageIndex: paginated.current_page - 1,
+        pageIndex: 0,
         pageSize: paginated.per_page,
       },
       sorting,
@@ -175,7 +142,7 @@ export function ServerDataTable<TData, TValue>({
                   <th
                     key={header.id}
                     className={cn(
-                      'px-3 py-2 text-left text-xs font-medium break-words whitespace-normal text-muted-foreground uppercase',
+                      'px-3 py-2 text-left text-xs font-medium whitespace-nowrap text-muted-foreground uppercase',
                       header.column.columnDef.meta?.className,
                     )}
                   >
@@ -213,10 +180,7 @@ export function ServerDataTable<TData, TValue>({
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className={cn(
-                        'px-3 py-2 break-words whitespace-normal',
-                        cell.column.columnDef.meta?.className,
-                      )}
+                      className={cn('px-3 py-2', cell.column.columnDef.meta?.className)}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
@@ -243,40 +207,20 @@ export function ServerDataTable<TData, TValue>({
         </table>
       </div>
 
-      {paginated.last_page > 1 ? (
-        <div className="flex items-center justify-between border-t border-border pt-4">
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <span>page</span>
-            <Input
-              inputSize="sm"
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={pageInput}
-              className="w-12 text-center"
-              aria-label="page number"
-              onChange={handlePageInputChange}
-              onBlur={handlePageInputBlur}
-              onKeyDown={handlePageInputKeyDown}
-            />
-            <span>of {paginated.last_page}</span>
+      {paginated.data.length > 0 ? (
+        <div className="flex items-center justify-between border-t border-border pt-4 text-sm text-muted-foreground">
+          <div>
+            page {pageIndex} of {totalPages}
           </div>
-
           <div className="flex gap-2">
             <Button
               variant="tertiary"
               size="icon"
               disabled={!canPreviousPage}
-              onClick={() => goToPage(1)}
-            >
-              <span className="sr-only">first</span>
-              <IconChevronDoubleLeft />
-            </Button>
-            <Button
-              variant="tertiary"
-              size="icon"
-              disabled={!canPreviousPage}
-              onClick={() => goToPage(paginated.current_page - 1)}
+              onClick={() => {
+                setPageIndex((current) => Math.max(1, current - 1));
+                goToCursor(paginated.prev_cursor);
+              }}
             >
               <span className="sr-only">previous</span>
               <IconChevronLeft />
@@ -285,19 +229,13 @@ export function ServerDataTable<TData, TValue>({
               variant="tertiary"
               size="icon"
               disabled={!canNextPage}
-              onClick={() => goToPage(paginated.current_page + 1)}
+              onClick={() => {
+                setPageIndex((current) => Math.min(totalPages, current + 1));
+                goToCursor(paginated.next_cursor);
+              }}
             >
               <span className="sr-only">next</span>
               <IconChevronRight />
-            </Button>
-            <Button
-              variant="tertiary"
-              size="icon"
-              disabled={!canNextPage}
-              onClick={() => goToPage(paginated.last_page)}
-            >
-              <span className="sr-only">last</span>
-              <IconChevronDoubleRight />
             </Button>
           </div>
         </div>

@@ -12,10 +12,10 @@ import { Heading } from '@/components/ui/heading';
 import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
 import { create, destroy, edit } from '@/routes/notifiers';
-import { type Notifier, type Paginated } from '@/types';
+import { type CursorPaginated, type Notifier } from '@/types';
 
 interface Props {
-  notifiers: Paginated<Notifier>;
+  notifiers: CursorPaginated<Notifier>;
   types: string[];
 }
 
@@ -127,7 +127,6 @@ export default function NotifiersIndex({ notifiers }: Props) {
           <ServerDataTable
             columns={columns}
             paginated={notifiers}
-            queryParam="page"
             initialSorting={[{ id: 'name', desc: false }]}
           />
         </Card.Root>
