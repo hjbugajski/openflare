@@ -100,6 +100,7 @@ it('updates monitor timestamps after check', function () {
 });
 
 it('creates an incident when status changes from up to down', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
     Http::fake([
         'https://example.com' => Http::response('Server Error', 500),
     ]);
@@ -124,7 +125,34 @@ it('creates an incident when status changes from up to down', function () {
         ->ended_at->toBeNull();
 });
 
+it('delays incident creation until failure threshold is met', function () {
+    config()->set('monitors.failure_confirmation_threshold', 2);
+
+    Http::fake([
+        'https://example.com' => Http::response('Server Error', 500),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+    ]));
+
+    MonitorCheck::factory()->up()->create([
+        'monitor_id' => $monitor->id,
+        'checked_at' => now()->subMinutes(5),
+    ]);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect(Incident::count())->toBe(0);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect(Incident::count())->toBe(1);
+});
+
 it('resolves an incident when status changes from down to up', function () {
+    config()->set('monitors.recovery_confirmation_threshold', 1);
     Http::fake([
         'https://example.com' => Http::response('OK', 200),
     ]);
@@ -151,6 +179,40 @@ it('resolves an incident when status changes from down to up', function () {
 
     expect($incident->ended_at)->not->toBeNull();
     expect($incident->isResolved())->toBeTrue();
+});
+
+it('delays incident resolution until recovery threshold is met', function () {
+    config()->set('monitors.recovery_confirmation_threshold', 2);
+
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+    ]));
+
+    MonitorCheck::factory()->down()->create([
+        'monitor_id' => $monitor->id,
+        'checked_at' => now()->subMinutes(5),
+    ]);
+
+    $incident = Incident::factory()->ongoing()->create([
+        'monitor_id' => $monitor->id,
+    ]);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    $incident->refresh();
+
+    expect($incident->ended_at)->toBeNull();
+
+    CheckMonitor::dispatchSync($monitor);
+
+    $incident->refresh();
+
+    expect($incident->ended_at)->not->toBeNull();
 });
 
 it('does not create an incident when status remains up', function () {
@@ -231,6 +293,7 @@ it('uses the correct HTTP method', function () {
 });
 
 it('dispatches notifications when status changes from up to down', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
     Bus::fake([SendMonitorNotification::class]);
     Http::fake([
         'https://example.com' => Http::response('Server Error', 500),
@@ -260,7 +323,43 @@ it('dispatches notifications when status changes from up to down', function () {
     });
 });
 
+it('delays notifications until failure threshold is met', function () {
+    Bus::fake([SendMonitorNotification::class]);
+    config()->set('monitors.failure_confirmation_threshold', 2);
+    Http::fake([
+        'https://example.com' => Http::response('Server Error', 500),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+    ]));
+
+    $notifier = Notifier::factory()->discord()->create([
+        'user_id' => $monitor->user_id,
+    ]);
+    $monitor->notifiers()->attach($notifier);
+
+    MonitorCheck::factory()->up()->create([
+        'monitor_id' => $monitor->id,
+        'checked_at' => now()->subMinutes(5),
+    ]);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    Bus::assertNotDispatched(SendMonitorNotification::class);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    Bus::assertDispatched(SendMonitorNotification::class, function ($job) use ($monitor, $notifier) {
+        return (string) $job->monitor->id === (string) $monitor->id
+            && (string) $job->notifier->id === (string) $notifier->id
+            && $job->status === MonitorStatus::Down;
+    });
+});
+
 it('dispatches notifications when status changes from down to up', function () {
+    config()->set('monitors.recovery_confirmation_threshold', 1);
     Bus::fake([SendMonitorNotification::class]);
     Http::fake([
         'https://example.com' => Http::response('OK', 200),
@@ -294,6 +393,51 @@ it('dispatches notifications when status changes from down to up', function () {
     });
 });
 
+it('delays notifications until recovery threshold is met', function () {
+    Bus::fake([SendMonitorNotification::class]);
+    config()->set('monitors.recovery_confirmation_threshold', 2);
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+    ]));
+
+    $notifier = Notifier::factory()->email()->create([
+        'user_id' => $monitor->user_id,
+    ]);
+    $monitor->notifiers()->attach($notifier);
+
+    MonitorCheck::factory()->down()->create([
+        'monitor_id' => $monitor->id,
+        'checked_at' => now()->subMinutes(5),
+    ]);
+
+    $incident = Incident::factory()->ongoing()->create([
+        'monitor_id' => $monitor->id,
+    ]);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    $incident->refresh();
+
+    Bus::assertNotDispatched(SendMonitorNotification::class);
+    expect($incident->ended_at)->toBeNull();
+
+    CheckMonitor::dispatchSync($monitor);
+
+    $incident->refresh();
+
+    Bus::assertDispatched(SendMonitorNotification::class, function ($job) use ($monitor, $notifier) {
+        return (string) $job->monitor->id === (string) $monitor->id
+            && (string) $job->notifier->id === (string) $notifier->id
+            && $job->status === MonitorStatus::Up;
+    });
+    expect($incident->ended_at)->not->toBeNull();
+});
+
 it('does not dispatch notifications when status remains unchanged', function () {
     Bus::fake([SendMonitorNotification::class]);
     Http::fake([
@@ -321,6 +465,7 @@ it('does not dispatch notifications when status remains unchanged', function () 
 });
 
 it('only dispatches notifications to active channels', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
     Bus::fake([SendMonitorNotification::class]);
     Http::fake([
         'https://example.com' => Http::response('Server Error', 500),
@@ -373,6 +518,7 @@ it('broadcasts MonitorChecked event after every check', function () {
 });
 
 it('broadcasts IncidentOpened event when status changes from up to down', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
     Event::fake([IncidentOpened::class, MonitorChecked::class]);
     Http::fake([
         'https://example.com' => Http::response('Server Error', 500),
@@ -397,6 +543,7 @@ it('broadcasts IncidentOpened event when status changes from up to down', functi
 });
 
 it('broadcasts IncidentResolved event when status changes from down to up', function () {
+    config()->set('monitors.recovery_confirmation_threshold', 1);
     Event::fake([IncidentResolved::class, MonitorChecked::class]);
     Http::fake([
         'https://example.com' => Http::response('OK', 200),
@@ -474,6 +621,7 @@ it('does not broadcast IncidentResolved when status remains down', function () {
 });
 
 it('does not dispatch notifications to channels with missing config', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
     Bus::fake([SendMonitorNotification::class]);
     Http::fake([
         'https://example.com' => Http::response('Server Error', 500),

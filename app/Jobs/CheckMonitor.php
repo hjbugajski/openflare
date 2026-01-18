@@ -91,7 +91,7 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
 
     public function handle(): void
     {
-        $monitor = Monitor::find($this->monitor->id);
+        $monitor = Monitor::query()->find($this->monitor->id);
 
         if (! $monitor || ! $monitor->is_active) {
             Log::debug('Skipping check for inactive or deleted monitor', [
@@ -104,12 +104,10 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         $this->monitor = $monitor;
 
         $check = $this->performCheck();
-        $previousCheck = $this->monitor->latestCheck;
-
         // Wrap check save and incident handling in transaction for consistency
-        DB::transaction(function () use ($previousCheck, $check) {
+        DB::transaction(function () use ($check) {
             $this->monitor->checks()->save($check);
-            $this->handleStatusChange($previousCheck, $check);
+            $this->handleStatusChange($check);
         });
 
         $this->monitor->update([
@@ -308,19 +306,31 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         return false;
     }
 
-    protected function handleStatusChange(?MonitorCheck $previousCheck, MonitorCheck $newCheck): void
+    protected function handleStatusChange(MonitorCheck $newCheck): void
     {
-        $wasUp = $previousCheck?->isUp() ?? true;
-        $isUp = $newCheck->isUp();
+        if ($newCheck->isDown()) {
+            $currentIncident = $this->monitor->currentIncident()->first();
 
-        if ($wasUp && ! $isUp) {
+            if ($currentIncident) {
+                return;
+            }
+
+            $failureThreshold = $this->getFailureConfirmationThreshold();
+            $recentChecks = $this->getRecentChecks($failureThreshold);
+
+            if (! $this->meetsConfirmationThreshold($recentChecks, MonitorStatus::Down, $failureThreshold)) {
+                return;
+            }
+
+            $startedAt = $recentChecks->sortBy('checked_at')->first()?->checked_at ?? $newCheck->checked_at;
+
             $incident = Incident::firstOrCreate(
                 [
                     'monitor_id' => $this->monitor->id,
                     'ended_at' => null,
                 ],
                 [
-                    'started_at' => $newCheck->checked_at,
+                    'started_at' => $startedAt,
                     'cause' => $newCheck->error_message,
                 ]
             );
@@ -329,20 +339,61 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
                 IncidentOpened::dispatch($this->monitor, $incident);
                 $this->sendNotifications(MonitorStatus::Down, $newCheck);
             }
+
+            return;
         }
 
-        if (! $wasUp && $isUp) {
-            $currentIncident = $this->monitor->currentIncident;
+        $currentIncident = $this->monitor->currentIncident()->first();
 
-            if ($currentIncident && $currentIncident->ended_at === null) {
-                $currentIncident->update([
-                    'ended_at' => $newCheck->checked_at,
-                ]);
-
-                IncidentResolved::dispatch($this->monitor, $currentIncident->fresh());
-                $this->sendNotifications(MonitorStatus::Up, $newCheck);
-            }
+        if (! $currentIncident) {
+            return;
         }
+
+        $recoveryThreshold = $this->getRecoveryConfirmationThreshold();
+        $recentChecks = $this->getRecentChecks($recoveryThreshold);
+
+        if (! $this->meetsConfirmationThreshold($recentChecks, MonitorStatus::Up, $recoveryThreshold)) {
+            return;
+        }
+
+        $currentIncident->update([
+            'ended_at' => $newCheck->checked_at,
+        ]);
+
+        IncidentResolved::dispatch($this->monitor, $currentIncident->fresh());
+        $this->sendNotifications(MonitorStatus::Up, $newCheck);
+    }
+
+    protected function getRecentChecks(int $limit): \Illuminate\Support\Collection
+    {
+        return $this->monitor->checks()
+            ->latest('checked_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    protected function meetsConfirmationThreshold(
+        \Illuminate\Support\Collection $recentChecks,
+        MonitorStatus $status,
+        int $threshold
+    ): bool {
+        if ($recentChecks->count() < $threshold) {
+            return false;
+        }
+
+        return $recentChecks->every(fn (MonitorCheck $check) => $status === MonitorStatus::Up
+            ? $check->isUp()
+            : $check->isDown());
+    }
+
+    protected function getFailureConfirmationThreshold(): int
+    {
+        return max(1, (int) config('monitors.failure_confirmation_threshold', 1));
+    }
+
+    protected function getRecoveryConfirmationThreshold(): int
+    {
+        return max(1, (int) config('monitors.recovery_confirmation_threshold', 1));
     }
 
     protected function sendNotifications(MonitorStatus $status, MonitorCheck $check): void
