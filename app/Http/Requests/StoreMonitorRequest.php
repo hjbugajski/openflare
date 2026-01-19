@@ -24,6 +24,8 @@ class StoreMonitorRequest extends FormRequest
             'interval' => ['required', 'integer', Rule::in(Monitor::INTERVALS)],
             'timeout' => ['required', 'integer', 'min:5', 'max:120'],
             'expected_status_code' => ['required', 'integer', 'min:100', 'max:599'],
+            'failure_confirmation_threshold' => ['required', 'integer', 'min:1', 'max:10'],
+            'recovery_confirmation_threshold' => ['required', 'integer', 'min:1', 'max:10'],
             'is_active' => ['boolean'],
             'notifiers' => ['array'],
             'notifiers.*' => [

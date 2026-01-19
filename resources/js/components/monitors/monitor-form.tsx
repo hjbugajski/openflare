@@ -104,6 +104,30 @@ export function MonitorForm({
             </form.AppField>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <form.AppField name="failure_confirmation_threshold">
+              {(field) => (
+                <field.Field
+                  label="failures before incident"
+                  serverError={getServerError('failure_confirmation_threshold')}
+                >
+                  <field.NumberInput min={1} max={10} />
+                </field.Field>
+              )}
+            </form.AppField>
+
+            <form.AppField name="recovery_confirmation_threshold">
+              {(field) => (
+                <field.Field
+                  label="successes before recovery"
+                  serverError={getServerError('recovery_confirmation_threshold')}
+                >
+                  <field.NumberInput min={1} max={10} />
+                </field.Field>
+              )}
+            </form.AppField>
+          </div>
+
           {notifiers.length > 0 ? (
             <form.AppField name="notifiers">
               {(field) => (

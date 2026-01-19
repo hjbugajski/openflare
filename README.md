@@ -73,6 +73,10 @@ See [.env.example](.env.example) for full list and deployment notes.
 
 ---
 
+![OpenFlare monitors detail](media/openflare-monitors-detail.png)
+
+---
+
 ![OpenFlare create monitor](media/openflare-create-monitor.png)
 
 ---

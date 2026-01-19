@@ -54,9 +54,17 @@ class MonitorObserver
             $monitor->next_check_at = now();
         }
 
-        // If interval, timeout, expected_status_code, url, or method changed while active, trigger immediate recheck
+        // If interval, timeout, expected_status_code, url, method, or confirmation thresholds changed while active, trigger immediate recheck
         if ($isActive) {
-            $triggerFields = ['interval', 'timeout', 'expected_status_code', 'url', 'method'];
+            $triggerFields = [
+                'interval',
+                'timeout',
+                'expected_status_code',
+                'url',
+                'method',
+                'failure_confirmation_threshold',
+                'recovery_confirmation_threshold',
+            ];
             $changed = false;
 
             foreach ($triggerFields as $field) {

@@ -33,7 +33,21 @@ class DispatchMonitorChecks extends Command
                 $query->whereNull('next_check_at')
                     ->orWhere('next_check_at', '<=', now());
             })
-            ->select(['id', 'user_id', 'name', 'url', 'method', 'interval', 'timeout', 'expected_status_code', 'is_active', 'last_checked_at', 'next_check_at'])
+            ->select([
+                'id',
+                'user_id',
+                'name',
+                'url',
+                'method',
+                'interval',
+                'timeout',
+                'expected_status_code',
+                'failure_confirmation_threshold',
+                'recovery_confirmation_threshold',
+                'is_active',
+                'last_checked_at',
+                'next_check_at',
+            ])
             ->chunkById(100, function ($monitors) use ($maxPerRun, &$dispatched, &$skipped) {
                 foreach ($monitors as $monitor) {
                     if ($dispatched >= $maxPerRun) {

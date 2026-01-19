@@ -21,13 +21,13 @@ import { formatInterval } from '@/lib/format/interval';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { edit } from '@/routes/monitors';
 import {
+  type CursorPaginated,
   type DailyUptimeRollup,
   type Incident,
   type Monitor,
   type MonitorCheck,
   type NotifierSummary,
   type PageProps,
-  type Paginated,
 } from '@/types';
 import type {
   IncidentOpenedEvent,
@@ -37,9 +37,9 @@ import type {
 
 interface Props {
   monitor: Monitor;
-  checks: Paginated<MonitorCheck>;
-  incidents: Paginated<Incident>;
-  notifiers: Paginated<NotifierSummary>;
+  checks: CursorPaginated<MonitorCheck>;
+  incidents: CursorPaginated<Incident>;
+  notifiers: CursorPaginated<NotifierSummary>;
   dailyRollups: DailyUptimeRollup[];
 }
 

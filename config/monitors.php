@@ -61,4 +61,26 @@ return [
 
     'max_per_user' => env('MONITORS_MAX_PER_USER', 100),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Failure Confirmation Threshold
+    |--------------------------------------------------------------------------
+    |
+    | Consecutive "down" checks required to open an incident and notify.
+    |
+    */
+
+    'failure_confirmation_threshold' => env('MONITORS_FAILURE_CONFIRMATION_THRESHOLD', 3),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recovery Confirmation Threshold
+    |--------------------------------------------------------------------------
+    |
+    | Consecutive "up" checks required to resolve an incident and notify.
+    |
+    */
+
+    'recovery_confirmation_threshold' => env('MONITORS_RECOVERY_CONFIRMATION_THRESHOLD', 3),
+
 ];

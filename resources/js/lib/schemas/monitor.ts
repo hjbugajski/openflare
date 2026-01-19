@@ -31,6 +31,14 @@ export const monitorSchema = z.object({
     .number()
     .min(100, 'status code must be between 100 and 599')
     .max(599, 'status code must be between 100 and 599'),
+  failure_confirmation_threshold: z
+    .number()
+    .min(1, 'failure confirmation must be at least 1 check')
+    .max(10, 'failure confirmation cannot exceed 10 checks'),
+  recovery_confirmation_threshold: z
+    .number()
+    .min(1, 'recovery confirmation must be at least 1 check')
+    .max(10, 'recovery confirmation cannot exceed 10 checks'),
   is_active: z.boolean(),
   notifiers: z.array(z.string()),
 });

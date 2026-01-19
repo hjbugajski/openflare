@@ -94,6 +94,8 @@ class MonitorController extends Controller
             'interval' => $request->validated('interval'),
             'timeout' => $request->validated('timeout'),
             'expected_status_code' => $request->validated('expected_status_code'),
+            'failure_confirmation_threshold' => $request->validated('failure_confirmation_threshold', config('monitors.failure_confirmation_threshold', 3)),
+            'recovery_confirmation_threshold' => $request->validated('recovery_confirmation_threshold', config('monitors.recovery_confirmation_threshold', 3)),
             'is_active' => $request->validated('is_active', true),
         ]);
 
@@ -132,9 +134,13 @@ class MonitorController extends Controller
         ];
         $checksSort = $checksSortMap[$checksSort] ?? $checksSortMap['checked_at'];
 
-        $checks = $monitor->checks()
+        $checksQuery = $monitor->checks();
+        $checksTotal = (clone $checksQuery)->count();
+
+        $checks = $checksQuery
             ->orderBy($checksSort, $checksDirection)
-            ->paginate(10, ['*'], 'checks_page')
+            ->orderBy('id', $checksDirection)
+            ->cursorPaginate(10, ['*'], 'checks_cursor')
             ->withQueryString();
 
         $incidentsSort = request()->string('incidents_sort', 'started_at')->toString();
@@ -144,6 +150,7 @@ class MonitorController extends Controller
         $incidentsSort = in_array($incidentsSort, $incidentsSortOptions, true) ? $incidentsSort : 'started_at';
 
         $incidentsQuery = $monitor->incidents();
+        $incidentsTotal = (clone $incidentsQuery)->count();
         $incidentsDirectionKeyword = $incidentsDirection === 'asc' ? 'asc' : 'desc';
 
         if ($incidentsSort === 'status') {
@@ -164,7 +171,8 @@ class MonitorController extends Controller
         }
 
         $incidents = $incidentsQuery
-            ->paginate(10, ['*'], 'incidents_page')
+            ->orderBy('id', $incidentsDirection)
+            ->cursorPaginate(10, ['*'], 'incidents_cursor')
             ->withQueryString();
 
         $notifiersSort = request()->string('notifiers_sort', 'name')->toString();
@@ -178,10 +186,14 @@ class MonitorController extends Controller
         ];
         $notifiersSort = $notifiersSortMap[$notifiersSort] ?? $notifiersSortMap['name'];
 
-        $notifiers = $monitor->notifiers()
-            ->wherePivot('is_excluded', false)
+        $notifiersQuery = $monitor->notifiers()
+            ->wherePivot('is_excluded', false);
+        $notifiersTotal = (clone $notifiersQuery)->count();
+
+        $notifiers = $notifiersQuery
             ->orderBy($notifiersSort, $notifiersDirection)
-            ->paginate(10, ['*'], 'notifiers_page')
+            ->orderBy('notifiers.id', $notifiersDirection)
+            ->cursorPaginate(10, ['*'], 'notifiers_cursor')
             ->withQueryString();
 
         $timezone = Auth::user()->getPreference('timezone', config('app.timezone'));
@@ -206,9 +218,9 @@ class MonitorController extends Controller
 
         return Inertia::render('monitors/show', [
             'monitor' => $monitor,
-            'checks' => $checks,
-            'incidents' => $incidents,
-            'notifiers' => $notifiers,
+            'checks' => array_merge($checks->toArray(), ['total' => $checksTotal]),
+            'incidents' => array_merge($incidents->toArray(), ['total' => $incidentsTotal]),
+            'notifiers' => array_merge($notifiers->toArray(), ['total' => $notifiersTotal]),
             'dailyRollups' => $dailyRollups,
         ]);
     }

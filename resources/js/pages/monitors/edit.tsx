@@ -26,6 +26,8 @@ export default function MonitorsEdit({ monitor, notifiers, intervals, methods }:
           interval: monitor.interval,
           timeout: monitor.timeout,
           expected_status_code: monitor.expected_status_code,
+          failure_confirmation_threshold: monitor.failure_confirmation_threshold,
+          recovery_confirmation_threshold: monitor.recovery_confirmation_threshold,
           is_active: monitor.is_active,
           notifiers: monitor.notifiers.map((n) => n.id),
         }}

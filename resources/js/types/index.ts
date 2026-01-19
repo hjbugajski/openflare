@@ -41,6 +41,8 @@ export interface Monitor {
   timeout: number;
   is_active: boolean;
   expected_status_code: number;
+  failure_confirmation_threshold: number;
+  recovery_confirmation_threshold: number;
   last_checked_at: string | null;
   latest_check?: MonitorCheck | null;
   current_incident?: Incident | null;
@@ -125,24 +127,14 @@ export interface DailyUptimeRollup {
   max_response_time_ms: number | null;
 }
 
-export interface Paginated<T> {
+export interface CursorPaginated<T> {
   data: T[];
-  current_page: number;
-  last_page: number;
   per_page: number;
-  total: number;
-  from: number | null;
-  to: number | null;
-  links: {
-    url: string | null;
-    label: string;
-    active: boolean;
-  }[];
-  first_page_url: string;
-  last_page_url: string;
+  next_cursor: string | null;
+  prev_cursor: string | null;
   next_page_url: string | null;
   prev_page_url: string | null;
-  path: string;
+  total: number;
 }
 
 export interface ReverbConfig {
