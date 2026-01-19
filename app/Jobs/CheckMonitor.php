@@ -388,12 +388,20 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
 
     protected function getFailureConfirmationThreshold(): int
     {
-        return max(1, (int) config('monitors.failure_confirmation_threshold', 1));
+        if ($this->monitor->failure_confirmation_threshold !== null) {
+            return max(1, (int) $this->monitor->failure_confirmation_threshold);
+        }
+
+        return max(1, (int) config('monitors.failure_confirmation_threshold', 3));
     }
 
     protected function getRecoveryConfirmationThreshold(): int
     {
-        return max(1, (int) config('monitors.recovery_confirmation_threshold', 1));
+        if ($this->monitor->recovery_confirmation_threshold !== null) {
+            return max(1, (int) $this->monitor->recovery_confirmation_threshold);
+        }
+
+        return max(1, (int) config('monitors.recovery_confirmation_threshold', 3));
     }
 
     protected function sendNotifications(MonitorStatus $status, MonitorCheck $check): void

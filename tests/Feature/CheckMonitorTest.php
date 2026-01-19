@@ -108,6 +108,7 @@ it('creates an incident when status changes from up to down', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
     ]));
 
     // Create a previous "up" check
@@ -135,6 +136,7 @@ it('delays incident creation until failure threshold is met', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 2,
     ]));
 
     MonitorCheck::factory()->up()->create([
@@ -160,6 +162,7 @@ it('resolves an incident when status changes from down to up', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'recovery_confirmation_threshold' => 1,
     ]));
 
     // Create a previous "down" check
@@ -191,6 +194,7 @@ it('delays incident resolution until recovery threshold is met', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'recovery_confirmation_threshold' => 2,
     ]));
 
     MonitorCheck::factory()->down()->create([
@@ -223,6 +227,7 @@ it('does not create an incident when status remains up', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 3,
     ]));
 
     MonitorCheck::factory()->up()->create([
@@ -243,6 +248,7 @@ it('does not resolve an incident when status remains down', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'recovery_confirmation_threshold' => 3,
     ]));
 
     MonitorCheck::factory()->down()->create([
@@ -285,6 +291,8 @@ it('uses the correct HTTP method', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'method' => 'HEAD',
+        'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
     ]));
 
     CheckMonitor::dispatchSync($monitor);
@@ -302,6 +310,7 @@ it('dispatches notifications when status changes from up to down', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
     ]));
 
     $notifier = Notifier::factory()->discord()->create([
@@ -333,6 +342,7 @@ it('delays notifications until failure threshold is met', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 2,
     ]));
 
     $notifier = Notifier::factory()->discord()->create([
@@ -368,6 +378,7 @@ it('dispatches notifications when status changes from down to up', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'recovery_confirmation_threshold' => 1,
     ]));
 
     $notifier = Notifier::factory()->email()->create([
@@ -403,6 +414,7 @@ it('delays notifications until recovery threshold is met', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'recovery_confirmation_threshold' => 2,
     ]));
 
     $notifier = Notifier::factory()->email()->create([
@@ -447,9 +459,10 @@ it('does not dispatch notifications when status remains unchanged', function () 
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'recovery_confirmation_threshold' => 2,
     ]));
 
-    $notifier = Notifier::factory()->discord()->create([
+    $notifier = Notifier::factory()->email()->create([
         'user_id' => $monitor->user_id,
     ]);
     $monitor->notifiers()->attach($notifier);
@@ -474,6 +487,7 @@ it('only dispatches notifications to active channels', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
     ]));
 
     $activeNotifier = Notifier::factory()->discord()->create([
@@ -507,6 +521,7 @@ it('broadcasts MonitorChecked event after every check', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 3,
     ]));
 
     CheckMonitor::dispatchSync($monitor);
@@ -527,6 +542,7 @@ it('broadcasts IncidentOpened event when status changes from up to down', functi
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
     ]));
 
     MonitorCheck::factory()->up()->create([
@@ -552,6 +568,7 @@ it('broadcasts IncidentResolved event when status changes from down to up', func
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'recovery_confirmation_threshold' => 1,
     ]));
 
     MonitorCheck::factory()->down()->create([
@@ -581,6 +598,7 @@ it('does not broadcast IncidentOpened when status remains up', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 3,
     ]));
 
     MonitorCheck::factory()->up()->create([
@@ -603,6 +621,7 @@ it('does not broadcast IncidentResolved when status remains down', function () {
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'recovery_confirmation_threshold' => 3,
     ]));
 
     MonitorCheck::factory()->down()->create([
@@ -630,6 +649,7 @@ it('does not dispatch notifications to channels with missing config', function (
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
         'url' => 'https://example.com',
         'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
     ]));
 
     $validNotifier = Notifier::factory()->discord()->create([

@@ -97,6 +97,8 @@ describe('store', function () {
             'interval' => 300,
             'timeout' => 30,
             'expected_status_code' => 200,
+            'failure_confirmation_threshold' => 3,
+            'recovery_confirmation_threshold' => 3,
             'is_active' => true,
         ];
 
@@ -123,6 +125,8 @@ describe('store', function () {
             'interval' => 300,
             'timeout' => 30,
             'expected_status_code' => 200,
+            'failure_confirmation_threshold' => 3,
+            'recovery_confirmation_threshold' => 3,
             'notifiers' => [(string) $notifier->id],
         ];
 
@@ -150,6 +154,8 @@ describe('store', function () {
             'interval' => 300,
             'timeout' => 30,
             'expected_status_code' => 200,
+            'failure_confirmation_threshold' => 3,
+            'recovery_confirmation_threshold' => 3,
             // No notifiers specified - should auto-attach defaults
         ];
 
@@ -179,6 +185,8 @@ describe('store', function () {
             'interval' => 300,
             'timeout' => 30,
             'expected_status_code' => 200,
+            'failure_confirmation_threshold' => 3,
+            'recovery_confirmation_threshold' => 3,
         ];
 
         $this->actingAs($this->user)
@@ -193,44 +201,116 @@ describe('store', function () {
     it('validates required fields', function () {
         $this->actingAs($this->user)
             ->post(route('monitors.store'), [])
-            ->assertSessionHasErrors(['name', 'url', 'method', 'interval', 'timeout', 'expected_status_code']);
+            ->assertSessionHasErrors([
+                'name',
+                'url',
+                'method',
+                'interval',
+                'timeout',
+                'expected_status_code',
+                'failure_confirmation_threshold',
+                'recovery_confirmation_threshold',
+            ]);
     });
 
     it('validates url format', function () {
         $this->actingAs($this->user)
-            ->post(route('monitors.store'), ['url' => 'not-a-url'])
+            ->post(route('monitors.store'), [
+                'name' => 'Test Monitor',
+                'url' => 'not-a-url',
+                'method' => 'GET',
+                'interval' => 300,
+                'timeout' => 30,
+                'expected_status_code' => 200,
+                'failure_confirmation_threshold' => 3,
+                'recovery_confirmation_threshold' => 3,
+            ])
             ->assertSessionHasErrors('url');
     });
 
     it('validates interval is in allowed values', function () {
         $this->actingAs($this->user)
-            ->post(route('monitors.store'), ['interval' => 999])
+            ->post(route('monitors.store'), [
+                'name' => 'Test Monitor',
+                'url' => 'https://example.com',
+                'method' => 'GET',
+                'interval' => 999,
+                'timeout' => 30,
+                'expected_status_code' => 200,
+                'failure_confirmation_threshold' => 3,
+                'recovery_confirmation_threshold' => 3,
+            ])
             ->assertSessionHasErrors('interval');
     });
 
     it('validates method is in allowed values', function () {
         $this->actingAs($this->user)
-            ->post(route('monitors.store'), ['method' => 'POST'])
+            ->post(route('monitors.store'), [
+                'name' => 'Test Monitor',
+                'url' => 'https://example.com',
+                'method' => 'POST',
+                'interval' => 300,
+                'timeout' => 30,
+                'expected_status_code' => 200,
+                'failure_confirmation_threshold' => 3,
+                'recovery_confirmation_threshold' => 3,
+            ])
             ->assertSessionHasErrors('method');
     });
 
     it('validates timeout range', function () {
         $this->actingAs($this->user)
-            ->post(route('monitors.store'), ['timeout' => 1])
+            ->post(route('monitors.store'), [
+                'name' => 'Test Monitor',
+                'url' => 'https://example.com',
+                'method' => 'GET',
+                'interval' => 300,
+                'timeout' => 1,
+                'expected_status_code' => 200,
+                'failure_confirmation_threshold' => 3,
+                'recovery_confirmation_threshold' => 3,
+            ])
             ->assertSessionHasErrors('timeout');
 
         $this->actingAs($this->user)
-            ->post(route('monitors.store'), ['timeout' => 999])
+            ->post(route('monitors.store'), [
+                'name' => 'Test Monitor',
+                'url' => 'https://example.com',
+                'method' => 'GET',
+                'interval' => 300,
+                'timeout' => 999,
+                'expected_status_code' => 200,
+                'failure_confirmation_threshold' => 3,
+                'recovery_confirmation_threshold' => 3,
+            ])
             ->assertSessionHasErrors('timeout');
     });
 
     it('validates expected status code range', function () {
         $this->actingAs($this->user)
-            ->post(route('monitors.store'), ['expected_status_code' => 50])
+            ->post(route('monitors.store'), [
+                'name' => 'Test Monitor',
+                'url' => 'https://example.com',
+                'method' => 'GET',
+                'interval' => 300,
+                'timeout' => 30,
+                'expected_status_code' => 50,
+                'failure_confirmation_threshold' => 3,
+                'recovery_confirmation_threshold' => 3,
+            ])
             ->assertSessionHasErrors('expected_status_code');
 
         $this->actingAs($this->user)
-            ->post(route('monitors.store'), ['expected_status_code' => 700])
+            ->post(route('monitors.store'), [
+                'name' => 'Test Monitor',
+                'url' => 'https://example.com',
+                'method' => 'GET',
+                'interval' => 300,
+                'timeout' => 30,
+                'expected_status_code' => 700,
+                'failure_confirmation_threshold' => 3,
+                'recovery_confirmation_threshold' => 3,
+            ])
             ->assertSessionHasErrors('expected_status_code');
     });
 });

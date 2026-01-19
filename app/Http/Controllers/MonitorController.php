@@ -94,6 +94,8 @@ class MonitorController extends Controller
             'interval' => $request->validated('interval'),
             'timeout' => $request->validated('timeout'),
             'expected_status_code' => $request->validated('expected_status_code'),
+            'failure_confirmation_threshold' => $request->validated('failure_confirmation_threshold', config('monitors.failure_confirmation_threshold', 3)),
+            'recovery_confirmation_threshold' => $request->validated('recovery_confirmation_threshold', config('monitors.recovery_confirmation_threshold', 3)),
             'is_active' => $request->validated('is_active', true),
         ]);
 

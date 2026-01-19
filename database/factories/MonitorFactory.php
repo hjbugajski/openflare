@@ -29,6 +29,8 @@ class MonitorFactory extends Factory
             'interval' => fake()->randomElement(Monitor::INTERVALS),
             'timeout' => 30,
             'expected_status_code' => 200,
+            'failure_confirmation_threshold' => 3,
+            'recovery_confirmation_threshold' => 3,
             'is_active' => true,
             'last_checked_at' => null,
             'next_check_at' => now(),

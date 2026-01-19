@@ -41,6 +41,8 @@ export interface Monitor {
   timeout: number;
   is_active: boolean;
   expected_status_code: number;
+  failure_confirmation_threshold: number;
+  recovery_confirmation_threshold: number;
   last_checked_at: string | null;
   latest_check?: MonitorCheck | null;
   current_incident?: Incident | null;

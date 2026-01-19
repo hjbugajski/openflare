@@ -25,6 +25,8 @@ export default function MonitorsCreate({ notifiers, intervals, methods }: Props)
           interval: 300,
           timeout: 30,
           expected_status_code: 200,
+          failure_confirmation_threshold: 3,
+          recovery_confirmation_threshold: 3,
           is_active: true,
           notifiers: [],
         }}
