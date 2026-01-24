@@ -2,6 +2,7 @@ import { cva } from 'class-variance-authority';
 import { useEffect, useRef } from 'react';
 
 import type { StatusToolbarSummary } from '@/types';
+import { formatNumber } from '@/lib/format/number';
 
 const stateLabel = {
   operational: 'fully operational',
@@ -80,7 +81,9 @@ export function StatusToolbar({ summary }: StatusToolbarProps) {
   const monitorLabel =
     summary.totalMonitors === 0
       ? 'no monitors configured'
-      : `${summary.activeMonitors} of ${summary.totalMonitors} monitors active`;
+      : `${formatNumber(summary.activeMonitors)} of ${formatNumber(
+          summary.totalMonitors,
+        )} monitors active`;
 
   return (
     <div
@@ -97,10 +100,10 @@ export function StatusToolbar({ summary }: StatusToolbarProps) {
         <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
           <span>{monitorLabel}</span>
           {summary.activeIncidentCount > 0 ? (
-            <span>{summary.activeIncidentCount} active incidents</span>
+            <span>{formatNumber(summary.activeIncidentCount)} active incidents</span>
           ) : null}
           {summary.activeIncidentCount === 0 && summary.recentFailureCount > 0 ? (
-            <span>{summary.recentFailureCount} recent failed checks</span>
+            <span>{formatNumber(summary.recentFailureCount)} recent failed checks</span>
           ) : null}
         </div>
       </div>

@@ -2,8 +2,9 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
+import { ValueUnit } from '@/components/ui/value-unit';
 import { formatDateTime } from '@/lib/format/date-time';
-import { formatDuration } from '@/lib/format/duration';
+import { formatDurationParts } from '@/lib/format/duration';
 import type { CursorPaginated, Incident } from '@/types';
 
 const getIncidentDurationMs = (incident: Incident) => {
@@ -39,7 +40,11 @@ const columns: ColumnDef<Incident>[] = [
     id: 'duration',
     accessorFn: (incident) => getIncidentDurationMs(incident),
     header: 'duration',
-    cell: ({ row }) => formatDuration(row.original.started_at, row.original.ended_at),
+    cell: ({ row }) => {
+      const duration = formatDurationParts(row.original.started_at, row.original.ended_at);
+
+      return <ValueUnit value={duration.value} unit={duration.unit} suffix={duration.suffix} />;
+    },
     meta: {
       className: 'whitespace-nowrap',
     },

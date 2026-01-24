@@ -10,9 +10,11 @@ import { Divider } from '@/components/ui/divider';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Heading } from '@/components/ui/heading';
 import { Stats } from '@/components/ui/stats';
+import { ValueUnit } from '@/components/ui/value-unit';
 import AppLayout from '@/layouts/app-layout';
 import { formatDateTime } from '@/lib/format/date-time';
-import { formatDuration } from '@/lib/format/duration';
+import { formatDurationParts } from '@/lib/format/duration';
+import { formatNumber } from '@/lib/format/number';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { show } from '@/routes/monitors';
 import type { CursorPaginated, IncidentWithMonitor } from '@/types';
@@ -103,7 +105,11 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
     id: 'duration',
     accessorFn: (incident) => getIncidentDurationMs(incident),
     header: 'duration',
-    cell: ({ row }) => formatDuration(row.original.started_at, row.original.ended_at),
+    cell: ({ row }) => {
+      const duration = formatDurationParts(row.original.started_at, row.original.ended_at);
+
+      return <ValueUnit value={duration.value} unit={duration.unit} suffix={duration.suffix} />;
+    },
     meta: {
       className: 'whitespace-nowrap',
     },
@@ -184,21 +190,21 @@ export default function DashboardIndex({ counts, incidents, monitorIds }: Props)
       <Stats.Root>
         <Stats.Card>
           <Stats.Term>total</Stats.Term>
-          <Stats.Value>{total}</Stats.Value>
+          <Stats.Value>{formatNumber(total)}</Stats.Value>
         </Stats.Card>
         <Stats.Card>
           <Stats.Term>up</Stats.Term>
-          <Stats.Value className="text-success">{counts.up}</Stats.Value>
+          <Stats.Value className="text-success">{formatNumber(counts.up)}</Stats.Value>
         </Stats.Card>
         <Stats.Card>
           <Stats.Term>down</Stats.Term>
           <Stats.Value className={counts.down > 0 ? 'text-danger' : 'text-muted-foreground'}>
-            {counts.down}
+            {formatNumber(counts.down)}
           </Stats.Value>
         </Stats.Card>
         <Stats.Card>
           <Stats.Term>inactive</Stats.Term>
-          <Stats.Value className="text-muted-foreground">{counts.inactive}</Stats.Value>
+          <Stats.Value className="text-muted-foreground">{formatNumber(counts.inactive)}</Stats.Value>
         </Stats.Card>
       </Stats.Root>
 

@@ -15,6 +15,7 @@ import { IconChevronLeft } from '@/components/icons/chevron-left';
 import { IconChevronRight } from '@/components/icons/chevron-right';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
+import { formatNumber } from '@/lib/format/number';
 import type { CursorPaginated } from '@/types';
 
 declare module '@tanstack/react-table' {
@@ -210,7 +211,7 @@ export function ServerDataTable<TData, TValue>({
       {paginated.data.length > 0 ? (
         <div className="flex items-center justify-between border-t border-border pt-4 text-sm text-muted-foreground">
           <div>
-            page {pageIndex} of {totalPages}
+            page {formatNumber(pageIndex)} of {formatNumber(totalPages)}
           </div>
           <div className="flex gap-2">
             <Button
