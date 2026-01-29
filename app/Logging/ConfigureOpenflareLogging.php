@@ -12,11 +12,13 @@ final class ConfigureOpenflareLogging
 {
     public function __invoke(Logger $logger): void
     {
-        $stdoutHandler = new StreamHandler('php://stdout', Logger::DEBUG);
-        $stderrHandler = new StreamHandler('php://stderr', Logger::ERROR);
+        $level = Logger::toMonologLevel(env('LOG_LEVEL', 'debug'));
+
+        $stdoutHandler = new StreamHandler('php://stdout', $level);
+        $stderrHandler = new StreamHandler('php://stderr', max($level, Logger::ERROR));
 
         $logger->setHandlers([
-            new FilterHandler($stdoutHandler, Logger::DEBUG, Logger::WARNING),
+            new FilterHandler($stdoutHandler, $level, Logger::WARNING),
             $stderrHandler,
         ]);
     }

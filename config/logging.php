@@ -47,11 +47,6 @@ return [
 
         'openflare' => [
             'driver' => 'monolog',
-            'handler' => StreamHandler::class,
-            'handler_with' => [
-                'stream' => 'php://stdout',
-            ],
-            'level' => env('LOG_LEVEL', 'debug'),
             'processors' => [PsrLogMessageProcessor::class],
             'tap' => [App\Logging\ConfigureOpenflareLogging::class],
         ],
