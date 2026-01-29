@@ -1,7 +1,8 @@
+import { useCallback, useRef } from 'react';
+
 import { Head, Link, router } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { useCallback, useRef } from 'react';
 
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
@@ -204,7 +205,9 @@ export default function DashboardIndex({ counts, incidents, monitorIds }: Props)
         </Stats.Card>
         <Stats.Card>
           <Stats.Term>inactive</Stats.Term>
-          <Stats.Value className="text-muted-foreground">{formatNumber(counts.inactive)}</Stats.Value>
+          <Stats.Value className="text-muted-foreground">
+            {formatNumber(counts.inactive)}
+          </Stats.Value>
         </Stats.Card>
       </Stats.Root>
 

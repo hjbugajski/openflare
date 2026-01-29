@@ -1,5 +1,6 @@
-import { Link, router } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { Link, router } from '@inertiajs/react';
 
 import { IconMinus } from '@/components/icons/minus';
 import { IconPlus } from '@/components/icons/plus';

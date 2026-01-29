@@ -1,6 +1,7 @@
+import { useCallback, useState } from 'react';
+
 import { Link } from '@inertiajs/react';
 import { useStore } from '@tanstack/react-form';
-import { useCallback, useState } from 'react';
 
 import { type MonitorMode, MonitorModeRadio } from '@/components/notifiers/monitor-mode-radio';
 import { useNotifierTest } from '@/components/notifiers/use-notifier-test';

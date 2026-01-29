@@ -1,8 +1,9 @@
-import { cva } from 'class-variance-authority';
 import { useEffect, useRef } from 'react';
 
-import type { StatusToolbarSummary } from '@/types';
+import { cva } from 'class-variance-authority';
+
 import { formatNumber } from '@/lib/format/number';
+import type { StatusToolbarSummary } from '@/types';
 
 const stateLabel = {
   operational: 'fully operational',

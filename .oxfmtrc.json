@@ -7,15 +7,26 @@
     "stylesheet": "resources/css/app.css"
   },
   "experimentalSortImports": {
+    "customGroups": [
+      {
+        "groupName": "react",
+        "elementNamePattern": ["react", "react-dom"]
+      },
+      {
+        "groupName": "openflare",
+        "elementNamePattern": ["@/"]
+      }
+    ],
     "groups": [
       ["builtin"],
+      ["react"],
       ["external", "external-type"],
+      ["openflare", "openflare-type"],
       ["internal", "internal-type"],
       ["parent", "parent-type", "sibling", "sibling-type"],
       ["index", "index-type"],
       ["side-effect"]
     ],
-    "internalPattern": ["@/"],
     "newlinesBetween": true
   },
   "ignorePatterns": [

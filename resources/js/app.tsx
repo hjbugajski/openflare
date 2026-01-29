@@ -1,8 +1,9 @@
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+
 import { createInertiaApp } from '@inertiajs/react';
 import { configureEcho } from '@laravel/echo-react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
 
 import { Toast } from '@/components/ui/toast';
 import type { ReverbConfig } from '@/types';
