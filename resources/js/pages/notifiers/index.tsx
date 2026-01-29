@@ -1,6 +1,7 @@
+import { useState } from 'react';
+
 import { Head, Link, router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { useState } from 'react';
 
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Heading } from '@/components/ui/heading';
 import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
+import { formatNumber } from '@/lib/format/number';
 import { create, destroy, edit } from '@/routes/notifiers';
 import { type CursorPaginated, type Notifier } from '@/types';
 
@@ -76,14 +78,14 @@ export default function NotifiersIndex({ notifiers }: Props) {
     {
       accessorKey: 'monitors_count',
       header: 'monitors',
-      cell: ({ row }) => row.original.monitors_count ?? 0,
+      cell: ({ row }) => formatNumber(row.original.monitors_count ?? 0),
       meta: { className: 'whitespace-nowrap' },
     },
     {
       id: 'excluded',
       accessorFn: (notifier) => notifier.excluded_monitors_count ?? 0,
       header: 'excluded',
-      cell: ({ row }) => row.original.excluded_monitors_count ?? 0,
+      cell: ({ row }) => formatNumber(row.original.excluded_monitors_count ?? 0),
       meta: { className: 'whitespace-nowrap w-full' },
     },
     {
@@ -113,7 +115,7 @@ export default function NotifiersIndex({ notifiers }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <Heading title="notifiers" />
-          <Badge variant="secondary">{notifiers.total}</Badge>
+          <Badge variant="secondary">{formatNumber(notifiers.total)}</Badge>
         </div>
         <Button render={<Link href={create().url} />}>add notifier</Button>
       </div>

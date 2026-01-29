@@ -12,11 +12,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | This option defines the default log channel that is utilized to write
-    | messages to your logs. OpenFlare uses stderr for container compatibility.
+    | messages to your logs. OpenFlare uses stdout for most logs and stderr
+    | for errors so platforms like Railway classify logs correctly.
     |
     */
 
-    'default' => 'stderr',
+    'default' => env('LOG_CHANNEL', 'openflare'),
 
     /*
     |--------------------------------------------------------------------------
@@ -43,6 +44,12 @@ return [
     */
 
     'channels' => [
+
+        'openflare' => [
+            'driver' => 'monolog',
+            'processors' => [PsrLogMessageProcessor::class],
+            'tap' => [App\Logging\ConfigureOpenflareLogging::class],
+        ],
 
         'single' => [
             'driver' => 'single',

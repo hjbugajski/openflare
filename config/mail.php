@@ -11,7 +11,8 @@ return [
     | messages unless another mailer is explicitly specified when sending
     | the message.
     |
-    | Use "log" for development (emails logged to stderr) and "resend" for
+    | Use "log" for development (emails logged to the default log channel)
+    | and "resend" for production (requires RESEND_API_KEY to be set).
     | production (requires RESEND_API_KEY to be set).
     |
     */

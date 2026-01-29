@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import {
   type ColumnDef,
   type SortingState,
@@ -6,7 +8,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { useState } from 'react';
 
 import { IconArrowDown } from '@/components/icons/arrow-down';
 import { IconArrowUp } from '@/components/icons/arrow-up';

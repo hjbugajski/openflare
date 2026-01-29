@@ -1,4 +1,3 @@
-import { type AnyFieldMeta } from '@tanstack/react-form';
 import {
   type ComponentProps,
   createContext,
@@ -8,6 +7,8 @@ import {
   useMemo,
   useRef,
 } from 'react';
+
+import { type AnyFieldMeta } from '@tanstack/react-form';
 
 import { IconChevronGrabberVertical } from '@/components/icons/chevron-grabber-vertical';
 import { IconSearchOptions } from '@/components/icons/search-options';

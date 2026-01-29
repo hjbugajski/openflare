@@ -1,6 +1,7 @@
+import type { ComponentProps } from 'react';
+
 import { Toggle } from '@base-ui/react/toggle';
 import { ToggleGroup as BaseToggleGroup } from '@base-ui/react/toggle-group';
-import type { ComponentProps } from 'react';
 
 import { cn } from '@/lib/cn';
 

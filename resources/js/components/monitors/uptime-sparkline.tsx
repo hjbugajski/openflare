@@ -1,5 +1,6 @@
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/cn';
+import { formatNumber } from '@/lib/format/number';
 import type { DailyUptimeRollup } from '@/types';
 
 interface UptimeSparklineProps {
@@ -157,7 +158,7 @@ export function UptimeSparkline({
                     <span className="text-danger">{downPercent.toFixed(2)}%</span> down
                     <br />
                     <span aria-hidden className="text-muted-foreground">
-                      [<span className="mx-1">{rollup.total_checks} checks</span>]
+                      [<span className="mx-1">{formatNumber(rollup.total_checks)} checks</span>]
                     </span>
                   </Tooltip.Popup>
                 </Tooltip.Positioner>

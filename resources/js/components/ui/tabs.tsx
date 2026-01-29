@@ -1,5 +1,6 @@
-import { Tabs as BaseTabs } from '@base-ui/react/tabs';
 import type { ComponentProps } from 'react';
+
+import { Tabs as BaseTabs } from '@base-ui/react/tabs';
 
 import { cn } from '@/lib/cn';
 

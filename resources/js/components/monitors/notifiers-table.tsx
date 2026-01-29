@@ -1,6 +1,7 @@
+import { useState } from 'react';
+
 import { router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { useState } from 'react';
 
 import { IconClose } from '@/components/icons/close';
 import { ServerDataTable } from '@/components/server-data-table';

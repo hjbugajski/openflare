@@ -1,6 +1,7 @@
+import { useCallback, useRef, useState } from 'react';
+
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { useCallback, useRef, useState } from 'react';
 
 import { ChecksTable } from '@/components/monitors/checks-table';
 import { DeleteMonitorDialog } from '@/components/monitors/delete-monitor-dialog';
@@ -18,6 +19,7 @@ import { Stats } from '@/components/ui/stats';
 import { ValueUnit } from '@/components/ui/value-unit';
 import AppLayout from '@/layouts/app-layout';
 import { formatInterval } from '@/lib/format/interval';
+import { formatNumber } from '@/lib/format/number';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { edit } from '@/routes/monitors';
 import {
@@ -214,7 +216,7 @@ export default function MonitorsShow({
         <Card.Header>
           <div className="flex items-center gap-2">
             <Heading level={2} title="notifiers" />
-            <Badge variant="secondary">{notifiers.total}</Badge>
+            <Badge variant="secondary">{formatNumber(notifiers.total)}</Badge>
           </div>
         </Card.Header>
         <Card.Content>
@@ -230,7 +232,7 @@ export default function MonitorsShow({
         <Card.Header>
           <div className="flex items-center gap-2">
             <Heading level={2} title="incidents" />
-            <Badge variant="secondary">{incidents.total}</Badge>
+            <Badge variant="secondary">{formatNumber(incidents.total)}</Badge>
           </div>
         </Card.Header>
         <Card.Content>
@@ -246,7 +248,7 @@ export default function MonitorsShow({
         <Card.Header>
           <div className="flex items-center gap-2">
             <Heading level={2} title="checks" />
-            <Badge variant="secondary">{checks.total}</Badge>
+            <Badge variant="secondary">{formatNumber(checks.total)}</Badge>
           </div>
         </Card.Header>
         <Card.Content>

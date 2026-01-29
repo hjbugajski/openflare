@@ -1,6 +1,7 @@
+import { useCallback, useRef } from 'react';
+
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { useCallback, useRef } from 'react';
 
 import { IconGrid } from '@/components/icons/grid';
 import { IconTable } from '@/components/icons/table';
@@ -18,6 +19,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { ValueUnit } from '@/components/ui/value-unit';
 import AppLayout from '@/layouts/app-layout';
 import { formatInterval } from '@/lib/format/interval';
+import { formatNumber } from '@/lib/format/number';
 import { formatRelativeTime } from '@/lib/format/relative-time';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { usePreferencePatch } from '@/lib/hooks/use-preference-patch';
@@ -197,7 +199,7 @@ export default function MonitorsIndex({ monitors }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <Heading title="monitors" />
-          <Badge variant="secondary">{monitors.length}</Badge>
+          <Badge variant="secondary">{formatNumber(monitors.length)}</Badge>
         </div>
         <div className="flex items-center gap-2">
           <Tooltip.Provider>

@@ -1,6 +1,7 @@
+import type { ComponentProps, ReactNode } from 'react';
+
 import { Radio } from '@base-ui/react/radio';
 import { RadioGroup as BaseRadioGroup } from '@base-ui/react/radio-group';
-import type { ComponentProps, ReactNode } from 'react';
 
 import { cn } from '@/lib/cn';
 

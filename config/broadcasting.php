@@ -16,7 +16,7 @@ $serverPort = env('REVERB_SERVER_PORT', $isProduction ? 6001 : 8080);
 
 return [
 
-    'default' => 'reverb',
+    'default' => env('BROADCAST_CONNECTION', 'reverb'),
 
     'connections' => [
 
