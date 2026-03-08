@@ -1,6 +1,16 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "import", "promise"],
+  "plugins": [
+    "eslint",
+    "import",
+    "jsx-a11y",
+    "oxc",
+    "promise",
+    "react-perf",
+    "react",
+    "typescript",
+    "unicorn"
+  ],
   "env": {
     "browser": true
   },
@@ -11,6 +21,32 @@
     }
   },
   "rules": {
+    "eslint/array-callback-return": "error",
+    "eslint/curly": "error",
+    "eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+    "eslint/no-await-in-loop": "warn",
+    "eslint/no-constructor-return": "error",
+    "eslint/no-else-return": "warn",
+    "eslint/no-fallthrough": "error",
+    "eslint/no-lonely-if": "warn",
+    "eslint/no-promise-executor-return": "error",
+    "eslint/no-self-compare": "error",
+    "eslint/no-useless-constructor": "error",
+    "eslint/no-var": "error",
+    "eslint/prefer-const": "error",
+    "import/no-self-import": "error",
+    "jsx-a11y/no-autofocus": "off",
+    "oxc/no-accumulating-spread": "warn",
+    "promise/no-multiple-resolved": "error",
+    "react-perf/jsx-no-new-array-as-prop": "warn",
+    "react-perf/jsx-no-new-function-as-prop": "warn",
+    "react-perf/jsx-no-new-object-as-prop": "warn",
+    "react/jsx-curly-brace-presence": "warn",
+    "react/jsx-no-target-blank": "error",
+    "react/jsx-no-useless-fragment": "warn",
+    "react/react-in-jsx-scope": "off",
+    "react/rules-of-hooks": "error",
+    "react/self-closing-comp": "warn",
     "sort-imports": [
       "error",
       {
@@ -21,9 +57,17 @@
         "memberSyntaxSortOrder": ["none", "all", "multiple", "single"]
       }
     ],
-    "react/react-in-jsx-scope": "off",
-    "typescript/no-explicit-any": "warn",
+    "typescript/consistent-type-definitions": ["error", "interface"],
     "typescript/consistent-type-imports": "error",
-    "typescript/no-floating-promises": "error"
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-unnecessary-condition": "warn",
+    "typescript/no-unnecessary-type-assertion": "warn",
+    "typescript/no-unnecessary-type-constraint": "warn",
+    "unicorn/no-useless-undefined": "warn",
+    "unicorn/prefer-includes": "warn",
+    "unicorn/prefer-optional-catch-binding": "warn",
+    "unicorn/throw-new-error": "warn"
   }
 }
