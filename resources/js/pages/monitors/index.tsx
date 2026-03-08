@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
@@ -85,9 +85,9 @@ function MonitorCard({ monitor, timezone }: { monitor: Monitor; timezone: string
                 <ValueUnit value={30} unit="d" />
                 <span>uptime</span>
               </span>
-              <UptimePercentage data={monitor.daily_rollups ?? []} className="font-medium" />
+              <UptimePercentage data={monitor.daily_rollups} className="font-medium" />
             </div>
-            <UptimeSparkline data={monitor.daily_rollups ?? []} height={16} timezone={timezone} />
+            <UptimeSparkline data={monitor.daily_rollups} height={16} timezone={timezone} />
           </div>
         </Card.Content>
 
@@ -133,9 +133,7 @@ export default function MonitorsIndex({ monitors }: Props) {
   const { auth } = usePage<PageProps>().props;
   const defaultView: MonitorViewMode = auth.user!.preferences?.monitors_view ?? 'cards';
   const browserTimezone =
-    typeof Intl !== 'undefined'
-      ? (Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC')
-      : 'UTC';
+    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
   const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
   const [viewMode, setViewMode] = usePreferencePatch('monitors_view', defaultView);
 
@@ -176,11 +174,16 @@ export default function MonitorsIndex({ monitors }: Props) {
     scheduleReload('monitors');
   }, [scheduleReload]);
 
-  const handleViewChange = (value: string[]) => {
-    if (value.length > 0) {
-      setViewMode(value[0] as MonitorViewMode);
-    }
-  };
+  const handleViewChange = useCallback(
+    (value: string[]) => {
+      if (value.length > 0) {
+        setViewMode(value[0] as MonitorViewMode);
+      }
+    },
+    [setViewMode],
+  );
+
+  const viewModeValue = useMemo(() => [viewMode], [viewMode]);
 
   return (
     <AppLayout>
@@ -203,7 +206,7 @@ export default function MonitorsIndex({ monitors }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <Tooltip.Provider>
-            <ToggleGroup.Root value={[viewMode]} onValueChange={handleViewChange}>
+            <ToggleGroup.Root value={viewModeValue} onValueChange={handleViewChange}>
               <Tooltip.Root>
                 <Tooltip.Trigger
                   render={

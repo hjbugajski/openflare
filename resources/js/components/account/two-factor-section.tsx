@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Link, router } from '@inertiajs/react';
 
@@ -16,7 +16,7 @@ interface TwoFactorSectionProps {
 export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
   const [isRegenerating, setIsRegenerating] = useState(false);
 
-  const handleRegenerate = () => {
+  const handleRegenerate = useCallback(() => {
     setIsRegenerating(true);
     router.post(regenerate().url, undefined, {
       onSuccess: () => {
@@ -24,7 +24,7 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
       },
       onFinish: () => setIsRegenerating(false),
     });
-  };
+  }, []);
 
   return (
     <Card.Root>

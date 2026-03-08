@@ -1,4 +1,4 @@
-import { type ComponentProps, createContext, useContext } from 'react';
+import { type ComponentProps, type ReactNode, createContext, useContext, useMemo } from 'react';
 
 import { Dialog as BaseDialog, type DialogRootProps } from '@base-ui/react/dialog';
 import { type VariantProps, cva } from 'class-variance-authority';
@@ -22,6 +22,18 @@ const useDialogContext = () => {
 
   return context;
 };
+
+function DialogContextProvider({
+  mode,
+  children,
+}: {
+  mode: DialogContextValue['mode'];
+  children: ReactNode;
+}) {
+  const value = useMemo(() => ({ mode }), [mode]);
+
+  return <DialogContext.Provider value={value}>{children}</DialogContext.Provider>;
+}
 
 function Root<Payload = unknown>(props: DialogRootProps<Payload>) {
   return <BaseDialog.Root {...props} />;
@@ -102,7 +114,7 @@ function Content({ className, children, mode = 'dialog', ...props }: DialogConte
       className={cn(contentVariants({ mode }), className)}
       {...props}
     >
-      <DialogContext.Provider value={{ mode: mode || 'dialog' }}>{children}</DialogContext.Provider>
+      <DialogContextProvider mode={mode || 'dialog'}>{children}</DialogContextProvider>
     </BaseDialog.Popup>
   );
 }

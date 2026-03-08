@@ -13,7 +13,9 @@ export function usePreferencePatch<K extends keyof UserPreferences>(
 
   const patchValue = useCallback(
     (newValue: NonNullable<UserPreferences[K]>) => {
-      if (newValue === value) return;
+      if (newValue === value) {
+        return;
+      }
 
       setValue(newValue);
       router.patch(update().url, { [key]: newValue }, { preserveScroll: true });

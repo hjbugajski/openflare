@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Head } from '@inertiajs/react';
 import { z } from 'zod';
@@ -22,6 +22,7 @@ const twoFactorChallengeSchema = z
 
 export default function TwoFactorChallenge() {
   const [recovery, setRecovery] = useState(false);
+  const toggleRecovery = useCallback(() => setRecovery((prev) => !prev), []);
   const { form, getServerError } = useInertiaAppForm({
     defaultValues: {
       code: '',
@@ -71,7 +72,7 @@ export default function TwoFactorChallenge() {
               )}
 
               <div className="flex items-center justify-end gap-4">
-                <Button variant="tertiary" onClick={() => setRecovery(!recovery)}>
+                <Button variant="tertiary" onClick={toggleRecovery}>
                   {recovery ? 'use an authentication code' : 'use a recovery code'}
                 </Button>
                 <form.SubmitButton submittingText="verifying...">verify</form.SubmitButton>

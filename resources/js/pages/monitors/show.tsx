@@ -56,19 +56,20 @@ export default function MonitorsShow({
 }: Props) {
   const { auth } = usePage<PageProps>().props;
   const browserTimezone =
-    typeof Intl !== 'undefined'
-      ? (Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC')
-      : 'UTC';
+    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
   const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
   const [currentIncident, setCurrentIncident] = useState(monitor.current_incident);
   const [latestCheck, setLatestCheck] = useState(monitor.latest_check);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const openDeleteDialog = useCallback(() => setDeleteDialogOpen(true), []);
 
   // Track what needs reloading, then batch into single request
   const pendingReloads = useRef<Set<string>>(new Set());
 
   const flushReloads = useDebouncedCallback(() => {
-    if (pendingReloads.current.size === 0) return;
+    if (pendingReloads.current.size === 0) {
+      return;
+    }
 
     const only = Array.from(pendingReloads.current);
     pendingReloads.current.clear();
@@ -155,7 +156,7 @@ export default function MonitorsShow({
           <Button variant="secondary" render={<Link href={edit(monitor.id).url} />}>
             edit
           </Button>
-          <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+          <Button variant="destructive" onClick={openDeleteDialog}>
             delete
           </Button>
         </div>
@@ -172,16 +173,11 @@ export default function MonitorsShow({
         <Card.Header>
           <div className="flex items-center justify-between">
             <Heading level={2} title="Uptime" />
-            <UptimePercentage data={dailyRollups ?? []} className="font-medium" />
+            <UptimePercentage data={dailyRollups} className="font-medium" />
           </div>
         </Card.Header>
         <Card.Content>
-          <UptimeSparkline
-            data={dailyRollups ?? []}
-            height={32}
-            className="w-full"
-            timezone={timezone}
-          />
+          <UptimeSparkline data={dailyRollups} height={32} className="w-full" timezone={timezone} />
           <div className="mt-2 flex justify-between text-xs text-muted-foreground">
             <span>30d ago</span>
             <span>today</span>

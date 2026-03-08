@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { router } from '@inertiajs/react';
 
@@ -16,7 +16,7 @@ export function DeleteAccountSection() {
   const [password, setPassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     setIsDeleting(true);
     router.delete(destroy().url, {
       data: { password },
@@ -26,7 +26,30 @@ export function DeleteAccountSection() {
       },
       onFinish: () => setIsDeleting(false),
     });
-  };
+  }, [password]);
+
+  const openDialog = useCallback(() => setDialogOpen(true), []);
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setPassword('');
+    }
+  }, []);
+
+  const handlePasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value),
+    [],
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter' && password) {
+        handleDelete();
+      }
+    },
+    [password, handleDelete],
+  );
 
   return (
     <>
@@ -44,21 +67,13 @@ export function DeleteAccountSection() {
           </p>
         </Card.Content>
         <Card.Footer className="justify-end">
-          <Button variant="destructive" onClick={() => setDialogOpen(true)}>
+          <Button variant="destructive" onClick={openDialog}>
             delete account
           </Button>
         </Card.Footer>
       </Card.Root>
 
-      <Dialog.Root
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) {
-            setPassword('');
-          }
-        }}
-      >
+      <Dialog.Root open={dialogOpen} onOpenChange={handleOpenChange}>
         <Dialog.Portal>
           <Dialog.Backdrop />
           <Dialog.Content>
@@ -74,8 +89,8 @@ export function DeleteAccountSection() {
                   autoComplete="current-password"
                   value={password}
                   className="z-5"
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && password && handleDelete()}
+                  onChange={handlePasswordChange}
+                  onKeyDown={handleKeyDown}
                 />
               </Field>
             </Dialog.Body>

@@ -62,7 +62,7 @@ function Heading({ title, description, level = 1, className, ...props }: Heading
       {heading}
       <p className="text-sm text-muted-foreground">
         <span aria-hidden className="mr-1">
-          {'//'}
+          //
         </span>
         {description}
       </p>

@@ -1,10 +1,14 @@
+import { useMemo } from 'react';
+
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format/number';
 import type { DailyUptimeRollup } from '@/types';
 
+const FULL_HEIGHT_STYLE = { height: '100%' };
+
 interface UptimeSparklineProps {
-  data: DailyUptimeRollup[];
+  data: DailyUptimeRollup[] | undefined;
   days?: number;
   height?: number;
   className?: string;
@@ -81,21 +85,22 @@ function buildDateRange(days: number, timezone: string) {
 }
 
 export function UptimeSparkline({
-  data,
+  data = [],
   days = 30,
   height = 24,
   className,
   timezone,
 }: UptimeSparklineProps) {
   const rollupMap = new Map(data.map((r) => [r.date.slice(0, 10), r]));
-  const resolvedTimezone = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+  const resolvedTimezone = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const dates = buildDateRange(days, resolvedTimezone);
+  const heightStyle = useMemo(() => ({ height }), [height]);
 
   return (
     <Tooltip.Provider>
       <div
         className={cn('flex items-end gap-px', className)}
-        style={{ height }}
+        style={heightStyle}
         role="img"
         aria-label={`Uptime over the last ${days} days`}
       >
@@ -108,7 +113,7 @@ export function UptimeSparkline({
               <Tooltip.Root key={date}>
                 <Tooltip.Trigger
                   className="min-w-0.5 flex-1 bg-muted hover:bg-muted-foreground"
-                  style={{ height: '100%' }}
+                  style={FULL_HEIGHT_STYLE}
                 >
                   <span className="sr-only">{date}: No data</span>
                 </Tooltip.Trigger>
@@ -135,17 +140,19 @@ export function UptimeSparkline({
             <Tooltip.Root key={date}>
               <Tooltip.Trigger
                 className="flex min-w-0.5 flex-1 flex-col justify-end overflow-hidden hover:opacity-80"
-                style={{ height: '100%' }}
+                style={FULL_HEIGHT_STYLE}
               >
                 <span className="sr-only">
                   {date}: {upPercent.toFixed(2)}% up
                 </span>
+                {/* oxlint-disable react-perf/jsx-no-new-object-as-prop -- dynamic per-bar style in render loop */}
                 {downPercent > 0 ? (
                   <div className="w-full bg-danger" style={{ height: downHeight }} />
                 ) : null}
                 {upPercent > 0 ? (
                   <div className="w-full bg-success" style={{ height: upHeight }} />
                 ) : null}
+                {/* oxlint-enable react-perf/jsx-no-new-object-as-prop */}
               </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Positioner>

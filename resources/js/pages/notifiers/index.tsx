@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Head, Link, router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -24,10 +24,79 @@ interface Props {
 // Handle pattern for row actions: selection determines payload (notifier to delete)
 const deleteDialog = Dialog.createHandle<Notifier>();
 
+const INITIAL_SORTING = [{ id: 'name', desc: false }];
+
+const columns: ColumnDef<Notifier>[] = [
+  {
+    accessorKey: 'name',
+    header: 'name',
+    meta: { className: 'whitespace-nowrap font-medium' },
+  },
+  {
+    id: 'status',
+    accessorFn: (notifier) => notifier.is_active,
+    header: 'status',
+    cell: ({ row }) => (
+      <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
+        {row.original.is_active ? 'active' : 'inactive'}
+      </Badge>
+    ),
+    meta: { className: 'whitespace-nowrap' },
+  },
+  {
+    accessorKey: 'type',
+    header: 'type',
+    cell: ({ row }) => (
+      <Badge variant={row.original.type === 'discord' ? 'purple' : 'blue'}>
+        {row.original.type}
+      </Badge>
+    ),
+    meta: { className: 'whitespace-nowrap' },
+  },
+  {
+    id: 'default',
+    accessorFn: (notifier) => notifier.is_default,
+    header: 'default',
+    cell: ({ row }) => (row.original.is_default ? <Badge variant="secondary">yes</Badge> : null),
+    meta: { className: 'whitespace-nowrap' },
+  },
+  {
+    accessorKey: 'monitors_count',
+    header: 'monitors',
+    cell: ({ row }) => formatNumber(row.original.monitors_count ?? 0),
+    meta: { className: 'whitespace-nowrap' },
+  },
+  {
+    id: 'excluded',
+    accessorFn: (notifier) => notifier.excluded_monitors_count ?? 0,
+    header: 'excluded',
+    cell: ({ row }) => formatNumber(row.original.excluded_monitors_count ?? 0),
+    meta: { className: 'whitespace-nowrap w-full' },
+  },
+  {
+    id: 'actions',
+    enableSorting: false,
+    cell: ({ row }) => (
+      <div className="flex justify-end gap-2">
+        <Button variant="secondary" size="sm" render={<Link href={edit(row.original.id).url} />}>
+          edit
+        </Button>
+        <Dialog.Trigger
+          handle={deleteDialog}
+          payload={row.original}
+          render={<Button variant="destructive" size="sm" />}
+        >
+          delete
+        </Dialog.Trigger>
+      </div>
+    ),
+  },
+];
+
 export default function NotifiersIndex({ notifiers }: Props) {
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDeleteConfirm = (notifier: Notifier) => {
+  const handleDeleteConfirm = useCallback((notifier: Notifier) => {
     setIsDeleting(true);
     router.delete(destroy(notifier.id).url, {
       onSuccess: () => {
@@ -38,75 +107,7 @@ export default function NotifiersIndex({ notifiers }: Props) {
         setIsDeleting(false);
       },
     });
-  };
-
-  // Columns inside component: needs handleToggle and deleteDialog for row actions
-  const columns: ColumnDef<Notifier>[] = [
-    {
-      accessorKey: 'name',
-      header: 'name',
-      meta: { className: 'whitespace-nowrap font-medium' },
-    },
-    {
-      id: 'status',
-      accessorFn: (notifier) => notifier.is_active,
-      header: 'status',
-      cell: ({ row }) => (
-        <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
-          {row.original.is_active ? 'active' : 'inactive'}
-        </Badge>
-      ),
-      meta: { className: 'whitespace-nowrap' },
-    },
-    {
-      accessorKey: 'type',
-      header: 'type',
-      cell: ({ row }) => (
-        <Badge variant={row.original.type === 'discord' ? 'purple' : 'blue'}>
-          {row.original.type}
-        </Badge>
-      ),
-      meta: { className: 'whitespace-nowrap' },
-    },
-    {
-      id: 'default',
-      accessorFn: (notifier) => notifier.is_default,
-      header: 'default',
-      cell: ({ row }) => (row.original.is_default ? <Badge variant="secondary">yes</Badge> : null),
-      meta: { className: 'whitespace-nowrap' },
-    },
-    {
-      accessorKey: 'monitors_count',
-      header: 'monitors',
-      cell: ({ row }) => formatNumber(row.original.monitors_count ?? 0),
-      meta: { className: 'whitespace-nowrap' },
-    },
-    {
-      id: 'excluded',
-      accessorFn: (notifier) => notifier.excluded_monitors_count ?? 0,
-      header: 'excluded',
-      cell: ({ row }) => formatNumber(row.original.excluded_monitors_count ?? 0),
-      meta: { className: 'whitespace-nowrap w-full' },
-    },
-    {
-      id: 'actions',
-      enableSorting: false,
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" render={<Link href={edit(row.original.id).url} />}>
-            edit
-          </Button>
-          <Dialog.Trigger
-            handle={deleteDialog}
-            payload={row.original}
-            render={<Button variant="destructive" size="sm" />}
-          >
-            delete
-          </Dialog.Trigger>
-        </div>
-      ),
-    },
-  ];
+  }, []);
 
   return (
     <AppLayout>
@@ -129,7 +130,7 @@ export default function NotifiersIndex({ notifiers }: Props) {
           <ServerDataTable
             columns={columns}
             paginated={notifiers}
-            initialSorting={[{ id: 'name', desc: false }]}
+            initialSorting={INITIAL_SORTING}
           />
         </Card.Root>
       )}
@@ -155,6 +156,7 @@ export default function NotifiersIndex({ notifiers }: Props) {
                 <Button
                   variant="destructive"
                   disabled={isDeleting}
+                  // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop -- payload comes from render prop
                   onClick={() => payload && handleDeleteConfirm(payload)}
                 >
                   {isDeleting ? 'deleting...' : 'delete'}

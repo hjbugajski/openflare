@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
@@ -30,7 +30,7 @@ export function ConfirmDeleteDialog({
 }: ConfirmDeleteDialogProps) {
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const handleConfirm = async () => {
+  const handleConfirm = useCallback(async () => {
     setIsConfirming(true);
     try {
       await onConfirm();
@@ -38,7 +38,9 @@ export function ConfirmDeleteDialog({
     } finally {
       setIsConfirming(false);
     }
-  };
+  }, [onConfirm, onOpenChange]);
+
+  const onConfirmClick = useCallback(() => void handleConfirm(), [handleConfirm]);
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -53,7 +55,7 @@ export function ConfirmDeleteDialog({
             <Dialog.Close render={<Button variant="secondary" disabled={isConfirming} />}>
               cancel
             </Dialog.Close>
-            <Button variant="destructive" disabled={isConfirming} onClick={handleConfirm}>
+            <Button variant="destructive" disabled={isConfirming} onClick={onConfirmClick}>
               {isConfirming ? confirmingLabel : confirmLabel}
             </Button>
           </Dialog.Footer>

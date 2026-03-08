@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+
 import { router } from '@inertiajs/react';
 
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
@@ -17,15 +19,18 @@ export function DeleteMonitorDialog({
   open,
   onOpenChange,
 }: DeleteMonitorDialogProps) {
-  const handleDelete = () =>
-    new Promise<void>((resolve) => {
-      router.delete(destroy(monitorId).url, {
-        onSuccess: () => {
-          toast.success({ title: 'monitor deleted' });
-        },
-        onFinish: () => resolve(),
-      });
-    });
+  const handleDelete = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        router.delete(destroy(monitorId).url, {
+          onSuccess: () => {
+            toast.success({ title: 'monitor deleted' });
+          },
+          onFinish: () => resolve(),
+        });
+      }),
+    [monitorId],
+  );
 
   return (
     <ConfirmDeleteDialog

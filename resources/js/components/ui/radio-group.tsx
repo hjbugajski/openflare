@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from 'react';
+import { type ComponentProps, type ReactNode, useCallback } from 'react';
 
 import { Radio } from '@base-ui/react/radio';
 import { RadioGroup as BaseRadioGroup } from '@base-ui/react/radio-group';
@@ -10,10 +10,15 @@ type RootProps = Omit<ComponentProps<typeof BaseRadioGroup>, 'onValueChange'> & 
 };
 
 function Root({ className, onValueChange, ...props }: RootProps) {
+  const handleValueChange = useCallback(
+    (value: unknown) => onValueChange?.(value as string),
+    [onValueChange],
+  );
+
   return (
     <BaseRadioGroup
       className={cn('grid gap-2', className)}
-      onValueChange={onValueChange ? (value) => onValueChange(value as string) : undefined}
+      onValueChange={onValueChange ? handleValueChange : undefined}
       {...props}
     />
   );

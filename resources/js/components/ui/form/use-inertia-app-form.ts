@@ -33,7 +33,7 @@ export function useInertiaAppForm<TData extends FormData>({
 }: UseInertiaFormOptions<TData>) {
   const pageProps = usePage().props;
   const serverErrors = useMemo(
-    () => (pageProps.errors ?? {}) as Record<string, string>,
+    () => pageProps.errors as Record<string, string>,
     [pageProps.errors],
   );
 

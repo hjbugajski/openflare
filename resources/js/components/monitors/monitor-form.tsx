@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { Link } from '@inertiajs/react';
 
 import { Button } from '@/components/ui/button';
@@ -40,6 +42,18 @@ export function MonitorForm({
     },
   });
 
+  const methodItems = useMemo(() => methods.map((m) => ({ value: m, label: m })), [methods]);
+
+  const intervalItems = useMemo(
+    () => intervals.map((i) => ({ value: i, label: INTERVAL_LABELS[i] || `${i}s` })),
+    [intervals],
+  );
+
+  const notifierItems = useMemo(
+    () => notifiers.map((n) => ({ id: n.id, label: n.name, description: n.type })),
+    [notifiers],
+  );
+
   return (
     <Card.Root>
       <form.AppForm>
@@ -64,7 +78,7 @@ export function MonitorForm({
             <form.AppField name="method">
               {(field) => (
                 <field.Field label="method" serverError={getServerError('method')}>
-                  <field.SelectField items={methods.map((m) => ({ value: m, label: m }))} />
+                  <field.SelectField items={methodItems} />
                 </field.Field>
               )}
             </form.AppField>
@@ -72,12 +86,7 @@ export function MonitorForm({
             <form.AppField name="interval">
               {(field) => (
                 <field.Field label="interval" serverError={getServerError('interval')}>
-                  <field.SelectField
-                    items={intervals.map((i) => ({
-                      value: i,
-                      label: INTERVAL_LABELS[i] || `${i}s`,
-                    }))}
-                  />
+                  <field.SelectField items={intervalItems} />
                 </field.Field>
               )}
             </form.AppField>
@@ -133,11 +142,7 @@ export function MonitorForm({
               {(field) => (
                 <field.Field label="notifiers" serverError={getServerError('notifiers')}>
                   <field.ComboboxField
-                    items={notifiers.map((n) => ({
-                      id: n.id,
-                      label: n.name,
-                      description: n.type,
-                    }))}
+                    items={notifierItems}
                     placeholder="select notifiers..."
                     emptyMessage="no notifiers found."
                   />

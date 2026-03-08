@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Head, Link, router } from '@inertiajs/react';
 
@@ -16,13 +16,13 @@ interface Props {
 export default function VerifyEmail({ status }: Props) {
   const [processing, setProcessing] = useState(false);
 
-  const resendVerification = () => {
+  const resendVerification = useCallback(() => {
     router.post(
       send().url,
       {},
       { onStart: () => setProcessing(true), onFinish: () => setProcessing(false) },
     );
-  };
+  }, []);
 
   return (
     <AuthLayout>

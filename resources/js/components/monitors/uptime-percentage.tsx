@@ -2,21 +2,25 @@ import { cn } from '@/lib/cn';
 import type { DailyUptimeRollup } from '@/types';
 
 function calculateOverallUptime(data: DailyUptimeRollup[]): number | null {
-  if (data.length === 0) return null;
+  if (data.length === 0) {
+    return null;
+  }
 
   const totalChecks = data.reduce((sum, r) => sum + r.total_checks, 0);
   const successfulChecks = data.reduce((sum, r) => sum + r.successful_checks, 0);
 
-  if (totalChecks === 0) return null;
+  if (totalChecks === 0) {
+    return null;
+  }
   return (successfulChecks / totalChecks) * 100;
 }
 
 interface UptimePercentageProps {
-  data: DailyUptimeRollup[];
+  data: DailyUptimeRollup[] | undefined;
   className?: string;
 }
 
-export function UptimePercentage({ data, className }: UptimePercentageProps) {
+export function UptimePercentage({ data = [], className }: UptimePercentageProps) {
   const percentage = calculateOverallUptime(data);
 
   if (percentage === null) {

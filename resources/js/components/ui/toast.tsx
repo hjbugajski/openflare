@@ -1,4 +1,4 @@
-import { type ComponentProps, type ReactNode, createContext, useContext } from 'react';
+import { type ComponentProps, type ReactNode, createContext, useContext, useMemo } from 'react';
 
 import { Toast as BaseToast } from '@base-ui/react/toast';
 import { type VariantProps, cva } from 'class-variance-authority';
@@ -27,6 +27,8 @@ const useToastContext = () => {
 
   return context;
 };
+
+const SWIPE_DIRECTION: ('right' | 'down')[] = ['right', 'down'];
 
 const toastManager = BaseToast.createToastManager();
 
@@ -118,17 +120,27 @@ interface RootProps
   toast: ComponentProps<typeof BaseToast.Root>['toast'];
 }
 
+function ToastContextProvider({
+  variant,
+  children,
+}: {
+  variant: ToastVariant;
+  children: ReactNode;
+}) {
+  const value = useMemo(() => ({ variant }), [variant]);
+
+  return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
+}
+
 function Root({ className, variant = 'default', toast, children, ...props }: RootProps) {
   return (
     <BaseToast.Root
       toast={toast}
       className={cn(rootVariants({ variant }), className)}
-      swipeDirection={['right', 'down']}
+      swipeDirection={SWIPE_DIRECTION}
       {...props}
     >
-      <ToastContext.Provider value={{ variant: variant || 'default' }}>
-        {children}
-      </ToastContext.Provider>
+      <ToastContextProvider variant={variant || 'default'}>{children}</ToastContextProvider>
     </BaseToast.Root>
   );
 }
@@ -198,12 +210,12 @@ function Close({ className, ...props }: ComponentProps<typeof BaseToast.Close>) 
   );
 }
 
-type ToastOptions = {
+interface ToastOptions {
   title?: ReactNode;
   description?: ReactNode;
   variant?: ToastVariant;
   timeout?: number;
-};
+}
 
 function toast({ title, description, variant, timeout }: ToastOptions) {
   return toastManager.add({
