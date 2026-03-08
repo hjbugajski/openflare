@@ -1,38 +1,40 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "printWidth": 100,
-  "singleQuote": true,
-  "experimentalTailwindcss": {
-    "functions": ["cn", "cva"],
-    "stylesheet": "resources/css/app.css"
-  },
-  "experimentalSortImports": {
-    "customGroups": [
-      {
-        "groupName": "react",
-        "elementNamePattern": ["react", "react-dom"]
-      },
-      {
-        "groupName": "openflare",
-        "elementNamePattern": ["@/"]
-      }
-    ],
-    "groups": [
-      ["builtin"],
-      ["react"],
-      ["external", "external-type"],
-      ["openflare", "openflare-type"],
-      ["internal", "internal-type"],
-      ["parent", "parent-type", "sibling", "sibling-type"],
-      ["index", "index-type"],
-      ["side-effect"]
-    ],
-    "newlinesBetween": true
-  },
   "ignorePatterns": [
     "resources/js/actions",
     "resources/js/routes",
     "resources/js/wayfinder",
     "resources/views"
-  ]
+  ],
+  "singleQuote": true,
+  "sortImports": {
+    "customGroups": [
+      {
+        "groupName": "react",
+        "elementNamePattern": ["react", "react-dom", "react-dom/**"]
+      },
+      {
+        "groupName": "openflare",
+        "elementNamePattern": ["@/**"]
+      }
+    ],
+    "groups": [
+      ["builtin"],
+      ["react"],
+      ["external", "type-external"],
+      ["openflare"],
+      ["internal", "type-internal"],
+      ["parent", "type-parent", "sibling", "type-sibling"],
+      ["index", "type-index"],
+      ["side_effect"],
+      ["unknown"]
+    ],
+    "newlinesBetween": true
+  },
+  "sortTailwindcss": {
+    "attributes": ["class", "className"],
+    "functions": ["cn", "cva"],
+    "preserveWhitespace": false,
+    "stylesheet": "resources/css/app.css"
+  }
 }
