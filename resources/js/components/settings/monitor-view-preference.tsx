@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+
 import { Card } from '@/components/ui/card';
 import { Heading } from '@/components/ui/heading';
 import { RadioGroup } from '@/components/ui/radio-group';
@@ -10,6 +12,11 @@ interface MonitorViewPreferenceProps {
 
 export function MonitorViewPreference({ value }: MonitorViewPreferenceProps) {
   const [currentValue, setCurrentValue] = usePreferencePatch('monitors_view', value);
+
+  const handleValueChange = useCallback(
+    (v: string) => setCurrentValue(v as MonitorViewMode),
+    [setCurrentValue],
+  );
 
   return (
     <Card.Root>
@@ -24,7 +31,7 @@ export function MonitorViewPreference({ value }: MonitorViewPreferenceProps) {
         <RadioGroup.Root
           value={currentValue}
           className="grid-cols-2"
-          onValueChange={(v) => setCurrentValue(v as MonitorViewMode)}
+          onValueChange={handleValueChange}
         >
           <RadioGroup.Item value="cards" checked={currentValue === 'cards'}>
             cards

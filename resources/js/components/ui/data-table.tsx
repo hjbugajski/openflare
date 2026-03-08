@@ -77,7 +77,7 @@ export function DataTable<TData, TValue>({
           ))}
         </thead>
         <tbody>
-          {table.getRowModel().rows?.length ? (
+          {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => (
               <tr key={row.id} className="border-b border-border last:border-0">
                 {row.getVisibleCells().map((cell) => (

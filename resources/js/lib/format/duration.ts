@@ -13,9 +13,15 @@ export function formatDurationParts(start: string, end: string | null): Duration
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days > 0) return { value: days, unit: 'd', suffix: `${hours % 24}h` };
-  if (hours > 0) return { value: hours, unit: 'h', suffix: `${minutes % 60}m` };
-  if (minutes > 0) return { value: minutes, unit: 'm' };
+  if (days > 0) {
+    return { value: days, unit: 'd', suffix: `${hours % 24}h` };
+  }
+  if (hours > 0) {
+    return { value: hours, unit: 'h', suffix: `${minutes % 60}m` };
+  }
+  if (minutes > 0) {
+    return { value: minutes, unit: 'm' };
+  }
   return { value: '<1', unit: 'm' };
 }
 

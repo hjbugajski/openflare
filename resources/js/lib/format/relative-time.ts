@@ -18,7 +18,9 @@ export function formatRelativeTime(
   date: string | null,
   options?: FormatRelativeTimeOptions,
 ): string | RelativeTimeParts | null {
-  if (!date) return options?.format ? null : 'never';
+  if (!date) {
+    return options?.format ? null : 'never';
+  }
 
   const diff = Date.now() - new Date(date).getTime();
   const seconds = Math.floor(diff / 1000);

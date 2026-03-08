@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { router } from '@inertiajs/react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 
 import { IconClose } from '@/components/icons/close';
 import { ServerDataTable } from '@/components/server-data-table';
@@ -12,6 +12,9 @@ import { toast } from '@/components/ui/toast';
 import { detach } from '@/routes/monitors/notifiers';
 import type { CursorPaginated, NotifierSummary } from '@/types';
 
+const RELOAD_ONLY = ['notifiers'];
+const INITIAL_SORTING: SortingState = [{ id: 'name', desc: false }];
+
 interface NotifiersTableProps {
   monitorId: string;
   notifiers: CursorPaginated<NotifierSummary>;
@@ -20,93 +23,101 @@ interface NotifiersTableProps {
 export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
   const [notifierToRemove, setNotifierToRemove] = useState<NotifierSummary | null>(null);
 
-  const handleDetach = () =>
-    new Promise<void>((resolve) => {
-      if (!notifierToRemove) {
-        resolve();
-        return;
-      }
-
-      router.delete(detach({ monitor: monitorId, notifier: notifierToRemove.id }).url, {
-        preserveScroll: true,
-        onSuccess: () => {
-          toast.success({ title: 'notifier disabled' });
-        },
-        onFinish: () => {
-          setNotifierToRemove(null);
+  const handleDetach = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        if (!notifierToRemove) {
           resolve();
-        },
-      });
-    });
-
-  // Columns inside component: needs setNotifierToRemove state setter for row actions
-  const columns: ColumnDef<NotifierSummary>[] = [
-    {
-      accessorKey: 'name',
-      header: 'name',
-      meta: {
-        className: 'whitespace-nowrap',
-      },
-    },
-    {
-      id: 'status',
-      accessorFn: (notifier) => notifier.is_active,
-      header: 'status',
-      cell: ({ row }) => {
-        if (row.original.pivot?.is_excluded) {
-          return <Badge variant="secondary">excluded</Badge>;
+          return;
         }
 
-        return (
-          <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
-            {row.original.is_active ? 'active' : 'inactive'}
+        router.delete(detach({ monitor: monitorId, notifier: notifierToRemove.id }).url, {
+          preserveScroll: true,
+          onSuccess: () => {
+            toast.success({ title: 'notifier disabled' });
+          },
+          onFinish: () => {
+            setNotifierToRemove(null);
+            resolve();
+          },
+        });
+      }),
+    [monitorId, notifierToRemove],
+  );
+
+  const handleOpenChange = useCallback((open: boolean) => !open && setNotifierToRemove(null), []);
+
+  const columns = useMemo<ColumnDef<NotifierSummary>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'name',
+        meta: {
+          className: 'whitespace-nowrap',
+        },
+      },
+      {
+        id: 'status',
+        accessorFn: (notifier) => notifier.is_active,
+        header: 'status',
+        cell: ({ row }) => {
+          if (row.original.pivot?.is_excluded) {
+            return <Badge variant="secondary">excluded</Badge>;
+          }
+
+          return (
+            <Badge variant={row.original.is_active ? 'success' : 'secondary'}>
+              {row.original.is_active ? 'active' : 'inactive'}
+            </Badge>
+          );
+        },
+        meta: {
+          className: 'whitespace-nowrap',
+        },
+      },
+      {
+        accessorKey: 'type',
+        header: 'type',
+        cell: ({ row }) => (
+          <Badge variant={row.original.type === 'discord' ? 'purple' : 'blue'}>
+            {row.original.type}
           </Badge>
-        );
-      },
-      meta: {
-        className: 'whitespace-nowrap',
-      },
-    },
-    {
-      accessorKey: 'type',
-      header: 'type',
-      cell: ({ row }) => (
-        <Badge variant={row.original.type === 'discord' ? 'purple' : 'blue'}>
-          {row.original.type}
-        </Badge>
-      ),
-      meta: {
-        className: 'whitespace-nowrap',
-      },
-    },
-    {
-      accessorKey: 'apply_to_all',
-      header: 'applied via',
-      cell: ({ row }) =>
-        row.original.apply_to_all ? (
-          <Badge variant="cyan">automatic selection</Badge>
-        ) : (
-          <Badge variant="magenta">manual selection</Badge>
         ),
-      meta: {
-        className: 'whitespace-nowrap w-full',
+        meta: {
+          className: 'whitespace-nowrap',
+        },
       },
-    },
-    {
-      id: 'actions',
-      header: '',
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button variant="tertiary" size="icon" onClick={() => setNotifierToRemove(row.original)}>
-          <span className="sr-only">remove</span>
-          <IconClose className="h-4 w-4" />
-        </Button>
-      ),
-      meta: {
-        className: 'text-right w-10',
+      {
+        accessorKey: 'apply_to_all',
+        header: 'applied via',
+        cell: ({ row }) =>
+          row.original.apply_to_all ? (
+            <Badge variant="cyan">automatic selection</Badge>
+          ) : (
+            <Badge variant="magenta">manual selection</Badge>
+          ),
+        meta: {
+          className: 'whitespace-nowrap w-full',
+        },
       },
-    },
-  ];
+      {
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        cell: ({ row }) => (
+          // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop -- row-specific callback in column def
+          <Button variant="tertiary" size="icon" onClick={() => setNotifierToRemove(row.original)}>
+            <span className="sr-only">remove</span>
+            <IconClose className="h-4 w-4" />
+          </Button>
+        ),
+        meta: {
+          className: 'text-right w-10',
+        },
+      },
+    ],
+    [],
+  );
 
   return (
     <>
@@ -116,7 +127,7 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
         confirmLabel="disable"
         confirmingLabel="disabling..."
         onConfirm={handleDetach}
-        onOpenChange={(open) => !open && setNotifierToRemove(null)}
+        onOpenChange={handleOpenChange}
       >
         <p>
           are you sure you want to disable <strong>{notifierToRemove?.name}</strong> for this
@@ -130,8 +141,8 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
         cursorParam="notifiers_cursor"
         sortParam="notifiers_sort"
         directionParam="notifiers_direction"
-        reloadOnly={['notifiers']}
-        initialSorting={[{ id: 'name', desc: false }]}
+        reloadOnly={RELOAD_ONLY}
+        initialSorting={INITIAL_SORTING}
       />
     </>
   );

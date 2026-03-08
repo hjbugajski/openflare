@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Head, Link, router } from '@inertiajs/react';
 
@@ -17,7 +17,7 @@ interface Props {
 export default function TwoFactorRecoveryCodes({ recoveryCodes }: Props) {
   const [isRegenerating, setIsRegenerating] = useState(false);
 
-  const handleRegenerate = () => {
+  const handleRegenerate = useCallback(() => {
     setIsRegenerating(true);
     router.post(regenerate().url, undefined, {
       onSuccess: () => {
@@ -25,7 +25,7 @@ export default function TwoFactorRecoveryCodes({ recoveryCodes }: Props) {
       },
       onFinish: () => setIsRegenerating(false),
     });
-  };
+  }, []);
 
   return (
     <TwoFactorLayout>

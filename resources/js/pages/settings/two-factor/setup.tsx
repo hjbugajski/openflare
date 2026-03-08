@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { Head, Link } from '@inertiajs/react';
 // eslint-disable-next-line import/no-named-as-default
 import DOMPurify from 'dompurify';
@@ -15,6 +17,15 @@ interface Props {
 }
 
 export default function TwoFactorSetup({ qrCodeSvg, secretKey }: Props) {
+  const sanitizedHtml = useMemo(
+    () => ({
+      __html: DOMPurify.sanitize(qrCodeSvg, {
+        USE_PROFILES: { svg: true, svgFilters: true },
+      }),
+    }),
+    [qrCodeSvg],
+  );
+
   return (
     <TwoFactorLayout>
       <Head title="Set Up 2FA" />
@@ -25,14 +36,7 @@ export default function TwoFactorSetup({ qrCodeSvg, secretKey }: Props) {
         <Card.Content className="flex flex-col gap-4">
           <div className="space-y-2">
             <p>scan this QR code with your authenticator app:</p>
-            <div
-              className="mx-auto w-fit bg-paper p-2"
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(qrCodeSvg, {
-                  USE_PROFILES: { svg: true, svgFilters: true },
-                }),
-              }}
-            />
+            <div className="mx-auto w-fit bg-paper p-2" dangerouslySetInnerHTML={sanitizedHtml} />
           </div>
           <div className="space-y-2">
             <p>or enter this code manually:</p>

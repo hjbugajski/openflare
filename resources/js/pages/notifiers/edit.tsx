@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { Head } from '@inertiajs/react';
 
 import { NotifierForm } from '@/components/notifiers/notifier-form';
@@ -13,27 +15,31 @@ interface Props {
 }
 
 export default function NotifiersEdit({ notifier, monitors, types }: Props) {
-  const excludedMonitors = notifier.monitors.filter((monitor) => monitor.pivot?.is_excluded);
-  const includedMonitors = notifier.monitors.filter((monitor) => !monitor.pivot?.is_excluded);
+  const defaultValues = useMemo(() => {
+    const excludedMonitors = notifier.monitors.filter((monitor) => monitor.pivot?.is_excluded);
+    const includedMonitors = notifier.monitors.filter((monitor) => !monitor.pivot?.is_excluded);
+
+    return {
+      name: notifier.name,
+      type: notifier.type,
+      config: {
+        webhook_url: notifier.config.webhook_url || '',
+        email: notifier.config.email || '',
+      },
+      is_active: notifier.is_active,
+      is_default: notifier.is_default,
+      apply_to_existing: notifier.apply_to_all,
+      monitors: includedMonitors.map((monitor) => monitor.id),
+      excluded_monitors: excludedMonitors.map((monitor) => monitor.id),
+    };
+  }, [notifier]);
 
   return (
     <AppLayout size="sm">
       <Head title={`Edit ${notifier.name}`} />
       <Heading title="edit notifier" />
       <NotifierForm
-        defaultValues={{
-          name: notifier.name,
-          type: notifier.type,
-          config: {
-            webhook_url: notifier.config.webhook_url || '',
-            email: notifier.config.email || '',
-          },
-          is_active: notifier.is_active,
-          is_default: notifier.is_default,
-          apply_to_existing: notifier.apply_to_all,
-          monitors: includedMonitors.map((monitor) => monitor.id),
-          excluded_monitors: excludedMonitors.map((monitor) => monitor.id),
-        }}
+        defaultValues={defaultValues}
         monitors={monitors}
         types={types}
         action={update(notifier.id).url}

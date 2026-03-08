@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+
 import { router } from '@inertiajs/react';
 import { z } from 'zod';
 
@@ -20,6 +22,8 @@ interface ProfileSectionProps {
 }
 
 export function ProfileSection({ user, mustVerifyEmail }: ProfileSectionProps) {
+  const handleResendVerification = useCallback(() => router.post(send().url), []);
+
   const { form, getServerError } = useInertiaAppForm({
     defaultValues: {
       name: user.name,
@@ -61,7 +65,7 @@ export function ProfileSection({ user, mustVerifyEmail }: ProfileSectionProps) {
                       <button
                         type="button"
                         className="ml-1 text-accent hover:underline"
-                        onClick={() => router.post(send().url)}
+                        onClick={handleResendVerification}
                       >
                         click here to re-send the verification email.
                       </button>

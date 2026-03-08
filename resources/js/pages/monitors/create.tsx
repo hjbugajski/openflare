@@ -12,24 +12,26 @@ interface Props {
   methods: HttpMethod[];
 }
 
+const DEFAULT_VALUES = {
+  name: '',
+  url: '',
+  method: 'GET' as const,
+  interval: 300,
+  timeout: 30,
+  expected_status_code: 200,
+  failure_confirmation_threshold: 3,
+  recovery_confirmation_threshold: 3,
+  is_active: true,
+  notifiers: [] as string[],
+};
+
 export default function MonitorsCreate({ notifiers, intervals, methods }: Props) {
   return (
     <AppLayout size="sm">
       <Head title="Create Monitor" />
       <Heading title="create monitor" />
       <MonitorForm
-        defaultValues={{
-          name: '',
-          url: '',
-          method: 'GET',
-          interval: 300,
-          timeout: 30,
-          expected_status_code: 200,
-          failure_confirmation_threshold: 3,
-          recovery_confirmation_threshold: 3,
-          is_active: true,
-          notifiers: [],
-        }}
+        defaultValues={DEFAULT_VALUES}
         notifiers={notifiers}
         intervals={intervals}
         methods={methods}

@@ -1,4 +1,4 @@
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,9 @@ import { ValueUnit } from '@/components/ui/value-unit';
 import { formatDateTime } from '@/lib/format/date-time';
 import { formatDurationParts } from '@/lib/format/duration';
 import type { CursorPaginated, Incident } from '@/types';
+
+const RELOAD_ONLY = ['incidents'];
+const INITIAL_SORTING: SortingState = [{ id: 'started_at', desc: true }];
 
 const getIncidentDurationMs = (incident: Incident) => {
   const start = new Date(incident.started_at).getTime();
@@ -81,8 +84,8 @@ export function IncidentsTable({ incidents }: IncidentsTableProps) {
       cursorParam="incidents_cursor"
       sortParam="incidents_sort"
       directionParam="incidents_direction"
-      reloadOnly={['incidents']}
-      initialSorting={[{ id: 'started_at', desc: true }]}
+      reloadOnly={RELOAD_ONLY}
+      initialSorting={INITIAL_SORTING}
     />
   );
 }

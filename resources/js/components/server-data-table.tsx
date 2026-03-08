@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { router } from '@inertiajs/react';
 import {
@@ -60,37 +60,53 @@ export function ServerDataTable<TData, TValue>({
     return [{ id: sort, desc: url.searchParams.get(directionParam) === 'desc' }];
   });
 
-  const applySortingParams = (url: URL, nextSorting: SortingState) => {
-    const sortEntry = nextSorting[0];
+  const applySortingParams = useCallback(
+    (url: URL, nextSorting: SortingState) => {
+      const sortEntry = nextSorting[0];
 
-    if (!sortEntry) {
-      url.searchParams.delete(sortParam);
-      url.searchParams.delete(directionParam);
-      return;
-    }
+      if (!sortEntry) {
+        url.searchParams.delete(sortParam);
+        url.searchParams.delete(directionParam);
+        return;
+      }
 
-    url.searchParams.set(sortParam, sortEntry.id);
-    url.searchParams.set(directionParam, sortEntry.desc ? 'desc' : 'asc');
-  };
+      url.searchParams.set(sortParam, sortEntry.id);
+      url.searchParams.set(directionParam, sortEntry.desc ? 'desc' : 'asc');
+    },
+    [sortParam, directionParam],
+  );
 
-  const goToCursor = (cursor: string | null, nextSorting: SortingState = sorting) => {
-    const url = new URL(window.location.href);
-    applySortingParams(url, nextSorting);
+  const goToCursor = useCallback(
+    (cursor: string | null, nextSorting: SortingState = sorting) => {
+      const url = new URL(window.location.href);
+      applySortingParams(url, nextSorting);
 
-    router.visit(url.pathname + url.search, {
-      data: cursor ? { [cursorParam]: cursor } : {},
-      preserveState: true,
-      preserveScroll: true,
-      preserveUrl: true,
-      only: reloadOnly,
-    });
-  };
+      router.visit(url.pathname + url.search, {
+        data: cursor ? { [cursorParam]: cursor } : {},
+        preserveState: true,
+        preserveScroll: true,
+        preserveUrl: true,
+        only: reloadOnly,
+      });
+    },
+    [sorting, cursorParam, reloadOnly, applySortingParams],
+  );
 
   const canPreviousPage = Boolean(paginated.prev_cursor);
   const canNextPage = Boolean(paginated.next_cursor);
 
   const totalPages = Math.max(1, Math.ceil(paginated.total / paginated.per_page));
   const [pageIndex, setPageIndex] = useState(1);
+
+  const handlePreviousPage = useCallback(() => {
+    setPageIndex((current) => Math.max(1, current - 1));
+    goToCursor(paginated.prev_cursor);
+  }, [goToCursor, paginated.prev_cursor]);
+
+  const handleNextPage = useCallback(() => {
+    setPageIndex((current) => Math.min(totalPages, current + 1));
+    goToCursor(paginated.next_cursor);
+  }, [goToCursor, paginated.next_cursor, totalPages]);
 
   useEffect(() => {
     if (!paginated.prev_cursor) {
@@ -176,7 +192,7 @@ export function ServerDataTable<TData, TValue>({
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className="border-b border-border last:border-0">
                   {row.getVisibleCells().map((cell) => (
@@ -219,23 +235,12 @@ export function ServerDataTable<TData, TValue>({
               variant="tertiary"
               size="icon"
               disabled={!canPreviousPage}
-              onClick={() => {
-                setPageIndex((current) => Math.max(1, current - 1));
-                goToCursor(paginated.prev_cursor);
-              }}
+              onClick={handlePreviousPage}
             >
               <span className="sr-only">previous</span>
               <IconChevronLeft />
             </Button>
-            <Button
-              variant="tertiary"
-              size="icon"
-              disabled={!canNextPage}
-              onClick={() => {
-                setPageIndex((current) => Math.min(totalPages, current + 1));
-                goToCursor(paginated.next_cursor);
-              }}
-            >
+            <Button variant="tertiary" size="icon" disabled={!canNextPage} onClick={handleNextPage}>
               <span className="sr-only">next</span>
               <IconChevronRight />
             </Button>

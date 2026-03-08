@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { Head } from '@inertiajs/react';
 
 import { MonitorForm } from '@/components/monitors/monitor-form';
@@ -14,23 +16,28 @@ interface Props {
 }
 
 export default function MonitorsEdit({ monitor, notifiers, intervals, methods }: Props) {
+  const defaultValues = useMemo(
+    () => ({
+      name: monitor.name,
+      url: monitor.url,
+      method: monitor.method,
+      interval: monitor.interval,
+      timeout: monitor.timeout,
+      expected_status_code: monitor.expected_status_code,
+      failure_confirmation_threshold: monitor.failure_confirmation_threshold,
+      recovery_confirmation_threshold: monitor.recovery_confirmation_threshold,
+      is_active: monitor.is_active,
+      notifiers: monitor.notifiers.map((n) => n.id),
+    }),
+    [monitor],
+  );
+
   return (
     <AppLayout size="sm">
       <Head title={`edit ${monitor.name}`} />
       <Heading title="edit monitor" />
       <MonitorForm
-        defaultValues={{
-          name: monitor.name,
-          url: monitor.url,
-          method: monitor.method,
-          interval: monitor.interval,
-          timeout: monitor.timeout,
-          expected_status_code: monitor.expected_status_code,
-          failure_confirmation_threshold: monitor.failure_confirmation_threshold,
-          recovery_confirmation_threshold: monitor.recovery_confirmation_threshold,
-          is_active: monitor.is_active,
-          notifiers: monitor.notifiers.map((n) => n.id),
-        }}
+        defaultValues={defaultValues}
         notifiers={notifiers}
         intervals={intervals}
         methods={methods}

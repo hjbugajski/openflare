@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { IconSearchOptions } from '@/components/icons/search-options';
 import { Card } from '@/components/ui/card';
@@ -43,11 +43,14 @@ export function TimezonePreference({ value }: TimezonePreferenceProps) {
     [currentValue, timezones],
   );
 
-  const handleValueChange = (newValue: TimezoneItem | null) => {
-    if (newValue) {
-      setCurrentValue(newValue.id);
-    }
-  };
+  const handleValueChange = useCallback(
+    (newValue: TimezoneItem | null) => {
+      if (newValue) {
+        setCurrentValue(newValue.id);
+      }
+    },
+    [setCurrentValue],
+  );
 
   return (
     <Card.Root>

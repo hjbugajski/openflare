@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
+
 import { Link } from '@inertiajs/react';
-import type { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 
 import { MonitorStatusBadge } from '@/components/monitors/monitor-status-badge';
 import { UptimePercentage } from '@/components/monitors/uptime-percentage';
@@ -10,6 +12,8 @@ import { formatInterval } from '@/lib/format/interval';
 import { formatRelativeTime } from '@/lib/format/relative-time';
 import { show } from '@/routes/monitors';
 import type { Monitor } from '@/types';
+
+const INITIAL_SORTING: SortingState = [{ id: 'name', desc: false }];
 
 const getMonitorStatusLabel = (monitor: Monitor) => {
   if (!monitor.is_active) {
@@ -85,7 +89,7 @@ const getColumns = (timezone: string): ColumnDef<Monitor>[] => [
     header: '',
     enableSorting: false,
     cell: ({ row }) => (
-      <UptimeSparkline data={row.original.daily_rollups ?? []} height={16} timezone={timezone} />
+      <UptimeSparkline data={row.original.daily_rollups} height={16} timezone={timezone} />
     ),
     meta: { className: 'w-full min-w-24' },
   },
@@ -145,11 +149,7 @@ interface MonitorsTableProps {
 }
 
 export function MonitorsTable({ monitors, timezone }: MonitorsTableProps) {
-  return (
-    <DataTable
-      columns={getColumns(timezone)}
-      data={monitors}
-      initialSorting={[{ id: 'name', desc: false }]}
-    />
-  );
+  const columns = useMemo(() => getColumns(timezone), [timezone]);
+
+  return <DataTable columns={columns} data={monitors} initialSorting={INITIAL_SORTING} />;
 }

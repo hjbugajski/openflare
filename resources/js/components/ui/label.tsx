@@ -24,7 +24,7 @@ function Description({ className, children, ...props }: ComponentProps<'p'>) {
   return (
     <p className={cn('text-xs text-muted-foreground', className)} {...props}>
       <span aria-hidden className="mr-1 text-muted-foreground">
-        {'//'}
+        //
       </span>
       {children}
     </p>

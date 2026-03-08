@@ -11,25 +11,27 @@ interface Props {
   types: NotifierType[];
 }
 
+const DEFAULT_VALUES = {
+  name: '',
+  type: 'discord' as const,
+  config: {
+    webhook_url: '',
+    email: '',
+  },
+  is_active: true,
+  is_default: false,
+  apply_to_existing: true,
+  monitors: [] as string[],
+  excluded_monitors: [] as string[],
+};
+
 export default function NotifiersCreate({ monitors, types }: Props) {
   return (
     <AppLayout size="sm">
       <Head title="Create Notifier" />
       <Heading title="create notifier" />
       <NotifierForm
-        defaultValues={{
-          name: '',
-          type: 'discord',
-          config: {
-            webhook_url: '',
-            email: '',
-          },
-          is_active: true,
-          is_default: false,
-          apply_to_existing: true,
-          monitors: [],
-          excluded_monitors: [],
-        }}
+        defaultValues={DEFAULT_VALUES}
         monitors={monitors}
         types={types}
         action={store().url}

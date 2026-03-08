@@ -38,6 +38,7 @@ interface Props {
 }
 
 const RELOAD_DEBOUNCE_MS = 2000;
+const INITIAL_SORTING = [{ id: 'started_at', desc: true }];
 
 function MonitorChannelListener({
   monitorId,
@@ -221,7 +222,7 @@ export default function DashboardIndex({ counts, incidents, monitorIds }: Props)
           <ServerDataTable
             columns={columns}
             paginated={incidents}
-            initialSorting={[{ id: 'started_at', desc: true }]}
+            initialSorting={INITIAL_SORTING}
           />
         )}
       </Card.Root>

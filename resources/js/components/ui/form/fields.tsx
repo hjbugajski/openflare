@@ -1,4 +1,5 @@
 import {
+  type ChangeEvent,
   type ComponentProps,
   createContext,
   useCallback,
@@ -49,7 +50,7 @@ export function FieldError({ meta, serverError }: FieldErrorProps) {
   }
 
   const error = meta.errors[0];
-  const message = typeof error === 'string' ? error : (error as { message?: string })?.message;
+  const message = typeof error === 'string' ? error : (error as { message?: string }).message;
 
   return message ? <ErrorMessage>{message}</ErrorMessage> : null;
 }
@@ -87,6 +88,11 @@ export function TextInput({ type = 'text', ...props }: Omit<ComponentProps<'inpu
   const fieldId = useFieldId();
   const hasError = !field.state.meta.isValid && field.state.meta.isTouched;
 
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value),
+    [field],
+  );
+
   return (
     <Input
       {...props}
@@ -95,7 +101,7 @@ export function TextInput({ type = 'text', ...props }: Omit<ComponentProps<'inpu
       type={type}
       value={field.state.value}
       aria-invalid={hasError || undefined}
-      onChange={(e) => field.handleChange(e.target.value)}
+      onChange={handleChange}
       onBlur={field.handleBlur}
     />
   );
@@ -106,6 +112,15 @@ export function NumberInput(props: Omit<ComponentProps<'input'>, 'type' | 'onCha
   const fieldId = useFieldId();
   const hasError = !field.state.meta.isValid && field.state.meta.isTouched;
 
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value === '' ? undefined : e.target.valueAsNumber;
+      // Only pass valid numbers or undefined; NaN gets converted to undefined
+      field.handleChange(Number.isNaN(value) ? undefined : value);
+    },
+    [field],
+  );
+
   return (
     <Input
       {...props}
@@ -114,11 +129,7 @@ export function NumberInput(props: Omit<ComponentProps<'input'>, 'type' | 'onCha
       type="number"
       value={field.state.value ?? ''}
       aria-invalid={hasError || undefined}
-      onChange={(e) => {
-        const value = e.target.value === '' ? undefined : e.target.valueAsNumber;
-        // Only pass valid numbers or undefined; NaN gets converted to undefined
-        field.handleChange(Number.isNaN(value) ? undefined : value);
-      }}
+      onChange={handleChange}
       onBlur={field.handleBlur}
     />
   );
@@ -129,6 +140,11 @@ export function TextAreaInput(props: ComponentProps<typeof Textarea>) {
   const fieldId = useFieldId();
   const hasError = !field.state.meta.isValid && field.state.meta.isTouched;
 
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLTextAreaElement>) => field.handleChange(e.target.value),
+    [field],
+  );
+
   return (
     <Textarea
       {...props}
@@ -136,7 +152,7 @@ export function TextAreaInput(props: ComponentProps<typeof Textarea>) {
       name={field.name}
       value={field.state.value}
       aria-invalid={hasError || undefined}
-      onChange={(e) => field.handleChange(e.target.value)}
+      onChange={handleChange}
       onBlur={field.handleBlur}
     />
   );
@@ -160,15 +176,18 @@ export function SelectField({ items, disabled }: SelectFieldProps) {
   // Determine if we should preserve numeric type based on current field value
   const isNumeric = typeof field.state.value === 'number';
 
-  const handleValueChange = (value: unknown) => {
-    // Base UI may return string even for numeric values; coerce if needed
-    if (isNumeric && typeof value === 'string') {
-      const parsed = Number(value);
-      field.handleChange(Number.isNaN(parsed) ? value : parsed);
-    } else {
-      field.handleChange(value as string | number);
-    }
-  };
+  const handleValueChange = useCallback(
+    (value: unknown) => {
+      // Base UI may return string even for numeric values; coerce if needed
+      if (isNumeric && typeof value === 'string') {
+        const parsed = Number(value);
+        field.handleChange(Number.isNaN(parsed) ? value : parsed);
+      } else {
+        field.handleChange(value as string | number);
+      }
+    },
+    [field, isNumeric],
+  );
 
   return (
     <Select.Root value={field.state.value} disabled={disabled} onValueChange={handleValueChange}>
@@ -319,6 +338,11 @@ export function CheckboxField({ label, description, disabled }: CheckboxFieldPro
   const uniqueId = useId();
   const fieldId = `${field.name}-${uniqueId}`;
 
+  const handleCheckedChange = useCallback(
+    (checked: boolean) => field.handleChange(!!checked),
+    [field],
+  );
+
   return (
     <div className="flex items-start gap-2">
       <Checkbox.Root
@@ -326,7 +350,7 @@ export function CheckboxField({ label, description, disabled }: CheckboxFieldPro
         checked={field.state.value}
         disabled={disabled}
         className="mt-0.5"
-        onCheckedChange={(checked) => field.handleChange(!!checked)}
+        onCheckedChange={handleCheckedChange}
         onBlur={field.handleBlur}
       >
         <Checkbox.Indicator />
@@ -354,14 +378,22 @@ export function CheckboxGroupItem({ id, label, description, disabled }: Checkbox
   const fieldId = `${field.name}-${id}-${uniqueId}`;
   const isChecked = field.state.value.includes(id);
 
-  const handleChange = (checked: boolean) => {
-    const current = field.state.value;
-    if (checked) {
-      field.handleChange([...current, id]);
-    } else {
-      field.handleChange(current.filter((v: string) => v !== id));
-    }
-  };
+  const handleChange = useCallback(
+    (checked: boolean) => {
+      const current = field.state.value;
+      if (checked) {
+        field.handleChange([...current, id]);
+      } else {
+        field.handleChange(current.filter((v: string) => v !== id));
+      }
+    },
+    [field, id],
+  );
+
+  const handleCheckedChange = useCallback(
+    (checked: boolean) => handleChange(!!checked),
+    [handleChange],
+  );
 
   return (
     <div className="flex items-center gap-2">
@@ -369,7 +401,7 @@ export function CheckboxGroupItem({ id, label, description, disabled }: Checkbox
         id={fieldId}
         checked={isChecked}
         disabled={disabled}
-        onCheckedChange={(checked) => handleChange(!!checked)}
+        onCheckedChange={handleCheckedChange}
         onBlur={field.handleBlur}
       >
         <Checkbox.Indicator />
@@ -401,7 +433,7 @@ export function RadioGroupField({ items, columns = 2, disabled }: RadioGroupFiel
       value={field.state.value}
       disabled={disabled}
       className={cn(columns === 2 && 'grid-cols-2')}
-      onValueChange={(value) => field.handleChange(value as string)}
+      onValueChange={field.handleChange}
     >
       {items.map((item) => (
         <RadioGroup.Item

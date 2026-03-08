@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { Link } from '@inertiajs/react';
 import { useStore } from '@tanstack/react-form';
@@ -60,15 +60,40 @@ export function NotifierForm({
     getConfig: useCallback(() => form.getFieldValue('config'), [form]),
   });
 
-  const handleModeChange = (value: MonitorMode) => {
-    setMonitorMode(value);
-    form.setFieldValue('apply_to_existing', value === 'all');
-    if (value === 'all') {
-      form.setFieldValue('monitors', []);
-    } else {
-      form.setFieldValue('excluded_monitors', []);
-    }
-  };
+  const onTestClick = useCallback(() => void handleTest(), [handleTest]);
+
+  const typeItems = useMemo(
+    () => types.map((type) => ({ value: type, label: NOTIFIER_TYPE_LABELS[type] || type })),
+    [types],
+  );
+
+  const excludedMonitorItems = useMemo(
+    () =>
+      monitors.map((monitor) => ({
+        id: monitor.id,
+        label: monitor.name,
+        description: monitor.url,
+      })),
+    [monitors],
+  );
+
+  const monitorItems = useMemo(
+    () => monitors.map((m) => ({ id: m.id, label: m.name })),
+    [monitors],
+  );
+
+  const handleModeChange = useCallback(
+    (value: MonitorMode) => {
+      setMonitorMode(value);
+      form.setFieldValue('apply_to_existing', value === 'all');
+      if (value === 'all') {
+        form.setFieldValue('monitors', []);
+      } else {
+        form.setFieldValue('excluded_monitors', []);
+      }
+    },
+    [form],
+  );
 
   return (
     <Card.Root>
@@ -89,12 +114,7 @@ export function NotifierForm({
                 description={NOTIFIER_TYPE_DESCRIPTIONS[field.state.value as NotifierType]}
                 serverError={getServerError('type')}
               >
-                <field.SelectField
-                  items={types.map((type) => ({
-                    value: type,
-                    label: NOTIFIER_TYPE_LABELS[type as NotifierType] || type,
-                  }))}
-                />
+                <field.SelectField items={typeItems} />
               </field.Field>
             )}
           </form.AppField>
@@ -117,7 +137,7 @@ export function NotifierForm({
                       type="button"
                       variant="secondary"
                       disabled={isTesting}
-                      onClick={handleTest}
+                      onClick={onTestClick}
                     >
                       {isTesting ? 'testing...' : 'test'}
                     </Button>
@@ -137,7 +157,7 @@ export function NotifierForm({
                       type="button"
                       variant="secondary"
                       disabled={isTesting}
-                      onClick={handleTest}
+                      onClick={onTestClick}
                     >
                       {isTesting ? 'testing...' : 'test'}
                     </Button>
@@ -163,11 +183,7 @@ export function NotifierForm({
                   serverError={getServerError('excluded_monitors')}
                 >
                   <field.ComboboxField
-                    items={monitors.map((monitor) => ({
-                      id: monitor.id,
-                      label: monitor.name,
-                      description: monitor.url,
-                    }))}
+                    items={excludedMonitorItems}
                     emptyMessage="no monitors found."
                     placeholder="exclude monitors..."
                   />
@@ -181,10 +197,7 @@ export function NotifierForm({
               {(field) => (
                 <field.Field label="select monitors" serverError={getServerError('monitors')}>
                   <field.ComboboxField
-                    items={monitors.map((m) => ({
-                      id: m.id,
-                      label: m.name,
-                    }))}
+                    items={monitorItems}
                     emptyMessage="no monitors found."
                     placeholder="select monitors..."
                   />

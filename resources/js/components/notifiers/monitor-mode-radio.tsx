@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+
 import { RadioGroup } from '@/components/ui/radio-group';
 
 export type MonitorMode = 'all' | 'manual';
@@ -8,12 +10,13 @@ interface MonitorModeRadioProps {
 }
 
 export function MonitorModeRadio({ value, onValueChange }: MonitorModeRadioProps) {
+  const handleValueChange = useCallback(
+    (v: string) => onValueChange(v as MonitorMode),
+    [onValueChange],
+  );
+
   return (
-    <RadioGroup.Root
-      value={value}
-      className="grid-cols-2"
-      onValueChange={(v) => onValueChange(v as MonitorMode)}
-    >
+    <RadioGroup.Root value={value} className="grid-cols-2" onValueChange={handleValueChange}>
       <RadioGroup.Item value="all" checked={value === 'all'}>
         apply to all monitors
       </RadioGroup.Item>

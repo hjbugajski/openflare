@@ -26,9 +26,9 @@ function initializeEcho(reverb: ReverbConfig) {
     broadcaster: 'reverb',
     key: reverb.key,
     wsHost: reverb.host,
-    wsPort: reverb.port ?? 80,
-    wssPort: reverb.port ?? 443,
-    forceTLS: (reverb.scheme ?? 'https') === 'https',
+    wsPort: reverb.port,
+    wssPort: reverb.port,
+    forceTLS: reverb.scheme === 'https',
     enabledTransports: ['ws', 'wss'],
   });
 }
