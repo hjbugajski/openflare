@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\NotifierFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Str;
 
 class Notifier extends Model
 {
-    /** @use HasFactory<\Database\Factories\NotifierFactory> */
+    /** @use HasFactory<NotifierFactory> */
     use HasFactory;
 
     protected $keyType = 'string';
@@ -22,7 +24,7 @@ class Notifier extends Model
     {
         static::creating(function (Notifier $notifier) {
             if (empty($notifier->id)) {
-                $notifier->id = \Illuminate\Support\Str::uuid7();
+                $notifier->id = Str::uuid7();
             }
         });
     }

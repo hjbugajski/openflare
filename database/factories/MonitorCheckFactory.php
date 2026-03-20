@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Models\Monitor;
 use App\Models\MonitorCheck;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<MonitorCheck>
@@ -19,7 +20,7 @@ class MonitorCheckFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => \Illuminate\Support\Str::uuid7(),
+            'id' => Str::uuid7(),
             'monitor_id' => Monitor::factory(),
             'status' => 'up',
             'status_code' => 200,

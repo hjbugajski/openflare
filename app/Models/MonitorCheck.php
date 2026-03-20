@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\MonitorStatus;
+use Database\Factories\MonitorCheckFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class MonitorCheck extends Model
 {
-    /** @use HasFactory<\Database\Factories\MonitorCheckFactory> */
+    /** @use HasFactory<MonitorCheckFactory> */
     use HasFactory;
 
     protected $keyType = 'string';
@@ -22,7 +24,7 @@ class MonitorCheck extends Model
     {
         static::creating(function (MonitorCheck $check) {
             if (empty($check->id)) {
-                $check->id = \Illuminate\Support\Str::uuid7();
+                $check->id = Str::uuid7();
             }
         });
     }
