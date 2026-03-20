@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\ConfigureOpenflareLogging;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
@@ -48,7 +49,7 @@ return [
         'openflare' => [
             'driver' => 'monolog',
             'processors' => [PsrLogMessageProcessor::class],
-            'tap' => [App\Logging\ConfigureOpenflareLogging::class],
+            'tap' => [ConfigureOpenflareLogging::class],
         ],
 
         'single' => [

@@ -12,10 +12,14 @@ use App\Models\Monitor;
 use App\Models\MonitorCheck;
 use App\Models\Notifier;
 use App\MonitorStatus;
+use Carbon\Carbon;
 use GuzzleHttp\TransferStats;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -172,11 +176,11 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
                 $check->status = MonitorStatus::Down->value;
                 $check->error_message = "Expected status {$this->monitor->expected_status_code}, got {$response->status()}";
             }
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             $check->status = MonitorStatus::Down->value;
             $check->status_code = 0;
             $check->error_message = $this->categorizeConnectionError($e);
-        } catch (\Illuminate\Http\Client\RequestException $e) {
+        } catch (RequestException $e) {
             $check->status = MonitorStatus::Down->value;
             $check->status_code = $e->response?->status() ?? 0;
             $check->error_message = "Request failed: {$e->getMessage()}";
@@ -194,7 +198,7 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         return $check;
     }
 
-    protected function categorizeConnectionError(\Illuminate\Http\Client\ConnectionException $e): string
+    protected function categorizeConnectionError(ConnectionException $e): string
     {
         $message = $e->getMessage();
 
@@ -364,7 +368,7 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         $this->sendNotifications(MonitorStatus::Up, $newCheck);
     }
 
-    protected function getRecentChecks(int $limit): \Illuminate\Support\Collection
+    protected function getRecentChecks(int $limit): Collection
     {
         return $this->monitor->checks()
             ->latest('checked_at')
@@ -373,7 +377,7 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
     }
 
     protected function meetsConfirmationThreshold(
-        \Illuminate\Support\Collection $recentChecks,
+        Collection $recentChecks,
         MonitorStatus $status,
         int $threshold
     ): bool {
@@ -434,7 +438,7 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         };
     }
 
-    protected function calculateNextCheckAt(): \Carbon\Carbon
+    protected function calculateNextCheckAt(): Carbon
     {
         $scheduledAt = $this->monitor->next_check_at ?? now();
         $nextCheck = $scheduledAt->copy()->addSeconds($this->monitor->interval);

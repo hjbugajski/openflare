@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Models\DailyUptimeRollup;
 use App\Models\Monitor;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<DailyUptimeRollup>
@@ -23,7 +24,7 @@ class DailyUptimeRollupFactory extends Factory
         $uptimePercentage = round(($successfulChecks / $totalChecks) * 100, 2);
 
         return [
-            'id' => \Illuminate\Support\Str::uuid7(),
+            'id' => Str::uuid7(),
             'monitor_id' => Monitor::factory(),
             'date' => fake()->dateTimeBetween('-30 days', 'now')->format('Y-m-d'),
             'total_checks' => $totalChecks,

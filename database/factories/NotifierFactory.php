@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Models\Notifier;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Notifier>
@@ -19,7 +20,7 @@ class NotifierFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => \Illuminate\Support\Str::uuid7(),
+            'id' => Str::uuid7(),
             'user_id' => function (array $attributes) {
                 return User::factory()->create()->uuid;
             },

@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Models\Incident;
 use App\Models\Monitor;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Incident>
@@ -21,7 +22,7 @@ class IncidentFactory extends Factory
         $startedAt = fake()->dateTimeBetween('-7 days', '-1 hour');
 
         return [
-            'id' => \Illuminate\Support\Str::uuid7(),
+            'id' => Str::uuid7(),
             'monitor_id' => Monitor::factory(),
             'started_at' => $startedAt,
             'ended_at' => fake()->dateTimeBetween($startedAt, 'now'),

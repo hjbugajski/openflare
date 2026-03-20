@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\DailyUptimeRollupFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class DailyUptimeRollup extends Model
 {
-    /** @use HasFactory<\Database\Factories\DailyUptimeRollupFactory> */
+    /** @use HasFactory<DailyUptimeRollupFactory> */
     use HasFactory;
 
     protected $keyType = 'string';
@@ -21,7 +23,7 @@ class DailyUptimeRollup extends Model
     {
         static::creating(function (DailyUptimeRollup $rollup) {
             if (empty($rollup->id)) {
-                $rollup->id = \Illuminate\Support\Str::uuid7();
+                $rollup->id = Str::uuid7();
             }
         });
     }

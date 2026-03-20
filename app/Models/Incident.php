@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\IncidentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class Incident extends Model
 {
-    /** @use HasFactory<\Database\Factories\IncidentFactory> */
+    /** @use HasFactory<IncidentFactory> */
     use HasFactory;
 
     protected $keyType = 'string';
@@ -21,7 +23,7 @@ class Incident extends Model
     {
         static::creating(function (Incident $incident) {
             if (empty($incident->id)) {
-                $incident->id = \Illuminate\Support\Str::uuid7();
+                $incident->id = Str::uuid7();
             }
         });
     }

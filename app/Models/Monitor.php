@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Observers\MonitorObserver;
+use Database\Factories\MonitorFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class Monitor extends Model
 {
-    /** @use HasFactory<\Database\Factories\MonitorFactory> */
+    /** @use HasFactory<MonitorFactory> */
     use HasFactory;
 
     protected $keyType = 'string';
@@ -22,11 +26,11 @@ class Monitor extends Model
 
     protected static function booted(): void
     {
-        static::observe(\App\Observers\MonitorObserver::class);
+        static::observe(MonitorObserver::class);
 
         static::creating(function (Monitor $monitor) {
             if (empty($monitor->id)) {
-                $monitor->id = \Illuminate\Support\Str::uuid7();
+                $monitor->id = Str::uuid7();
             }
         });
     }
@@ -129,9 +133,9 @@ class Monitor extends Model
      * Get notifiers that should receive notifications for this monitor.
      * Includes: explicitly attached (not excluded) + apply_to_all (not excluded).
      *
-     * @return \Illuminate\Support\Collection<int, Notifier>
+     * @return Collection<int, Notifier>
      */
-    public function getEffectiveNotifiers(): \Illuminate\Support\Collection
+    public function getEffectiveNotifiers(): Collection
     {
         $pivotData = $this->notifiers()->pluck('is_excluded', 'notifiers.id');
         $excludedIds = $pivotData->filter(fn (bool $excluded) => $excluded)->keys();
