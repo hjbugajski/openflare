@@ -63,6 +63,13 @@ Thumbs.db
 *.log
 boost.json
 
+# Sensitive files
+*.pem
+*.key
+credentials*
+secrets*
+*.secret
+
 # Development scripts (not needed in production)
 .editorconfig
 .prettierrc
