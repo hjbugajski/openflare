@@ -1,7 +1,8 @@
 export interface DurationParts {
   value: number | string;
   unit: string;
-  suffix?: string;
+  suffixValue?: number;
+  suffixUnit?: string;
 }
 
 export function formatDurationParts(start: string, end: string | null): DurationParts {
@@ -14,10 +15,16 @@ export function formatDurationParts(start: string, end: string | null): Duration
   const days = Math.floor(hours / 24);
 
   if (days > 0) {
-    return { value: days, unit: 'd', suffix: `${hours % 24}h` };
+    const remainingHours = hours % 24;
+    return remainingHours > 0
+      ? { value: days, unit: 'd', suffixValue: remainingHours, suffixUnit: 'h' }
+      : { value: days, unit: 'd' };
   }
   if (hours > 0) {
-    return { value: hours, unit: 'h', suffix: `${minutes % 60}m` };
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0
+      ? { value: hours, unit: 'h', suffixValue: remainingMinutes, suffixUnit: 'm' }
+      : { value: hours, unit: 'h' };
   }
   if (minutes > 0) {
     return { value: minutes, unit: 'm' };
@@ -27,7 +34,8 @@ export function formatDurationParts(start: string, end: string | null): Duration
 
 export function formatDuration(start: string, end: string | null): string {
   const duration = formatDurationParts(start, end);
-  const suffix = duration.suffix ? ` ${duration.suffix}` : '';
+  const suffix =
+    duration.suffixValue !== undefined ? ` ${duration.suffixValue}${duration.suffixUnit}` : '';
 
   return `${duration.value}${duration.unit}${suffix}`;
 }

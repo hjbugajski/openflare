@@ -110,7 +110,14 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
     cell: ({ row }) => {
       const duration = formatDurationParts(row.original.started_at, row.original.ended_at);
 
-      return <ValueUnit value={duration.value} unit={duration.unit} suffix={duration.suffix} />;
+      return (
+        <ValueUnit
+          value={duration.value}
+          unit={duration.unit}
+          suffixValue={duration.suffixValue}
+          suffixUnit={duration.suffixUnit}
+        />
+      );
     },
     meta: {
       className: 'whitespace-nowrap',
