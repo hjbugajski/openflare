@@ -91,7 +91,10 @@ export default function Login({ status, canRegister }: Props) {
           </p>
           {canRegister ? (
             <p>
-              <Link href={register().url} className="text-accent transition hover:text-foreground">
+              <Link
+                href={register().url}
+                className="text-accent underline-offset-4 transition hover:underline"
+              >
                 register
               </Link>
             </p>

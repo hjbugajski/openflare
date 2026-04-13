@@ -132,7 +132,7 @@ export function Navigation() {
           className="border-b border-border bg-background"
         >
           <div className="mx-auto flex h-12 max-w-6xl items-center gap-4 px-4">
-            <Link href={home().url} className="text-accent transition hover:text-foreground">
+            <Link href={home().url} className="text-accent transition">
               <span aria-hidden>[</span>
               <span className="mx-1">openflare</span>
               <span aria-hidden>]</span>

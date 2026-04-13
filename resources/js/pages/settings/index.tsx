@@ -4,6 +4,7 @@ import { DeleteAccountSection } from '@/components/account/delete-account-sectio
 import { PasswordSection } from '@/components/account/password-section';
 import { ProfileSection } from '@/components/account/profile-section';
 import { TwoFactorSection } from '@/components/account/two-factor-section';
+import { CrtEffectsPreference } from '@/components/settings/crt-effects-preference';
 import { MonitorViewPreference } from '@/components/settings/monitor-view-preference';
 import { TimezonePreference } from '@/components/settings/timezone-preference';
 import { Divider } from '@/components/ui/divider';
@@ -24,12 +25,14 @@ export default function Settings({ auth, mustVerifyEmail, twoFactorEnabled }: Pr
   const browserTimezone =
     typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
   const timezone = auth.user.preferences?.timezone ?? browserTimezone;
+  const crtEffects = auth.user.preferences?.crt_effects ?? true;
 
   return (
     <AppLayout size="sm">
       <Head title="Settings" />
 
       <Heading title="Settings" description="configure your preferences" />
+      <CrtEffectsPreference value={crtEffects} />
       <MonitorViewPreference value={monitorsView} />
       <TimezonePreference value={timezone} />
 

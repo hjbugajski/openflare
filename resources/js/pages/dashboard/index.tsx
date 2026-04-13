@@ -73,7 +73,7 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
     cell: ({ row }) => (
       <Link
         href={show(row.original.monitor.id).url}
-        className="font-medium text-accent transition hover:text-foreground"
+        className="font-medium text-accent underline-offset-4 transition hover:underline"
       >
         {row.original.monitor.name}
       </Link>
@@ -110,7 +110,14 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
     cell: ({ row }) => {
       const duration = formatDurationParts(row.original.started_at, row.original.ended_at);
 
-      return <ValueUnit value={duration.value} unit={duration.unit} suffix={duration.suffix} />;
+      return (
+        <ValueUnit
+          value={duration.value}
+          unit={duration.unit}
+          suffixValue={duration.suffixValue}
+          suffixUnit={duration.suffixUnit}
+        />
+      );
     },
     meta: {
       className: 'whitespace-nowrap',

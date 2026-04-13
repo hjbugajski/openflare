@@ -50,7 +50,7 @@ const getColumns = (timezone: string): ColumnDef<Monitor>[] => [
       <div className="grid gap-1">
         <Link
           href={show(row.original.id).url}
-          className="font-medium text-accent transition hover:text-foreground"
+          className="font-medium text-accent underline-offset-4 transition hover:underline"
         >
           {row.original.name}
         </Link>

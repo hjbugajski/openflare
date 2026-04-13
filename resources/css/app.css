@@ -1,6 +1,11 @@
 @import 'tailwindcss';
 
 :root {
+  /* CRT Effect Controls */
+  --crt-scanline-opacity: 0.015;
+  --crt-glow-intensity: 0.25;
+  --crt-flicker-enabled: 0;
+
   /* Extended Flexoki palette - Base */
   --flexoki-black: #100f0f;
   --flexoki-paper: #fffcf0;
@@ -168,6 +173,11 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    /* CRT Effect Controls - Dark */
+    --crt-scanline-opacity: 0.06;
+    --crt-glow-intensity: 0.35;
+    --crt-flicker-enabled: 1;
+
     /* Dark theme semantic mappings */
     --bg: var(--flexoki-black);
     --bg-2: var(--flexoki-base-950);
@@ -372,6 +382,37 @@
   --color-info-foreground: var(--cy-fg);
 }
 
+@keyframes crt-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  4% {
+    opacity: 0.99;
+  }
+  6% {
+    opacity: 1;
+  }
+  18% {
+    opacity: 0.985;
+  }
+  20% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.99;
+  }
+  57% {
+    opacity: 1;
+  }
+  78% {
+    opacity: 0.985;
+  }
+  80% {
+    opacity: 1;
+  }
+}
+
 @layer base {
   * {
     @apply selection:bg-accent selection:text-background;
@@ -389,11 +430,67 @@
     @apply flex h-full flex-1 flex-col;
   }
 
+  .crt-effects body {
+    animation: crt-flicker calc(var(--crt-flicker-enabled) * 8s) infinite;
+  }
+
+  .crt-effects body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, var(--crt-scanline-opacity)) 2px,
+      rgba(0, 0, 0, var(--crt-scanline-opacity)) 4px
+    );
+  }
+
   #app {
     @apply isolate flex w-full flex-1;
   }
 
   a {
     @apply transition outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+}
+
+@layer components {
+  .crt-effects .text-accent:not(button, [role='tab'], [role='radio'], label) {
+    text-shadow:
+      0 0 2px color-mix(in srgb, var(--or) calc(var(--crt-glow-intensity) * 100%), transparent),
+      0 0 8px color-mix(in srgb, var(--or) calc(var(--crt-glow-intensity) * 50%), transparent);
+  }
+
+  .crt-effects h1,
+  .crt-effects h2,
+  .crt-effects h3,
+  .crt-effects h4,
+  .crt-effects h5,
+  .crt-effects h6 {
+    text-shadow:
+      0 0 2px color-mix(in srgb, var(--tx) calc(var(--crt-glow-intensity) * 80%), transparent),
+      0 0 10px color-mix(in srgb, var(--tx) calc(var(--crt-glow-intensity) * 40%), transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt-effects body {
+    animation: none;
+  }
+}
+
+/* Light mode: subtle drop shadow for headings instead of glow */
+@media (prefers-color-scheme: light) {
+  .crt-effects h1,
+  .crt-effects h2,
+  .crt-effects h3,
+  .crt-effects h4,
+  .crt-effects h5,
+  .crt-effects h6 {
+    text-shadow: 0 1px 2px color-mix(in srgb, var(--tx) 10%, transparent);
   }
 }

@@ -59,6 +59,7 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'monitors_view' => ['sometimes', 'string', 'in:cards,table'],
             'timezone' => ['sometimes', 'string', 'timezone'],
+            'crt_effects' => ['sometimes', 'boolean'],
         ]);
 
         $user = $request->user();
