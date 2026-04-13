@@ -6,7 +6,7 @@ import { configureEcho } from '@laravel/echo-react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 
 import { Toast } from '@/components/ui/toast';
-import type { ReverbConfig } from '@/types';
+import type { ReverbConfig, User } from '@/types';
 
 import '../css/app.css';
 
@@ -33,6 +33,11 @@ function initializeEcho(reverb: ReverbConfig) {
   });
 }
 
+function initializeCrtEffects(user: User | undefined) {
+  const enabled = user?.preferences?.crt_effects ?? true;
+  document.documentElement.classList.toggle('crt-effects', enabled);
+}
+
 void createInertiaApp({
   title: (title) => (title ? `${title} - OpenFlare` : 'OpenFlare'),
   resolve: (name) => {
@@ -40,10 +45,13 @@ void createInertiaApp({
   },
   setup({ el, App, props }) {
     const reverb = props.initialPage.props.reverb as ReverbConfig | undefined;
+    const auth = props.initialPage.props.auth as { user: User } | undefined;
 
     if (reverb?.key) {
       initializeEcho(reverb);
     }
+
+    initializeCrtEffects(auth?.user);
 
     const root = createRoot(el);
 
