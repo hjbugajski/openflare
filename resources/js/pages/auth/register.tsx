@@ -91,7 +91,10 @@ export default function Register() {
         <Card.Footer>
           <p>
             already have an account?{' '}
-            <Link href={login().url} className="text-accent transition hover:text-foreground">
+            <Link
+              href={login().url}
+              className="text-accent underline-offset-4 transition hover:underline"
+            >
               sign in
             </Link>
           </p>

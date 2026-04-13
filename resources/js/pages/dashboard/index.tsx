@@ -73,7 +73,7 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
     cell: ({ row }) => (
       <Link
         href={show(row.original.monitor.id).url}
-        className="font-medium text-accent transition hover:text-foreground"
+        className="font-medium text-accent underline-offset-4 transition hover:underline"
       >
         {row.original.monitor.name}
       </Link>
