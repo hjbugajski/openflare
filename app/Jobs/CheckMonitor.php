@@ -14,7 +14,7 @@ use App\Models\Notifier;
 use App\MonitorStatus;
 use App\Support\SsrfGuard;
 use Carbon\Carbon;
-use GuzzleHttp\TransferStats;
+use Closure;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -25,7 +25,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 use Throwable;
 
 class CheckMonitor implements ShouldBeUnique, ShouldQueue
@@ -39,6 +38,8 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
     public int $maxExceptions = 3;
 
     public int $uniqueFor = 300;
+
+    public static ?Closure $resolveHostIpsOverride = null;
 
     public function __construct(
         public Monitor $monitor
@@ -132,17 +133,45 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
             return $check;
         }
 
+        $host = parse_url($this->monitor->url, PHP_URL_HOST);
+        $scheme = parse_url($this->monitor->url, PHP_URL_SCHEME);
+        $port = parse_url($this->monitor->url, PHP_URL_PORT) ?? ($scheme === 'https' ? 443 : 80);
+
+        $hostLiteral = trim((string) $host, '[]');
+
+        if (filter_var($hostLiteral, FILTER_VALIDATE_IP) !== false) {
+            $ips = [$hostLiteral];
+        } else {
+            $ips = $this->resolveHostIps($host);
+        }
+
+        if ($ips === []) {
+            $check->status = MonitorStatus::Down->value;
+            $check->status_code = 0;
+            $check->error_message = 'DNS resolution failed: Could not resolve hostname';
+
+            return $check;
+        }
+
+        $ssrfGuard = new SsrfGuard;
+
+        if (collect($ips)->contains(fn (string $ip) => $ssrfGuard->isBlockedIp($ip))) {
+            $check->status = MonitorStatus::Down->value;
+            $check->status_code = 0;
+            $check->error_message = 'Request blocked: hostname resolves to a restricted IP address';
+
+            return $check;
+        }
+
+        $pinnedIp = $ips[0];
+
         try {
             $startTime = microtime(true);
-            $resolvedIp = null;
 
             $response = Http::withOptions([
-                'on_stats' => function (TransferStats $stats) use (&$resolvedIp) {
-                    $resolvedIp = $stats->getHandlerStat('primary_ip');
-                    if ($resolvedIp && (new SsrfGuard)->isBlockedIp($resolvedIp)) {
-                        throw new RuntimeException('Request resolved to blocked IP address');
-                    }
-                },
+                'curl' => [
+                    CURLOPT_RESOLVE => ["{$host}:{$port}:{$pinnedIp}"],
+                ],
             ])
                 ->timeout($this->monitor->timeout)
                 ->connectTimeout(10)
@@ -182,6 +211,31 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         }
 
         return $check;
+    }
+
+    protected function resolveHostIps(string $host): array
+    {
+        if (self::$resolveHostIpsOverride !== null) {
+            return (self::$resolveHostIpsOverride)($host);
+        }
+
+        $ips = [];
+
+        $ipv4 = @dns_get_record($host, DNS_A);
+        foreach ($ipv4 ?: [] as $record) {
+            if (! empty($record['ip'])) {
+                $ips[] = $record['ip'];
+            }
+        }
+
+        $ipv6 = @dns_get_record($host, DNS_AAAA);
+        foreach ($ipv6 ?: [] as $record) {
+            if (! empty($record['ipv6'])) {
+                $ips[] = $record['ipv6'];
+            }
+        }
+
+        return $ips;
     }
 
     protected function categorizeConnectionError(ConnectionException $e): string

@@ -798,3 +798,102 @@ it('rolls back check and scheduling update together when incident handling fails
     expect($monitor->last_checked_at)->toBeNull();
     expect($monitor->next_check_at)->toBeNull();
 });
+
+it('blocks the check and issues no request when resolved IP is restricted', function () {
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['169.254.169.254'];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://attacker-controlled.test',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('down')
+        ->status_code->toBe(0)
+        ->error_message->toContain('restricted');
+});
+
+it('checks a normal public host correctly with DNS pinning applied', function () {
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['93.184.216.34'];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://example.com',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('up')
+        ->status_code->toBe(200);
+});
+
+it('records DNS resolution failure as down without issuing a request', function () {
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => [];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://nonexistent-host.test',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('down')
+        ->status_code->toBe(0)
+        ->error_message->toBe('DNS resolution failed: Could not resolve hostname');
+});
+
+it('blocks a restricted IP-literal URL without issuing a request', function () {
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'http://169.254.169.254/',
+        'expected_status_code' => 200,
+    ]));
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('down')
+        ->status_code->toBe(0)
+        ->error_message->toBe('Request blocked: hostname resolves to a restricted IP address');
+});
+
+it('checks a public IP-literal URL correctly without DNS resolution', function () {
+    Http::fake([
+        '8.8.8.8*' => Http::response('OK', 200),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'http://8.8.8.8/',
+        'expected_status_code' => 200,
+    ]));
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('up')
+        ->status_code->toBe(200);
+});
