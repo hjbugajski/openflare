@@ -45,7 +45,7 @@ class UpdateNotifierRequest extends FormRequest
                 Rule::requiredIf($type === Notifier::TYPE_DISCORD),
                 'nullable',
                 'url',
-                'regex:/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[\w-]+$/',
+                'regex:'.Notifier::DISCORD_WEBHOOK_URL_REGEX,
             ],
 
             // Email-specific

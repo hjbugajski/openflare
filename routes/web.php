@@ -77,7 +77,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:notifications');
     Route::post('notifiers/test', [NotifierController::class, 'test'])
         ->name('notifiers.test')
-        ->middleware('throttle:notifications');
+        ->middleware(['throttle:notifications', 'throttle:notifier-test-daily']);
 
     // API endpoints for real-time data
     Route::prefix('api')->name('api.')->middleware('throttle:api')->group(function () {

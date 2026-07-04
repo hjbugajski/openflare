@@ -42,7 +42,7 @@ class StoreNotifierRequest extends FormRequest
                 'required_if:type,discord',
                 'nullable',
                 'url',
-                'regex:/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[\w-]+$/',
+                'regex:'.Notifier::DISCORD_WEBHOOK_URL_REGEX,
             ],
 
             // Email-specific

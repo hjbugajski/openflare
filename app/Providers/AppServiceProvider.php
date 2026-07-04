@@ -49,6 +49,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->user()?->uuid ?: $request->ip());
         });
 
+        RateLimiter::for('notifier-test-daily', function (Request $request) {
+            return Limit::perDay(50)->by($request->user()?->uuid ?: $request->ip());
+        });
+
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(120)->by($request->user()?->uuid ?: $request->ip());
         });

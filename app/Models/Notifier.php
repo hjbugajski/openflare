@@ -38,6 +38,8 @@ class Notifier extends Model
         self::TYPE_EMAIL,
     ];
 
+    public const DISCORD_WEBHOOK_URL_REGEX = '/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[\w-]+$/';
+
     protected $fillable = [
         'user_id',
         'type',
