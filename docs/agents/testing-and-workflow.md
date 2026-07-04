@@ -18,10 +18,10 @@
 - `php artisan test` - All tests
 - `php artisan test --filter=X` - Filtered tests
 - `vendor/bin/pint --dirty` - Format changed PHP files
-- `pnpm run lint` - Lint frontend
-- `pnpm run lint:fix` - Lint and fix frontend
-- `pnpm run format` - Format frontend
-- `pnpm run format:check` - Check frontend formatting
+- `pnpm run lint` - Lint and fix frontend (oxlint, fix-mode)
+- `pnpm run lint:check` - Check frontend lint (no fixes)
+- `pnpm run fmt` - Format frontend
+- `pnpm run fmt:check` - Check frontend formatting
 - `pnpm run typecheck` - Type check frontend
 - `php artisan queue:work --queue=default,monitors,notifications`
 - `php artisan monitors:compute-rollups`
