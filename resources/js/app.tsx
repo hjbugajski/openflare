@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { createInertiaApp } from '@inertiajs/react';
+import { type ResolvedComponent, createInertiaApp } from '@inertiajs/react';
 import { configureEcho } from '@laravel/echo-react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 
@@ -41,7 +41,10 @@ function initializeCrtEffects(user: User | undefined) {
 void createInertiaApp({
   title: (title) => (title ? `${title} - OpenFlare` : 'OpenFlare'),
   resolve: (name) => {
-    return resolvePageComponent(`./pages/${name}.tsx`, import.meta.glob('./pages/**/*.tsx'));
+    return resolvePageComponent(
+      `./pages/${name}.tsx`,
+      import.meta.glob<ResolvedComponent>('./pages/**/*.tsx', { import: 'default' }),
+    );
   },
   setup({ el, App, props }) {
     const reverb = props.initialPage.props.reverb as ReverbConfig | undefined;

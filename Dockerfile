@@ -33,12 +33,12 @@ RUN mkdir -p bootstrap/cache \
 # ==============================================================================
 # Stage 2: Build frontend assets
 # ==============================================================================
-FROM node:24-alpine AS frontend
+FROM node:26-alpine AS frontend
 
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
