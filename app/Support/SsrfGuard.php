@@ -87,6 +87,11 @@ class SsrfGuard
             return true;
         }
 
+        // Multicast (ff00::/8)
+        if ($firstByte === 0xFF) {
+            return true;
+        }
+
         // IPv4-mapped (::ffff:0:0/96) - check embedded IPv4
         if (str_starts_with($hex, '00000000000000000000ffff')) {
             $ipv4Hex = substr($hex, 24, 8);
@@ -98,6 +103,14 @@ class SsrfGuard
         // 6to4 addresses (2002::/16) - check embedded IPv4
         if (str_starts_with($hex, '2002')) {
             $ipv4Hex = substr($hex, 4, 8);
+            $ipv4 = long2ip((int) hexdec($ipv4Hex));
+
+            return $this->isBlockedIpv4($ipv4);
+        }
+
+        // NAT64 well-known prefix (64:ff9b::/96) - check embedded IPv4
+        if (str_starts_with($hex, '0064ff9b') && substr($hex, 8, 16) === str_repeat('0', 16)) {
+            $ipv4Hex = substr($hex, 24, 8);
             $ipv4 = long2ip((int) hexdec($ipv4Hex));
 
             return $this->isBlockedIpv4($ipv4);

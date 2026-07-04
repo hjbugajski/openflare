@@ -82,4 +82,29 @@ describe('SsrfGuard - IPv6', function () {
     it('allows public IPv6 addresses', function () {
         expect(isBlockedIp('2606:4700:4700::1111'))->toBeFalse(); // Cloudflare DNS
     });
+
+    it('blocks multicast (ff00::/8)', function () {
+        expect(isBlockedIp('ff02::1'))->toBeTrue();
+        expect(isBlockedIp('ff00::1'))->toBeTrue();
+    });
+
+    it('blocks NAT64 addresses embedding a blocked IPv4 (64:ff9b::/96)', function () {
+        // 64:ff9b::a9fe:a9fe embeds 169.254.169.254 (link-local/metadata)
+        expect(isBlockedIp('64:ff9b::a9fe:a9fe'))->toBeTrue();
+    });
+
+    it('allows NAT64 addresses embedding a public IPv4', function () {
+        // 64:ff9b::808:808 embeds 8.8.8.8
+        expect(isBlockedIp('64:ff9b::808:808'))->toBeFalse();
+    });
+});
+
+describe('SsrfGuard - additional blocked addresses', function () {
+    it('blocks 0.0.0.0', function () {
+        expect(isBlockedIp('0.0.0.0'))->toBeTrue();
+    });
+
+    it('blocks IPv4-mapped metadata address', function () {
+        expect(isBlockedIp('::ffff:169.254.169.254'))->toBeTrue();
+    });
 });

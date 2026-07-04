@@ -25,7 +25,7 @@ class SafeUrl implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value)) {
-            $fail('validation.safe_url.string')->translate();
+            $fail('The URL must be a string.');
 
             return;
         }
@@ -62,14 +62,8 @@ class SafeUrl implements ValidationRule
 
         $ssrfGuard = new SsrfGuard;
 
-        if (filter_var($hostForValidation, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-            if ($ssrfGuard->isBlockedIpv4($hostForValidation)) {
-                $fail('The URL must not point to private or internal networks.');
-
-                return;
-            }
-        } elseif (filter_var($hostForValidation, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-            if ($ssrfGuard->isBlockedIpv6($hostForValidation)) {
+        if (filter_var($hostForValidation, FILTER_VALIDATE_IP) !== false) {
+            if ($ssrfGuard->isBlockedIp($hostForValidation)) {
                 $fail('The URL must not point to private or internal networks.');
 
                 return;

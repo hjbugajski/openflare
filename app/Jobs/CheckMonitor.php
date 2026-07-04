@@ -138,8 +138,9 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         $port = parse_url($this->monitor->url, PHP_URL_PORT) ?? ($scheme === 'https' ? 443 : 80);
 
         $hostLiteral = trim((string) $host, '[]');
+        $isHostIpLiteral = filter_var($hostLiteral, FILTER_VALIDATE_IP) !== false;
 
-        if (filter_var($hostLiteral, FILTER_VALIDATE_IP) !== false) {
+        if ($isHostIpLiteral) {
             $ips = [$hostLiteral];
         } else {
             $ips = $this->resolveHostIps($host);
@@ -154,8 +155,9 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         }
 
         $ssrfGuard = new SsrfGuard;
+        $pinnedIp = collect($ips)->first(fn (string $ip) => ! $ssrfGuard->isBlockedIp($ip));
 
-        if (collect($ips)->contains(fn (string $ip) => $ssrfGuard->isBlockedIp($ip))) {
+        if ($pinnedIp === null) {
             $check->status = MonitorStatus::Down->value;
             $check->status_code = 0;
             $check->error_message = 'Request blocked: hostname resolves to a restricted IP address';
@@ -163,15 +165,15 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
             return $check;
         }
 
-        $pinnedIp = $ips[0];
-
         try {
             $startTime = microtime(true);
 
+            $curlOptions = $isHostIpLiteral ? [] : [
+                CURLOPT_RESOLVE => ["{$host}:{$port}:{$pinnedIp}"],
+            ];
+
             $response = Http::withOptions([
-                'curl' => [
-                    CURLOPT_RESOLVE => ["{$host}:{$port}:{$pinnedIp}"],
-                ],
+                'curl' => $curlOptions,
             ])
                 ->timeout($this->monitor->timeout)
                 ->connectTimeout(10)
@@ -305,7 +307,11 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $currentIncident = $this->monitor->currentIncident()->first();
+        $currentIncident = Incident::query()
+            ->where('monitor_id', $this->monitor->id)
+            ->whereNull('ended_at')
+            ->lockForUpdate()
+            ->first();
 
         if (! $currentIncident) {
             return;

@@ -897,3 +897,67 @@ it('checks a public IP-literal URL correctly without DNS resolution', function (
         ->status->toBe('up')
         ->status_code->toBe(200);
 });
+
+it('checks an IPv6-literal-host monitor successfully without CURLOPT_RESOLVE', function () {
+    Http::fake([
+        'http://[2606:4700:4700::1111]/*' => Http::response('OK', 200),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'http://[2606:4700:4700::1111]/',
+        'expected_status_code' => 200,
+    ]));
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('up')
+        ->status_code->toBe(200)
+        ->error_message->toBeNull();
+});
+
+it('pins to the first non-blocked IP when resolution mixes private and public addresses', function () {
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['169.254.169.254', '93.184.216.34'];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://example.com',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('up')
+        ->status_code->toBe(200);
+});
+
+it('blocks the check when all resolved IPs are restricted', function () {
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['169.254.169.254', '10.0.0.1'];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://attacker-controlled.test',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('down')
+        ->status_code->toBe(0)
+        ->error_message->toContain('restricted');
+});
