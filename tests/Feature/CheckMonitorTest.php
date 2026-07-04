@@ -12,6 +12,7 @@ use App\Models\Monitor;
 use App\Models\MonitorCheck;
 use App\Models\Notifier;
 use App\MonitorStatus;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
@@ -124,6 +125,55 @@ it('creates an incident when status changes from up to down', function () {
         ->not->toBeNull()
         ->cause->toBe('Expected status 200, got 500')
         ->ended_at->toBeNull();
+});
+
+it('does not create a duplicate open incident when one already exists at the DB level', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
+    ]));
+
+    Incident::factory()->ongoing()->create([
+        'monitor_id' => $monitor->id,
+    ]);
+
+    expect(fn () => Incident::create([
+        'monitor_id' => $monitor->id,
+        'ended_at' => null,
+        'started_at' => now(),
+        'cause' => 'second attempt',
+    ]))->toThrow(UniqueConstraintViolationException::class);
+
+    expect(Incident::query()->where('monitor_id', $monitor->id)->whereNull('ended_at')->count())->toBe(1);
+});
+
+// This exercises the job's existing early-return "belt" (currentIncident() lookup finds the
+// pre-existing row), not the new catch-based "suspenders" — true concurrency where two workers
+// race past the read before either commits cannot be simulated in a single-process Pest test.
+it('treats a unique-constraint violation on incident creation as already-open and does not duplicate notifications', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
+    Event::fake([IncidentOpened::class, MonitorChecked::class]);
+    Http::fake([
+        'https://example.com' => Http::response('Server Error', 500),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
+    ]));
+
+    Incident::factory()->ongoing()->create([
+        'monitor_id' => $monitor->id,
+    ]);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect(Incident::query()->where('monitor_id', $monitor->id)->whereNull('ended_at')->count())->toBe(1);
+    Event::assertNotDispatched(IncidentOpened::class);
 });
 
 it('delays incident creation until failure threshold is met', function () {

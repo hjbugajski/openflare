@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use GuzzleHttp\TransferStats;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -314,7 +315,11 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
     protected function handleStatusChange(MonitorCheck $newCheck): void
     {
         if ($newCheck->isDown()) {
-            $currentIncident = $this->monitor->currentIncident()->first();
+            $currentIncident = Incident::query()
+                ->where('monitor_id', $this->monitor->id)
+                ->whereNull('ended_at')
+                ->lockForUpdate()
+                ->first();
 
             if ($currentIncident) {
                 return;
@@ -329,21 +334,20 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
 
             $startedAt = $recentChecks->sortBy('checked_at')->first()?->checked_at ?? $newCheck->checked_at;
 
-            $incident = Incident::firstOrCreate(
-                [
+            try {
+                $incident = Incident::create([
                     'monitor_id' => $this->monitor->id,
                     'ended_at' => null,
-                ],
-                [
                     'started_at' => $startedAt,
                     'cause' => $newCheck->error_message,
-                ]
-            );
-
-            if ($incident->wasRecentlyCreated) {
-                IncidentOpened::dispatch($this->monitor, $incident);
-                $this->sendNotifications(MonitorStatus::Down, $newCheck);
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                // Another concurrent worker already opened the incident; nothing to do.
+                return;
             }
+
+            IncidentOpened::dispatch($this->monitor, $incident);
+            $this->sendNotifications(MonitorStatus::Down, $newCheck);
 
             return;
         }
