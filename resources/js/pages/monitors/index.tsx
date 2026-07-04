@@ -131,7 +131,7 @@ function MonitorCard({ monitor, timezone }: { monitor: Monitor; timezone: string
 
 export default function MonitorsIndex({ monitors }: Props) {
   const { auth } = usePage<PageProps>().props;
-  const defaultView: MonitorViewMode = auth.user!.preferences?.monitors_view ?? 'cards';
+  const defaultView: MonitorViewMode = auth.user?.preferences?.monitors_view ?? 'cards';
   const browserTimezone =
     typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
   const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
