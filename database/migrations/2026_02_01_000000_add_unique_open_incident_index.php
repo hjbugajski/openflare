@@ -49,7 +49,7 @@ return new class extends Migration
                 DB::table('incidents')
                     ->where('id', $duplicate->id)
                     ->update([
-                        'ended_at' => $keep->started_at,
+                        'ended_at' => $duplicate->started_at,
                         'cause' => trim(($duplicate->cause ?? '').' [closed by 013 duplicate-incident cleanup]'),
                         'updated_at' => now(),
                     ]);
