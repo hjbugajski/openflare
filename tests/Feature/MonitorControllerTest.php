@@ -228,6 +228,21 @@ describe('store', function () {
             ->assertSessionHasErrors('url');
     });
 
+    it('blocks SSRF via private/internal URL', function () {
+        $this->actingAs($this->user)
+            ->post(route('monitors.store'), [
+                'name' => 'Test Monitor',
+                'url' => 'http://169.254.169.254/latest/meta-data/',
+                'method' => 'GET',
+                'interval' => 300,
+                'timeout' => 30,
+                'expected_status_code' => 200,
+                'failure_confirmation_threshold' => 3,
+                'recovery_confirmation_threshold' => 3,
+            ])
+            ->assertSessionHasErrors('url');
+    });
+
     it('validates interval is in allowed values', function () {
         $this->actingAs($this->user)
             ->post(route('monitors.store'), [
@@ -436,6 +451,14 @@ describe('update', function () {
 
         $this->actingAs($this->user)
             ->put(route('monitors.update', $monitor), ['url' => 'not-a-url'])
+            ->assertSessionHasErrors('url');
+    });
+
+    it('blocks SSRF via private/internal URL', function () {
+        $monitor = Monitor::factory()->create(['user_id' => $this->user->uuid]);
+
+        $this->actingAs($this->user)
+            ->put(route('monitors.update', $monitor), ['url' => 'http://169.254.169.254/latest/meta-data/'])
             ->assertSessionHasErrors('url');
     });
 });

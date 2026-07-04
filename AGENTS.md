@@ -1,6 +1,6 @@
 # Openflare
 
-Self-hostable uptime monitoring app (Laravel 12 backend, React 19 + Inertia v2 frontend).
+Self-hostable uptime monitoring app (Laravel 13 backend, React 19 + Inertia v3 frontend).
 
 - Backend package manager: composer
 - Frontend package manager: pnpm

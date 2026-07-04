@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\SortsCursorPaginatedResults;
 use App\Http\Requests\StoreNotifierRequest;
 use App\Http\Requests\TestNotifierRequest;
 use App\Http\Requests\UpdateNotifierRequest;
@@ -12,6 +13,7 @@ use App\Models\Monitor;
 use App\Models\Notifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -21,20 +23,18 @@ use Throwable;
 
 class NotifierController extends Controller
 {
+    use SortsCursorPaginatedResults;
+
     public function index(): Response
     {
-        $sort = request()->string('sort', 'name')->toString();
-        $direction = strtolower(request()->string('direction', 'asc')->toString());
-        $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : 'asc';
-        $sortMap = [
+        [$sort, $direction] = $this->resolveSort('sort', 'direction', [
             'name' => 'name',
             'status' => 'is_active',
             'type' => 'type',
             'default' => 'is_default',
             'monitors_count' => 'monitors_count',
             'excluded' => 'excluded_monitors_count',
-        ];
-        $sort = $sortMap[$sort] ?? $sortMap['name'];
+        ], 'name', 'asc');
 
         $notifiersQuery = Notifier::query()
             ->where('user_id', Auth::user()->uuid)
@@ -44,11 +44,12 @@ class NotifierController extends Controller
             ]);
         $notifiersTotal = (clone $notifiersQuery)->count();
 
-        $notifiers = $notifiersQuery
-            ->orderBy($sort, $direction)
-            ->orderBy('notifiers.id', $direction)
-            ->cursorPaginate(10, ['*'], 'notifiers_cursor')
-            ->withQueryString();
+        $notifiers = $this->finalizeCursorPage(
+            $notifiersQuery->orderBy($sort, $direction),
+            'notifiers.id',
+            $direction,
+            'notifiers_cursor',
+        );
 
         return Inertia::render('notifiers/index', [
             'notifiers' => array_merge($notifiers->toArray(), ['total' => $notifiersTotal]),
@@ -68,6 +69,19 @@ class NotifierController extends Controller
         ]);
     }
 
+    private function syncMonitorAttachments(Notifier $notifier, bool $applyToAll, Collection $monitorIds, Collection $excludedMonitorIds, bool $shouldSyncMonitors): void
+    {
+        if ($applyToAll) {
+            $allMonitorIds = Monitor::where('user_id', Auth::user()->uuid)->pluck('id');
+            $syncData = $allMonitorIds->mapWithKeys(fn (string $id) => [
+                $id => ['is_excluded' => $excludedMonitorIds->contains($id)],
+            ]);
+            $notifier->monitors()->sync($syncData);
+        } elseif ($shouldSyncMonitors) {
+            $notifier->monitors()->sync($monitorIds);
+        }
+    }
+
     public function store(StoreNotifierRequest $request): RedirectResponse
     {
         $this->authorize('create', Notifier::class);
@@ -84,19 +98,14 @@ class NotifierController extends Controller
             'apply_to_all' => $applyToAll,
         ]);
 
-        if ($applyToAll) {
-            $allMonitorIds = Monitor::where('user_id', Auth::user()->uuid)->pluck('id');
-            $excludedMonitorIds = collect($request->validated('excluded_monitors', []));
-            $syncData = $allMonitorIds->mapWithKeys(fn (string $id) => [
-                $id => ['is_excluded' => $excludedMonitorIds->contains($id)],
-            ]);
-            $notifier->monitors()->sync($syncData);
-        } else {
-            $monitorIds = collect($request->validated('monitors', []));
-            if ($monitorIds->isNotEmpty()) {
-                $notifier->monitors()->sync($monitorIds);
-            }
-        }
+        $monitorIds = collect($request->validated('monitors', []));
+        $this->syncMonitorAttachments(
+            $notifier,
+            $applyToAll,
+            $monitorIds,
+            collect($request->validated('excluded_monitors', [])),
+            $monitorIds->isNotEmpty(),
+        );
 
         return redirect()->route('notifiers.index')
             ->with('success', 'Notifier created successfully.');
@@ -130,16 +139,13 @@ class NotifierController extends Controller
             'apply_to_all' => $applyToAll,
         ]);
 
-        if ($applyToAll) {
-            $allMonitorIds = Monitor::where('user_id', Auth::user()->uuid)->pluck('id');
-            $excludedMonitorIds = collect($request->validated('excluded_monitors', []));
-            $syncData = $allMonitorIds->mapWithKeys(fn (string $id) => [
-                $id => ['is_excluded' => $excludedMonitorIds->contains($id)],
-            ]);
-            $notifier->monitors()->sync($syncData);
-        } elseif ($request->has('monitors')) {
-            $notifier->monitors()->sync($request->validated('monitors'));
-        }
+        $this->syncMonitorAttachments(
+            $notifier,
+            $applyToAll,
+            collect($request->validated('monitors', [])),
+            collect($request->validated('excluded_monitors', [])),
+            $request->has('monitors'),
+        );
 
         return redirect()->route('notifiers.index')
             ->with('success', 'Notifier updated successfully.');

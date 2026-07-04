@@ -37,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
         if (str_starts_with(config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
+
+        URL::forceRootUrl(config('app.url'));
     }
 
     protected function configureRateLimiting(): void
@@ -47,6 +49,10 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('notifications', function (Request $request) {
             return Limit::perMinute(20)->by($request->user()?->uuid ?: $request->ip());
+        });
+
+        RateLimiter::for('notifier-test-daily', function (Request $request) {
+            return Limit::perDay(50)->by($request->user()?->uuid ?: $request->ip());
         });
 
         RateLimiter::for('api', function (Request $request) {
@@ -98,9 +104,9 @@ class AppServiceProvider extends ServiceProvider
         $reverbSecret = config('reverb.apps.apps.0.secret');
 
         if (empty($reverbKey) || empty($reverbSecret)) {
-            Log::warning('Security: Reverb WebSocket credentials are not configured. Real-time features may not work.');
+            throw new \RuntimeException('Security: Reverb WebSocket credentials are not configured. Refusing to boot in production.');
         } elseif ($reverbKey === 'openflare-key' || $reverbSecret === 'openflare-secret') {
-            Log::warning('Security: Reverb WebSocket credentials are using default values. Please generate secure secrets.');
+            throw new \RuntimeException('Security: Reverb WebSocket credentials are using default values. Refusing to boot in production.');
         }
     }
 

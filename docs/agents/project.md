@@ -23,8 +23,8 @@ Monitor checks block private/link-local IP ranges and disallow redirects.
 
 ## Tech Stack
 
-- Backend: Laravel 12, PHP 8.4
-- Frontend: React 19, Inertia v2, TypeScript
+- Backend: Laravel 13, PHP 8.4
+- Frontend: React 19, Inertia v3, TypeScript
 - Styling: Tailwind CSS v4
 - Auth: Fortify (2FA, 12+ char secure pass)
 - WebSockets: Laravel Reverb

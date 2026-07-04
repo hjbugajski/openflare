@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '26'
           cache: 'pnpm'
 
       - name: Get Composer cache directory
@@ -53,13 +53,16 @@ jobs:
         run: composer run lint:check
 
       - name: Run Oxlint
-        run: pnpm run lint
+        run: pnpm run lint:check
 
       - name: Run Oxfmt
         run: pnpm run fmt:check
 
       - name: Run TypeScript check
         run: pnpm run typecheck
+
+      - name: Run frontend tests
+        run: pnpm run test
 
       - name: Run tests
         run: composer run test

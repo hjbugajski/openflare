@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import { router } from '@inertiajs/react';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 
 import { IconClose } from '@/components/icons/close';
@@ -8,7 +7,7 @@ import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
-import { toast } from '@/components/ui/toast';
+import { inertiaDelete } from '@/lib/http/inertia-delete';
 import { detach } from '@/routes/monitors/notifiers';
 import type { CursorPaginated, NotifierSummary } from '@/types';
 
@@ -23,27 +22,17 @@ interface NotifiersTableProps {
 export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
   const [notifierToRemove, setNotifierToRemove] = useState<NotifierSummary | null>(null);
 
-  const handleDetach = useCallback(
-    () =>
-      new Promise<void>((resolve) => {
-        if (!notifierToRemove) {
-          resolve();
-          return;
-        }
+  const handleDetach = useCallback(() => {
+    if (!notifierToRemove) {
+      return Promise.resolve();
+    }
 
-        router.delete(detach({ monitor: monitorId, notifier: notifierToRemove.id }).url, {
-          preserveScroll: true,
-          onSuccess: () => {
-            toast.success({ title: 'notifier disabled' });
-          },
-          onFinish: () => {
-            setNotifierToRemove(null);
-            resolve();
-          },
-        });
-      }),
-    [monitorId, notifierToRemove],
-  );
+    return inertiaDelete(detach({ monitor: monitorId, notifier: notifierToRemove.id }).url, {
+      preserveScroll: true,
+      successTitle: 'notifier disabled',
+      errorTitle: 'failed to disable notifier',
+    }).then(() => setNotifierToRemove(null));
+  }, [monitorId, notifierToRemove]);
 
   const handleOpenChange = useCallback((open: boolean) => !open && setNotifierToRemove(null), []);
 

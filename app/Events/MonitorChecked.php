@@ -30,7 +30,7 @@ class MonitorChecked implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('monitors.'.$this->monitor->id),
+            new PrivateChannel('users.'.$this->monitor->user_id),
         ];
     }
 

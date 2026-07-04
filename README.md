@@ -15,8 +15,8 @@ I built OpenFlare because I wanted a basic uptime tool that was easy to self-hos
 
 ## Tech Stack
 
-- Laravel 12, PHP 8.4
-- React 19, Inertia.js v2, TypeScript
+- Laravel 13, PHP 8.4
+- React 19, Inertia.js v3, TypeScript
 - Tailwind CSS v4
 - SQLite or PostgreSQL
 - Laravel Reverb (WebSockets)

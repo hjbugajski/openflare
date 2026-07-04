@@ -12,6 +12,7 @@ use App\Models\Monitor;
 use App\Models\MonitorCheck;
 use App\Models\Notifier;
 use App\MonitorStatus;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
@@ -124,6 +125,55 @@ it('creates an incident when status changes from up to down', function () {
         ->not->toBeNull()
         ->cause->toBe('Expected status 200, got 500')
         ->ended_at->toBeNull();
+});
+
+it('does not create a duplicate open incident when one already exists at the DB level', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
+    ]));
+
+    Incident::factory()->ongoing()->create([
+        'monitor_id' => $monitor->id,
+    ]);
+
+    expect(fn () => Incident::create([
+        'monitor_id' => $monitor->id,
+        'ended_at' => null,
+        'started_at' => now(),
+        'cause' => 'second attempt',
+    ]))->toThrow(UniqueConstraintViolationException::class);
+
+    expect(Incident::query()->where('monitor_id', $monitor->id)->whereNull('ended_at')->count())->toBe(1);
+});
+
+// This exercises the job's existing early-return "belt" (currentIncident() lookup finds the
+// pre-existing row), not the new catch-based "suspenders" — true concurrency where two workers
+// race past the read before either commits cannot be simulated in a single-process Pest test.
+it('treats a unique-constraint violation on incident creation as already-open and does not duplicate notifications', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
+    Event::fake([IncidentOpened::class, MonitorChecked::class]);
+    Http::fake([
+        'https://example.com' => Http::response('Server Error', 500),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
+    ]));
+
+    Incident::factory()->ongoing()->create([
+        'monitor_id' => $monitor->id,
+    ]);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect(Incident::query()->where('monitor_id', $monitor->id)->whereNull('ended_at')->count())->toBe(1);
+    Event::assertNotDispatched(IncidentOpened::class);
 });
 
 it('delays incident creation until failure threshold is met', function () {
@@ -722,4 +772,192 @@ it('catches up to next future slot when significantly behind schedule', function
     expect($monitor->next_check_at->isFuture())->toBeTrue();
     // Should be within the next interval from now
     expect($monitor->next_check_at->diffInSeconds(now()))->toBeLessThanOrEqual(60);
+});
+
+it('rolls back check and scheduling update together when incident handling fails', function () {
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'next_check_at' => null,
+        'last_checked_at' => null,
+    ]));
+
+    $job = Mockery::mock(CheckMonitor::class, [$monitor])->makePartial();
+    $job->shouldAllowMockingProtectedMethods();
+    $job->shouldReceive('handleStatusChange')->once()->andThrow(new RuntimeException('forced failure'));
+
+    expect(fn () => $job->handle())->toThrow(RuntimeException::class, 'forced failure');
+
+    $monitor->refresh();
+
+    expect(MonitorCheck::count())->toBe(0);
+    expect($monitor->last_checked_at)->toBeNull();
+    expect($monitor->next_check_at)->toBeNull();
+});
+
+it('blocks the check and issues no request when resolved IP is restricted', function () {
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['169.254.169.254'];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://attacker-controlled.test',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('down')
+        ->status_code->toBe(0)
+        ->error_message->toContain('restricted');
+});
+
+it('checks a normal public host correctly with DNS pinning applied', function () {
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['93.184.216.34'];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://example.com',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('up')
+        ->status_code->toBe(200);
+});
+
+it('records DNS resolution failure as down without issuing a request', function () {
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => [];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://nonexistent-host.test',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('down')
+        ->status_code->toBe(0)
+        ->error_message->toBe('DNS resolution failed: Could not resolve hostname');
+});
+
+it('blocks a restricted IP-literal URL without issuing a request', function () {
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'http://169.254.169.254/',
+        'expected_status_code' => 200,
+    ]));
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('down')
+        ->status_code->toBe(0)
+        ->error_message->toBe('Request blocked: hostname resolves to a restricted IP address');
+});
+
+it('checks a public IP-literal URL correctly without DNS resolution', function () {
+    Http::fake([
+        '8.8.8.8*' => Http::response('OK', 200),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'http://8.8.8.8/',
+        'expected_status_code' => 200,
+    ]));
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('up')
+        ->status_code->toBe(200);
+});
+
+it('checks an IPv6-literal-host monitor successfully without CURLOPT_RESOLVE', function () {
+    Http::fake([
+        'http://[2606:4700:4700::1111]/*' => Http::response('OK', 200),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'http://[2606:4700:4700::1111]/',
+        'expected_status_code' => 200,
+    ]));
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('up')
+        ->status_code->toBe(200)
+        ->error_message->toBeNull();
+});
+
+it('pins to the first non-blocked IP when resolution mixes private and public addresses', function () {
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['169.254.169.254', '93.184.216.34'];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://example.com',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('up')
+        ->status_code->toBe(200);
+});
+
+it('blocks the check when all resolved IPs are restricted', function () {
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['169.254.169.254', '10.0.0.1'];
+
+    try {
+        $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+            'url' => 'https://attacker-controlled.test',
+            'expected_status_code' => 200,
+        ]));
+
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('down')
+        ->status_code->toBe(0)
+        ->error_message->toContain('restricted');
 });

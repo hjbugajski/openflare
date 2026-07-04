@@ -161,7 +161,9 @@ describe('store', function () {
                 'type' => 'discord',
                 'config' => [],
             ])
-            ->assertSessionHasErrors('config.webhook_url');
+            ->assertSessionHasErrors([
+                'config.webhook_url' => 'A Discord webhook URL is required.',
+            ]);
     });
 
     it('validates email format', function () {
@@ -571,5 +573,39 @@ describe('test', function () {
             ])
             ->assertUnprocessable()
             ->assertJson(['success' => false]);
+    });
+
+    it('validates discord webhook url shape (id/token) on test endpoint', function () {
+        $this->actingAs($this->user)
+            ->postJson(route('notifiers.test'), [
+                'type' => 'discord',
+                'config' => [
+                    'webhook_url' => 'https://discord.com/api/webhooks/not-numeric/abc',
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('config.webhook_url');
+    });
+
+    it('enforces a daily cap on the test endpoint', function () {
+        Http::fake(['discord.com/*' => Http::response(['ok' => true], 204)]);
+
+        $payload = [
+            'type' => 'discord',
+            'config' => ['webhook_url' => 'https://discord.com/api/webhooks/123/abc'],
+        ];
+
+        $this->actingAs($this->user);
+        for ($i = 0; $i < 50; $i++) {
+            // Advance past the independent per-minute `notifications` limiter (20/min)
+            // every 20 requests so only the daily cap under test can trip.
+            if ($i > 0 && $i % 20 === 0) {
+                $this->travel(61)->seconds();
+            }
+
+            $this->postJson(route('notifiers.test'), $payload)->assertOk();
+        }
+
+        $this->postJson(route('notifiers.test'), $payload)->assertStatus(429);
     });
 });

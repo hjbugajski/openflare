@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEcho } from '@laravel/echo-react';
 
 import { IconGrid } from '@/components/icons/grid';
 import { IconTable } from '@/components/icons/table';
@@ -23,37 +22,15 @@ import { formatNumber } from '@/lib/format/number';
 import { formatRelativeTime } from '@/lib/format/relative-time';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { usePreferencePatch } from '@/lib/hooks/use-preference-patch';
+import { useUserChannel } from '@/lib/hooks/use-user-channel';
 import { create, show } from '@/routes/monitors';
 import { type Monitor, type MonitorViewMode, type PageProps } from '@/types';
-import type {
-  IncidentOpenedEvent,
-  IncidentResolvedEvent,
-  MonitorCheckedEvent,
-} from '@/types/events';
 
 interface Props {
   monitors: Monitor[];
 }
 
 const RELOAD_DEBOUNCE_MS = 2000;
-
-function MonitorChannelListener({
-  monitorId,
-  onMonitorChecked,
-  onIncidentOpened,
-  onIncidentResolved,
-}: {
-  monitorId: string;
-  onMonitorChecked: (event: MonitorCheckedEvent) => void;
-  onIncidentOpened: (event: IncidentOpenedEvent) => void;
-  onIncidentResolved: (event: IncidentResolvedEvent) => void;
-}) {
-  useEcho<MonitorCheckedEvent>(`monitors.${monitorId}`, '.monitor.checked', onMonitorChecked);
-  useEcho<IncidentOpenedEvent>(`monitors.${monitorId}`, '.incident.opened', onIncidentOpened);
-  useEcho<IncidentResolvedEvent>(`monitors.${monitorId}`, '.incident.resolved', onIncidentResolved);
-
-  return null;
-}
 
 function MonitorCard({ monitor, timezone }: { monitor: Monitor; timezone: string }) {
   const status = monitor.latest_check?.status;
@@ -131,7 +108,7 @@ function MonitorCard({ monitor, timezone }: { monitor: Monitor; timezone: string
 
 export default function MonitorsIndex({ monitors }: Props) {
   const { auth } = usePage<PageProps>().props;
-  const defaultView: MonitorViewMode = auth.user!.preferences?.monitors_view ?? 'cards';
+  const defaultView: MonitorViewMode = auth.user?.preferences?.monitors_view ?? 'cards';
   const browserTimezone =
     typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
   const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
@@ -174,6 +151,12 @@ export default function MonitorsIndex({ monitors }: Props) {
     scheduleReload('monitors');
   }, [scheduleReload]);
 
+  useUserChannel({
+    onMonitorChecked: handleMonitorChecked,
+    onIncidentOpened: handleIncidentOpened,
+    onIncidentResolved: handleIncidentResolved,
+  });
+
   const handleViewChange = useCallback(
     (value: string[]) => {
       if (value.length > 0) {
@@ -188,16 +171,6 @@ export default function MonitorsIndex({ monitors }: Props) {
   return (
     <AppLayout>
       <Head title="Monitors" />
-
-      {sortedMonitors.map((monitor) => (
-        <MonitorChannelListener
-          key={monitor.id}
-          monitorId={monitor.id}
-          onMonitorChecked={handleMonitorChecked}
-          onIncidentOpened={handleIncidentOpened}
-          onIncidentResolved={handleIncidentResolved}
-        />
-      ))}
 
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">

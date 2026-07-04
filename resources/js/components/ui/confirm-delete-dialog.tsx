@@ -35,6 +35,8 @@ export function ConfirmDeleteDialog({
     try {
       await onConfirm();
       onOpenChange(false);
+    } catch {
+      // error toast already shown by onConfirm
     } finally {
       setIsConfirming(false);
     }

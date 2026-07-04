@@ -12,10 +12,12 @@ use App\Models\Monitor;
 use App\Models\MonitorCheck;
 use App\Models\Notifier;
 use App\MonitorStatus;
+use App\Support\SsrfGuard;
 use Carbon\Carbon;
-use GuzzleHttp\TransferStats;
+use Closure;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -23,7 +25,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 use Throwable;
 
 class CheckMonitor implements ShouldBeUnique, ShouldQueue
@@ -38,22 +39,7 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 300;
 
-    private const BLOCKED_IPV4_RANGES = [
-        '10.0.0.0/8',        // Private (RFC 1918)
-        '172.16.0.0/12',     // Private (RFC 1918)
-        '192.168.0.0/16',    // Private (RFC 1918)
-        '127.0.0.0/8',       // Loopback
-        '169.254.0.0/16',    // Link-local & AWS/Azure metadata
-        '0.0.0.0/8',         // "This" network
-        '100.64.0.0/10',     // Carrier-grade NAT (RFC 6598)
-        '192.0.0.0/24',      // IETF Protocol Assignments
-        '192.0.2.0/24',      // TEST-NET-1 (documentation)
-        '198.51.100.0/24',   // TEST-NET-2 (documentation)
-        '203.0.113.0/24',    // TEST-NET-3 (documentation)
-        '224.0.0.0/4',       // Multicast
-        '240.0.0.0/4',       // Reserved for future use
-        '255.255.255.255/32', // Broadcast
-    ];
+    public static ?Closure $resolveHostIpsOverride = null;
 
     public function __construct(
         public Monitor $monitor
@@ -108,16 +94,17 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         $this->monitor = $monitor;
 
         $check = $this->performCheck();
-        // Wrap check save and incident handling in transaction for consistency
+
+        // Wrap check save, incident handling, and scheduling update in one transaction for atomicity
         DB::transaction(function () use ($check) {
             $this->monitor->checks()->save($check);
             $this->handleStatusChange($check);
-        });
 
-        $this->monitor->update([
-            'last_checked_at' => $check->checked_at,
-            'next_check_at' => $this->calculateNextCheckAt(),
-        ]);
+            $this->monitor->update([
+                'last_checked_at' => $check->checked_at,
+                'next_check_at' => $this->calculateNextCheckAt(),
+            ]);
+        });
 
         MonitorChecked::dispatch($this->monitor, $check);
 
@@ -146,17 +133,47 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
             return $check;
         }
 
+        $host = parse_url($this->monitor->url, PHP_URL_HOST);
+        $scheme = parse_url($this->monitor->url, PHP_URL_SCHEME);
+        $port = parse_url($this->monitor->url, PHP_URL_PORT) ?? ($scheme === 'https' ? 443 : 80);
+
+        $hostLiteral = trim((string) $host, '[]');
+        $isHostIpLiteral = filter_var($hostLiteral, FILTER_VALIDATE_IP) !== false;
+
+        if ($isHostIpLiteral) {
+            $ips = [$hostLiteral];
+        } else {
+            $ips = $this->resolveHostIps($host);
+        }
+
+        if ($ips === []) {
+            $check->status = MonitorStatus::Down->value;
+            $check->status_code = 0;
+            $check->error_message = 'DNS resolution failed: Could not resolve hostname';
+
+            return $check;
+        }
+
+        $ssrfGuard = new SsrfGuard;
+        $pinnedIp = collect($ips)->first(fn (string $ip) => ! $ssrfGuard->isBlockedIp($ip));
+
+        if ($pinnedIp === null) {
+            $check->status = MonitorStatus::Down->value;
+            $check->status_code = 0;
+            $check->error_message = 'Request blocked: hostname resolves to a restricted IP address';
+
+            return $check;
+        }
+
         try {
             $startTime = microtime(true);
-            $resolvedIp = null;
+
+            $curlOptions = $isHostIpLiteral ? [] : [
+                CURLOPT_RESOLVE => ["{$host}:{$port}:{$pinnedIp}"],
+            ];
 
             $response = Http::withOptions([
-                'on_stats' => function (TransferStats $stats) use (&$resolvedIp) {
-                    $resolvedIp = $stats->getHandlerStat('primary_ip');
-                    if ($resolvedIp && $this->isBlockedIp($resolvedIp)) {
-                        throw new RuntimeException('Request resolved to blocked IP address');
-                    }
-                },
+                'curl' => $curlOptions,
             ])
                 ->timeout($this->monitor->timeout)
                 ->connectTimeout(10)
@@ -198,6 +215,31 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         return $check;
     }
 
+    protected function resolveHostIps(string $host): array
+    {
+        if (self::$resolveHostIpsOverride !== null) {
+            return (self::$resolveHostIpsOverride)($host);
+        }
+
+        $ips = [];
+
+        $ipv4 = @dns_get_record($host, DNS_A);
+        foreach ($ipv4 ?: [] as $record) {
+            if (! empty($record['ip'])) {
+                $ips[] = $record['ip'];
+            }
+        }
+
+        $ipv6 = @dns_get_record($host, DNS_AAAA);
+        foreach ($ipv6 ?: [] as $record) {
+            if (! empty($record['ipv6'])) {
+                $ips[] = $record['ipv6'];
+            }
+        }
+
+        return $ips;
+    }
+
     protected function categorizeConnectionError(ConnectionException $e): string
     {
         $message = $e->getMessage();
@@ -225,95 +267,14 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         return "Connection failed: {$message}";
     }
 
-    protected function isBlockedIp(string $ip): bool
-    {
-        // Check IPv4
-        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-            return $this->isBlockedIpv4($ip);
-        }
-
-        // Check IPv6
-        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
-            return $this->isBlockedIpv6($ip);
-        }
-
-        return false;
-    }
-
-    protected function isBlockedIpv4(string $ip): bool
-    {
-        $ipLong = ip2long($ip);
-        if ($ipLong === false) {
-            return false;
-        }
-
-        foreach (self::BLOCKED_IPV4_RANGES as $range) {
-            [$subnet, $bits] = explode('/', $range);
-            $subnetLong = ip2long($subnet);
-            $mask = -1 << (32 - (int) $bits);
-
-            if (($ipLong & $mask) === ($subnetLong & $mask)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    protected function isBlockedIpv6(string $ip): bool
-    {
-        $packed = inet_pton($ip);
-        if ($packed === false) {
-            return false;
-        }
-
-        $hex = bin2hex($packed);
-
-        // Loopback (::1)
-        if ($hex === '00000000000000000000000000000001') {
-            return true;
-        }
-
-        // Unspecified (::)
-        if ($hex === '00000000000000000000000000000000') {
-            return true;
-        }
-
-        // Link-local (fe80::/10)
-        if (str_starts_with($hex, 'fe8') || str_starts_with($hex, 'fe9') ||
-            str_starts_with($hex, 'fea') || str_starts_with($hex, 'feb')) {
-            return true;
-        }
-
-        // Unique local (fc00::/7)
-        $firstByte = hexdec(substr($hex, 0, 2));
-        if ($firstByte >= 0xFC && $firstByte <= 0xFD) {
-            return true;
-        }
-
-        // IPv4-mapped (::ffff:0:0/96) - check embedded IPv4
-        if (str_starts_with($hex, '00000000000000000000ffff')) {
-            $ipv4Hex = substr($hex, 24, 8);
-            $ipv4 = long2ip((int) hexdec($ipv4Hex));
-
-            return $this->isBlockedIpv4($ipv4);
-        }
-
-        // 6to4 addresses (2002::/16) - check embedded IPv4
-        if (str_starts_with($hex, '2002')) {
-            $ipv4Hex = substr($hex, 4, 8);
-            $ipv4 = long2ip((int) hexdec($ipv4Hex));
-
-            return $this->isBlockedIpv4($ipv4);
-        }
-
-        return false;
-    }
-
     protected function handleStatusChange(MonitorCheck $newCheck): void
     {
         if ($newCheck->isDown()) {
-            $currentIncident = $this->monitor->currentIncident()->first();
+            $currentIncident = Incident::query()
+                ->where('monitor_id', $this->monitor->id)
+                ->whereNull('ended_at')
+                ->lockForUpdate()
+                ->first();
 
             if ($currentIncident) {
                 return;
@@ -328,26 +289,29 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
 
             $startedAt = $recentChecks->sortBy('checked_at')->first()?->checked_at ?? $newCheck->checked_at;
 
-            $incident = Incident::firstOrCreate(
-                [
+            try {
+                $incident = Incident::create([
                     'monitor_id' => $this->monitor->id,
                     'ended_at' => null,
-                ],
-                [
                     'started_at' => $startedAt,
                     'cause' => $newCheck->error_message,
-                ]
-            );
-
-            if ($incident->wasRecentlyCreated) {
-                IncidentOpened::dispatch($this->monitor, $incident);
-                $this->sendNotifications(MonitorStatus::Down, $newCheck);
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                // Another concurrent worker already opened the incident; nothing to do.
+                return;
             }
+
+            IncidentOpened::dispatch($this->monitor, $incident);
+            $this->sendNotifications(MonitorStatus::Down, $newCheck);
 
             return;
         }
 
-        $currentIncident = $this->monitor->currentIncident()->first();
+        $currentIncident = Incident::query()
+            ->where('monitor_id', $this->monitor->id)
+            ->whereNull('ended_at')
+            ->lockForUpdate()
+            ->first();
 
         if (! $currentIncident) {
             return;

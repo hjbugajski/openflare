@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Models\DailyUptimeRollup;
+use App\Actions\ComputeRollupStats;
+use App\Actions\PersistDailyRollups;
 use App\Models\Monitor;
-use App\Models\MonitorCheck;
-use App\MonitorStatus;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +18,13 @@ class ComputeDailyUptimeRollups extends Command
         {--days= : Number of past days to compute (overrides --date)}';
 
     protected $description = 'Compute daily uptime rollups from monitor checks';
+
+    public function __construct(
+        private readonly ComputeRollupStats $computeRollupStats,
+        private readonly PersistDailyRollups $persistDailyRollups,
+    ) {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -85,50 +91,15 @@ class ComputeDailyUptimeRollups extends Command
         $startOfDay = $date->copy()->startOfDay();
         $endOfDay = $date->copy()->endOfDay();
 
-        // Get all monitors
-        Monitor::query()->chunkById(100, function ($monitors) use ($startOfDay, $endOfDay, &$created, &$updated) {
-            foreach ($monitors as $monitor) {
-                $stats = MonitorCheck::query()
-                    ->where('monitor_id', $monitor->id)
-                    ->whereBetween('checked_at', [$startOfDay, $endOfDay])
-                    ->selectRaw('
-                        COUNT(*) as total_checks,
-                        SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as successful_checks,
-                        AVG(response_time_ms) as avg_response_time_ms,
-                        MIN(response_time_ms) as min_response_time_ms,
-                        MAX(response_time_ms) as max_response_time_ms
-                    ', [MonitorStatus::Up->value])
-                    ->first();
+        Monitor::query()->chunkById(100, function ($monitors) use ($startOfDay, $endOfDay, $date, &$created, &$updated) {
+            $monitorIds = $monitors->pluck('id');
 
-                if (! $stats || $stats->total_checks === 0) {
-                    continue;
-                }
+            $stats = $this->computeRollupStats->handle($monitorIds, $startOfDay, $endOfDay);
 
-                $uptimePercentage = $stats->total_checks > 0
-                    ? round(($stats->successful_checks / $stats->total_checks) * 100, 2)
-                    : 100.00;
+            $result = $this->persistDailyRollups->handle($monitorIds, $date, $stats);
 
-                $rollup = DailyUptimeRollup::updateOrCreate(
-                    [
-                        'monitor_id' => $monitor->id,
-                        'date' => $startOfDay->toDateString(),
-                    ],
-                    [
-                        'total_checks' => $stats->total_checks,
-                        'successful_checks' => $stats->successful_checks,
-                        'uptime_percentage' => $uptimePercentage,
-                        'avg_response_time_ms' => $stats->avg_response_time_ms ? (int) round($stats->avg_response_time_ms) : null,
-                        'min_response_time_ms' => $stats->min_response_time_ms,
-                        'max_response_time_ms' => $stats->max_response_time_ms,
-                    ]
-                );
-
-                if ($rollup->wasRecentlyCreated) {
-                    $created++;
-                } else {
-                    $updated++;
-                }
-            }
+            $created += $result['created'];
+            $updated += $result['updated'];
         });
 
         return ['created' => $created, 'updated' => $updated];
