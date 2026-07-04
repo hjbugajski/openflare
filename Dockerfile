@@ -21,7 +21,9 @@ COPY database ./database
 
 # Create required directories and generate routes
 # (fake key - only needed for Laravel to boot, not used for encryption;
-# APP_ENV=local so production-only security checks don't abort the build)
+# APP_ENV=local so production-only security checks don't abort the build;
+# APP_URL='' so forceRootUrl is empty and wayfinder emits relative URLs
+# instead of baking the build-time host into the JS bundle)
 RUN mkdir -p bootstrap/cache \
     storage/framework/views \
     storage/framework/cache \
@@ -31,6 +33,7 @@ RUN mkdir -p bootstrap/cache \
     resources/js/routes \
     resources/js/wayfinder \
     && APP_ENV=local \
+    APP_URL='' \
     APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
     php artisan wayfinder:generate --with-form
 
