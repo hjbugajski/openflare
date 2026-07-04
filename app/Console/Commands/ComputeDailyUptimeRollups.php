@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Actions\ComputeRollupStats;
 use App\Models\DailyUptimeRollup;
 use App\Models\Monitor;
-use App\Models\MonitorCheck;
-use App\MonitorStatus;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +18,11 @@ class ComputeDailyUptimeRollups extends Command
         {--days= : Number of past days to compute (overrides --date)}';
 
     protected $description = 'Compute daily uptime rollups from monitor checks';
+
+    public function __construct(private readonly ComputeRollupStats $computeRollupStats)
+    {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -85,28 +89,25 @@ class ComputeDailyUptimeRollups extends Command
         $startOfDay = $date->copy()->startOfDay();
         $endOfDay = $date->copy()->endOfDay();
 
-        // Get all monitors
-        Monitor::query()->chunkById(100, function ($monitors) use ($startOfDay, $endOfDay, &$created, &$updated) {
-            foreach ($monitors as $monitor) {
-                $stats = MonitorCheck::query()
-                    ->where('monitor_id', $monitor->id)
-                    ->whereBetween('checked_at', [$startOfDay, $endOfDay])
-                    ->selectRaw('
-                        COUNT(*) as total_checks,
-                        SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as successful_checks,
-                        AVG(response_time_ms) as avg_response_time_ms,
-                        MIN(response_time_ms) as min_response_time_ms,
-                        MAX(response_time_ms) as max_response_time_ms
-                    ', [MonitorStatus::Up->value])
-                    ->first();
+        Monitor::query()->chunkById(100, function ($monitors) use ($startOfDay, $endOfDay, $date, &$created, &$updated) {
+            $monitorIds = $monitors->pluck('id');
 
-                if (! $stats || $stats->total_checks === 0) {
+            $stats = $this->computeRollupStats->handle($monitorIds, $startOfDay, $endOfDay);
+
+            // Zero-check policy (see plan 017): delete stale rows for
+            // monitors with no checks this date instead of leaving them.
+            DailyUptimeRollup::query()
+                ->whereIn('monitor_id', $monitorIds)
+                ->whereDate('date', $date)
+                ->whereNotIn('monitor_id', $stats->keys())
+                ->delete();
+
+            foreach ($monitors as $monitor) {
+                if (! $stats->has($monitor->id)) {
                     continue;
                 }
 
-                $uptimePercentage = $stats->total_checks > 0
-                    ? round(($stats->successful_checks / $stats->total_checks) * 100, 2)
-                    : 100.00;
+                $stat = $stats->get($monitor->id);
 
                 $rollup = DailyUptimeRollup::updateOrCreate(
                     [
@@ -114,12 +115,12 @@ class ComputeDailyUptimeRollups extends Command
                         'date' => $startOfDay->toDateString(),
                     ],
                     [
-                        'total_checks' => $stats->total_checks,
-                        'successful_checks' => $stats->successful_checks,
-                        'uptime_percentage' => $uptimePercentage,
-                        'avg_response_time_ms' => $stats->avg_response_time_ms ? (int) round($stats->avg_response_time_ms) : null,
-                        'min_response_time_ms' => $stats->min_response_time_ms,
-                        'max_response_time_ms' => $stats->max_response_time_ms,
+                        'total_checks' => $stat->total_checks,
+                        'successful_checks' => $stat->successful_checks,
+                        'uptime_percentage' => $stat->uptime_percentage,
+                        'avg_response_time_ms' => $stat->avg_response_time_ms,
+                        'min_response_time_ms' => $stat->min_response_time_ms,
+                        'max_response_time_ms' => $stat->max_response_time_ms,
                     ]
                 );
 

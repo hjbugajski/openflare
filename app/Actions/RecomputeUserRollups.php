@@ -6,12 +6,15 @@ namespace App\Actions;
 
 use App\Models\DailyUptimeRollup;
 use App\Models\Monitor;
-use App\Models\MonitorCheck;
 use App\Models\User;
-use App\MonitorStatus;
+use Illuminate\Support\Str;
 
 class RecomputeUserRollups
 {
+    public function __construct(
+        private readonly ComputeRollupStats $computeRollupStats,
+    ) {}
+
     public function handle(User $user, string $timezone, int $days = 30): void
     {
         $monitorIds = Monitor::query()
@@ -28,72 +31,44 @@ class RecomputeUserRollups
 
         for ($offset = 0; $offset < $days; $offset++) {
             $date = $now->copy()->subDays($offset)->startOfDay();
-            $dateValue = $date->copy();
-            $startOfDay = $date->copy()->startOfDay()->utc()->toDateTimeString();
-            $endOfDay = $date->copy()->endOfDay()->utc()->toDateTimeString();
+            $startOfDay = $date->copy()->startOfDay()->utc();
+            $endOfDay = $date->copy()->endOfDay()->utc();
 
-            $stats = MonitorCheck::query()
+            $stats = $this->computeRollupStats->handle($monitorIds, $startOfDay, $endOfDay);
+
+            // Zero-check policy (see plan 017): delete any existing rollup
+            // row for monitors absent from $stats for this date. whereNotIn
+            // with an empty collection matches every row, so this single
+            // query also covers the "no monitor had any checks" case.
+            DailyUptimeRollup::query()
                 ->whereIn('monitor_id', $monitorIds)
-                ->whereBetween('checked_at', [$startOfDay, $endOfDay])
-                ->groupBy('monitor_id')
-                ->selectRaw('
-                    monitor_id,
-                    COUNT(*) as total_checks,
-                    SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as successful_checks,
-                    AVG(response_time_ms) as avg_response_time_ms,
-                    MIN(response_time_ms) as min_response_time_ms,
-                    MAX(response_time_ms) as max_response_time_ms
-                ', [MonitorStatus::Up->value])
-                ->get();
+                ->whereDate('date', $date)
+                ->whereNotIn('monitor_id', $stats->keys())
+                ->delete();
 
-            $monitorsWithStats = $stats->pluck('monitor_id');
-
-            if ($monitorsWithStats->isEmpty()) {
-                DailyUptimeRollup::query()
-                    ->whereIn('monitor_id', $monitorIds)
-                    ->whereDate('date', $dateValue)
-                    ->delete();
-            } else {
-                DailyUptimeRollup::query()
-                    ->whereIn('monitor_id', $monitorIds)
-                    ->whereDate('date', $dateValue)
-                    ->whereNotIn('monitor_id', $monitorsWithStats)
-                    ->delete();
+            if ($stats->isEmpty()) {
+                continue;
             }
 
-            foreach ($stats as $stat) {
-                if ($stat->total_checks === 0) {
-                    continue;
-                }
+            $rows = $stats->map(fn ($stat) => [
+                'id' => (string) Str::uuid7(),
+                'monitor_id' => $stat->monitor_id,
+                'date' => $date->toDateString(),
+                'total_checks' => $stat->total_checks,
+                'successful_checks' => $stat->successful_checks,
+                'uptime_percentage' => $stat->uptime_percentage,
+                'avg_response_time_ms' => $stat->avg_response_time_ms,
+                'min_response_time_ms' => $stat->min_response_time_ms,
+                'max_response_time_ms' => $stat->max_response_time_ms,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])->values()->all();
 
-                $uptimePercentage = $stat->total_checks > 0
-                    ? round(($stat->successful_checks / $stat->total_checks) * 100, 2)
-                    : 100.00;
-
-                $rollup = DailyUptimeRollup::query()
-                    ->where('monitor_id', $stat->monitor_id)
-                    ->whereDate('date', $dateValue)
-                    ->first();
-
-                if ($rollup === null) {
-                    $rollup = new DailyUptimeRollup([
-                        'monitor_id' => $stat->monitor_id,
-                        'date' => $dateValue,
-                    ]);
-                }
-
-                $rollup->fill([
-                    'total_checks' => $stat->total_checks,
-                    'successful_checks' => $stat->successful_checks,
-                    'uptime_percentage' => $uptimePercentage,
-                    'avg_response_time_ms' => $stat->avg_response_time_ms
-                        ? (int) round($stat->avg_response_time_ms)
-                        : null,
-                    'min_response_time_ms' => $stat->min_response_time_ms,
-                    'max_response_time_ms' => $stat->max_response_time_ms,
-                ]);
-                $rollup->save();
-            }
+            DailyUptimeRollup::query()->upsert(
+                $rows,
+                ['monitor_id', 'date'],
+                ['total_checks', 'successful_checks', 'uptime_percentage', 'avg_response_time_ms', 'min_response_time_ms', 'max_response_time_ms', 'updated_at']
+            );
         }
 
         $this->markRollupsRun($user, $timezone);

@@ -120,3 +120,25 @@ it('computes accurate rollups during backfill', function () {
     expect((float) $rollup->uptime_percentage)->toBe(80.0);
     expect($rollup->avg_response_time_ms)->toBeGreaterThan(0);
 });
+
+it('deletes a stale rollup row when a monitor has zero checks that day', function () {
+    $user = User::factory()->create();
+    $monitor = Monitor::factory()->for($user)->create();
+    $yesterday = now()->subDay()->startOfDay();
+
+    DailyUptimeRollup::factory()->create([
+        'monitor_id' => $monitor->id,
+        'date' => $yesterday->toDateString(),
+        'total_checks' => 10,
+        'successful_checks' => 10,
+    ]);
+
+    // No MonitorCheck rows created for $yesterday: zero checks that day.
+
+    Artisan::call('monitors:compute-rollups', ['--date' => $yesterday->toDateString()]);
+
+    expect(DailyUptimeRollup::query()
+        ->where('monitor_id', $monitor->id)
+        ->whereDate('date', $yesterday)
+        ->exists())->toBeFalse();
+});
