@@ -723,3 +723,28 @@ it('catches up to next future slot when significantly behind schedule', function
     // Should be within the next interval from now
     expect($monitor->next_check_at->diffInSeconds(now()))->toBeLessThanOrEqual(60);
 });
+
+it('rolls back check and scheduling update together when incident handling fails', function () {
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'next_check_at' => null,
+        'last_checked_at' => null,
+    ]));
+
+    $job = Mockery::mock(CheckMonitor::class, [$monitor])->makePartial();
+    $job->shouldAllowMockingProtectedMethods();
+    $job->shouldReceive('handleStatusChange')->once()->andThrow(new RuntimeException('forced failure'));
+
+    expect(fn () => $job->handle())->toThrow(RuntimeException::class, 'forced failure');
+
+    $monitor->refresh();
+
+    expect(MonitorCheck::count())->toBe(0);
+    expect($monitor->last_checked_at)->toBeNull();
+    expect($monitor->next_check_at)->toBeNull();
+});

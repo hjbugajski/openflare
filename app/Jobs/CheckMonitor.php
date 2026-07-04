@@ -108,16 +108,17 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         $this->monitor = $monitor;
 
         $check = $this->performCheck();
-        // Wrap check save and incident handling in transaction for consistency
+
+        // Wrap check save, incident handling, and scheduling update in one transaction for atomicity
         DB::transaction(function () use ($check) {
             $this->monitor->checks()->save($check);
             $this->handleStatusChange($check);
-        });
 
-        $this->monitor->update([
-            'last_checked_at' => $check->checked_at,
-            'next_check_at' => $this->calculateNextCheckAt(),
-        ]);
+            $this->monitor->update([
+                'last_checked_at' => $check->checked_at,
+                'next_check_at' => $this->calculateNextCheckAt(),
+            ]);
+        });
 
         MonitorChecked::dispatch($this->monitor, $check);
 
