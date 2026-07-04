@@ -30,7 +30,7 @@ return [
             'connection' => null,
             'table' => 'jobs',
             'queue' => 'default',
-            'retry_after' => 90,
+            'retry_after' => 180,
             'after_commit' => true,
         ],
 
