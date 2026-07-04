@@ -25,20 +25,31 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
 
   const handleDetach = useCallback(
     () =>
-      new Promise<void>((resolve) => {
+      new Promise<void>((resolve, reject) => {
         if (!notifierToRemove) {
           resolve();
           return;
         }
 
+        let settled = false;
         router.delete(detach({ monitor: monitorId, notifier: notifierToRemove.id }).url, {
           preserveScroll: true,
           onSuccess: () => {
             toast.success({ title: 'notifier disabled' });
+            setNotifierToRemove(null);
+            settled = true;
+            resolve();
+          },
+          onError: () => {
+            toast.destructive({ title: 'failed to disable notifier' });
+            settled = true;
+            reject(new Error('failed to disable notifier'));
           },
           onFinish: () => {
-            setNotifierToRemove(null);
-            resolve();
+            if (!settled) {
+              toast.destructive({ title: 'failed to disable notifier' });
+              reject(new Error('failed to disable notifier'));
+            }
           },
         });
       }),

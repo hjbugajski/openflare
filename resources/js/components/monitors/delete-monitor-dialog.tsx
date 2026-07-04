@@ -21,12 +21,25 @@ export function DeleteMonitorDialog({
 }: DeleteMonitorDialogProps) {
   const handleDelete = useCallback(
     () =>
-      new Promise<void>((resolve) => {
+      new Promise<void>((resolve, reject) => {
+        let settled = false;
         router.delete(destroy(monitorId).url, {
           onSuccess: () => {
             toast.success({ title: 'monitor deleted' });
+            settled = true;
+            resolve();
           },
-          onFinish: () => resolve(),
+          onError: () => {
+            toast.destructive({ title: 'failed to delete monitor' });
+            settled = true;
+            reject(new Error('failed to delete monitor'));
+          },
+          onFinish: () => {
+            if (!settled) {
+              toast.destructive({ title: 'failed to delete monitor' });
+              reject(new Error('failed to delete monitor'));
+            }
+          },
         });
       }),
     [monitorId],
