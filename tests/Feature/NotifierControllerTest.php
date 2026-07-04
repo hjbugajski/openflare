@@ -161,7 +161,9 @@ describe('store', function () {
                 'type' => 'discord',
                 'config' => [],
             ])
-            ->assertSessionHasErrors('config.webhook_url');
+            ->assertSessionHasErrors([
+                'config.webhook_url' => 'A Discord webhook URL is required.',
+            ]);
     });
 
     it('validates email format', function () {

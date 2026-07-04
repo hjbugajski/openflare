@@ -4,55 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Models\Monitor;
-use App\Models\Notifier;
+use App\Http\Requests\Concerns\HasNotifierRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 
 class StoreNotifierRequest extends FormRequest
 {
+    use HasNotifierRules;
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        return [
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'string', Rule::in(Notifier::TYPES)],
-            'is_active' => ['boolean'],
-            'is_default' => ['boolean'],
-
-            // Monitor associations
-            'apply_to_existing' => ['boolean'],
-            'monitors' => ['array'],
-            'monitors.*' => [
-                'string',
-                Rule::exists(Monitor::class, 'id')->where('user_id', Auth::user()->uuid),
-            ],
-            'excluded_monitors' => ['array'],
-            'excluded_monitors.*' => [
-                'string',
-                Rule::exists(Monitor::class, 'id')->where('user_id', Auth::user()->uuid),
-            ],
-
-            // Discord-specific
-            'config.webhook_url' => [
-                'required_if:type,discord',
-                'nullable',
-                'url',
-                'regex:'.Notifier::DISCORD_WEBHOOK_URL_REGEX,
-            ],
-
-            // Email-specific
-            'config.email' => [
-                'required_if:type,email',
-                'nullable',
-                'email',
-                'max:255',
-            ],
-        ];
+        return $this->baseNotifierRules(false, $this->input('type'));
     }
 
     /**
@@ -61,9 +26,9 @@ class StoreNotifierRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'config.webhook_url.required_if' => 'A Discord webhook URL is required.',
+            'config.webhook_url.required' => 'A Discord webhook URL is required.',
             'config.webhook_url.regex' => 'Please enter a valid Discord webhook URL.',
-            'config.email.required_if' => 'An email address is required.',
+            'config.email.required' => 'An email address is required.',
         ];
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\ComputeTodayRollup;
+use App\Http\Controllers\Concerns\SortsCursorPaginatedResults;
 use App\Http\Requests\StoreMonitorRequest;
 use App\Http\Requests\UpdateMonitorRequest;
 use App\Models\DailyUptimeRollup;
@@ -18,6 +19,8 @@ use Inertia\Response;
 
 class MonitorController extends Controller
 {
+    use SortsCursorPaginatedResults;
+
     public function __construct(
         private ComputeTodayRollup $computeTodayRollup,
     ) {}
@@ -122,39 +125,37 @@ class MonitorController extends Controller
 
         $monitor->load(['latestCheck', 'currentIncident']);
 
-        $checksSort = request()->string('checks_sort', 'checked_at')->toString();
-        $checksDirection = strtolower(request()->string('checks_direction', 'desc')->toString());
-        $checksDirection = in_array($checksDirection, ['asc', 'desc'], true) ? $checksDirection : 'desc';
-        $checksSortMap = [
+        [$checksSort, $checksDirection] = $this->resolveSort('checks_sort', 'checks_direction', [
             'status' => 'status',
             'status_code' => 'status_code',
             'response_time_ms' => 'response_time_ms',
             'error_message' => 'error_message',
             'checked_at' => 'checked_at',
-        ];
-        $checksSort = $checksSortMap[$checksSort] ?? $checksSortMap['checked_at'];
+        ], 'checked_at', 'desc');
 
         $checksQuery = $monitor->checks();
         $checksTotal = (clone $checksQuery)->count();
 
-        $checks = $checksQuery
-            ->orderBy($checksSort, $checksDirection)
-            ->orderBy('id', $checksDirection)
-            ->cursorPaginate(10, ['*'], 'checks_cursor')
-            ->withQueryString();
+        $checks = $this->finalizeCursorPage(
+            $checksQuery->orderBy($checksSort, $checksDirection),
+            'id',
+            $checksDirection,
+            'checks_cursor',
+        );
 
-        $incidentsSort = request()->string('incidents_sort', 'started_at')->toString();
-        $incidentsDirection = strtolower(request()->string('incidents_direction', 'desc')->toString());
-        $incidentsDirection = in_array($incidentsDirection, ['asc', 'desc'], true) ? $incidentsDirection : 'desc';
-        $incidentsSortOptions = ['status', 'cause', 'duration', 'started_at', 'ended_at'];
-        $incidentsSort = in_array($incidentsSort, $incidentsSortOptions, true) ? $incidentsSort : 'started_at';
+        [$incidentsSort, $incidentsDirection] = $this->resolveSort('incidents_sort', 'incidents_direction', [
+            'status' => 'status',
+            'cause' => 'cause',
+            'duration' => 'duration',
+            'started_at' => 'started_at',
+            'ended_at' => 'ended_at',
+        ], 'started_at', 'desc');
 
         $incidentsQuery = $monitor->incidents();
         $incidentsTotal = (clone $incidentsQuery)->count();
-        $incidentsDirectionKeyword = $incidentsDirection === 'asc' ? 'asc' : 'desc';
 
         if ($incidentsSort === 'status') {
-            $incidentsQuery->orderByRaw('CASE WHEN ended_at IS NULL THEN 0 ELSE 1 END '.$incidentsDirectionKeyword);
+            $incidentsQuery->orderByRaw('CASE WHEN ended_at IS NULL THEN 0 ELSE 1 END '.$incidentsDirection);
         } elseif ($incidentsSort === 'duration') {
             $driver = DB::connection()->getDriverName();
 
@@ -165,36 +166,30 @@ class MonitorController extends Controller
                 default => '(COALESCE(ended_at, NOW()) - started_at)',
             };
 
-            $incidentsQuery->orderByRaw($durationExpression.' '.$incidentsDirectionKeyword);
+            $incidentsQuery->orderByRaw($durationExpression.' '.$incidentsDirection);
         } else {
             $incidentsQuery->orderBy($incidentsSort, $incidentsDirection);
         }
 
-        $incidents = $incidentsQuery
-            ->orderBy('id', $incidentsDirection)
-            ->cursorPaginate(10, ['*'], 'incidents_cursor')
-            ->withQueryString();
+        $incidents = $this->finalizeCursorPage($incidentsQuery, 'id', $incidentsDirection, 'incidents_cursor');
 
-        $notifiersSort = request()->string('notifiers_sort', 'name')->toString();
-        $notifiersDirection = strtolower(request()->string('notifiers_direction', 'asc')->toString());
-        $notifiersDirection = in_array($notifiersDirection, ['asc', 'desc'], true) ? $notifiersDirection : 'asc';
-        $notifiersSortMap = [
+        [$notifiersSort, $notifiersDirection] = $this->resolveSort('notifiers_sort', 'notifiers_direction', [
             'name' => 'name',
             'status' => 'is_active',
             'type' => 'type',
             'apply_to_all' => 'apply_to_all',
-        ];
-        $notifiersSort = $notifiersSortMap[$notifiersSort] ?? $notifiersSortMap['name'];
+        ], 'name', 'asc');
 
         $notifiersQuery = $monitor->notifiers()
             ->wherePivot('is_excluded', false);
         $notifiersTotal = (clone $notifiersQuery)->count();
 
-        $notifiers = $notifiersQuery
-            ->orderBy($notifiersSort, $notifiersDirection)
-            ->orderBy('notifiers.id', $notifiersDirection)
-            ->cursorPaginate(10, ['*'], 'notifiers_cursor')
-            ->withQueryString();
+        $notifiers = $this->finalizeCursorPage(
+            $notifiersQuery->orderBy($notifiersSort, $notifiersDirection),
+            'notifiers.id',
+            $notifiersDirection,
+            'notifiers_cursor',
+        );
 
         $timezone = Auth::user()->getPreference('timezone', config('app.timezone'));
         $now = now($timezone);
