@@ -25,10 +25,6 @@ class UpdateMonitorRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
-            'url.url' => 'Please enter a valid URL including the protocol (e.g., https://example.com).',
-            'interval.in' => 'Please select a valid check interval.',
-            'method.in' => 'Please select a valid HTTP method.',
-        ];
+        return $this->baseMonitorMessages();
     }
 }

@@ -28,10 +28,6 @@ class UpdateNotifierRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
-            'config.webhook_url.required' => 'A Discord webhook URL is required.',
-            'config.webhook_url.regex' => 'Please enter a valid Discord webhook URL.',
-            'config.email.required' => 'An email address is required.',
-        ];
+        return $this->baseNotifierMessages();
     }
 }
