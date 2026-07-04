@@ -98,9 +98,9 @@ class AppServiceProvider extends ServiceProvider
         $reverbSecret = config('reverb.apps.apps.0.secret');
 
         if (empty($reverbKey) || empty($reverbSecret)) {
-            Log::warning('Security: Reverb WebSocket credentials are not configured. Real-time features may not work.');
+            throw new \RuntimeException('Security: Reverb WebSocket credentials are not configured. Refusing to boot in production.');
         } elseif ($reverbKey === 'openflare-key' || $reverbSecret === 'openflare-secret') {
-            Log::warning('Security: Reverb WebSocket credentials are using default values. Please generate secure secrets.');
+            throw new \RuntimeException('Security: Reverb WebSocket credentials are using default values. Refusing to boot in production.');
         }
     }
 
