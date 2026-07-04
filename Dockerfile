@@ -6,7 +6,9 @@ FROM composer:2 AS wayfinder
 WORKDIR /app
 
 COPY composer.json composer.lock ./
-RUN --mount=type=cache,target=/tmp/cache \
+# sharing=locked: this stage and the composer stage build concurrently and
+# race on composer's cache dir if both mount it unserialized
+RUN --mount=type=cache,target=/tmp/cache,sharing=locked \
     composer config cache-files-dir /tmp/cache && \
     composer install --no-dev --no-scripts --prefer-dist --ignore-platform-reqs
 
@@ -71,8 +73,8 @@ WORKDIR /app
 
 COPY composer.json composer.lock ./
 
-# Install dependencies without dev packages
-RUN --mount=type=cache,target=/tmp/cache \
+# Install dependencies without dev packages (sharing=locked: see wayfinder stage)
+RUN --mount=type=cache,target=/tmp/cache,sharing=locked \
     composer config cache-files-dir /tmp/cache && \
     composer install \
     --no-dev \
