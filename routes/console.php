@@ -2,7 +2,6 @@
 
 use App\Jobs\CheckMonitor;
 use App\Models\Monitor;
-use App\Models\MonitorCheck;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
@@ -47,16 +46,10 @@ Schedule::call(function () {
     ->name('dispatch-monitor-checks')
     ->withoutOverlapping(5);
 
-Schedule::call(function () {
-    $retentionDays = (int) config('monitors.retention_days', 30);
-    $deleted = MonitorCheck::query()
-        ->where('checked_at', '<', now()->subDays($retentionDays))
-        ->delete();
-
-    if ($deleted > 0) {
-        Log::info('Pruned old monitor checks', ['deleted' => $deleted]);
-    }
-})->daily()->name('prune-monitor-checks');
+Schedule::command('monitors:prune-checks')
+    ->daily()
+    ->name('prune-monitor-checks')
+    ->withoutOverlapping();
 
 Schedule::command('monitors:compute-rollups')
     ->dailyAt('00:15')
