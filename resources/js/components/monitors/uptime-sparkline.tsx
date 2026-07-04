@@ -91,9 +91,9 @@ export function UptimeSparkline({
   className,
   timezone,
 }: UptimeSparklineProps) {
-  const rollupMap = new Map(data.map((r) => [r.date.slice(0, 10), r]));
   const resolvedTimezone = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const dates = buildDateRange(days, resolvedTimezone);
+  const rollupMap = useMemo(() => new Map(data.map((r) => [r.date.slice(0, 10), r])), [data]);
+  const dates = useMemo(() => buildDateRange(days, resolvedTimezone), [days, resolvedTimezone]);
   const heightStyle = useMemo(() => ({ height }), [height]);
 
   return (
