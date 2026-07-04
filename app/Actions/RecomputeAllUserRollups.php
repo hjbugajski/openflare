@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 class RecomputeAllUserRollups
 {
@@ -25,7 +26,11 @@ class RecomputeAllUserRollups
                 $lastTimezone = $user->getPreference('timezone_rollups_timezone');
                 $lastRanAt = $user->getPreference('timezone_rollups_ran_at');
 
-                if ($lastTimezone === $timezone && $lastRanAt) {
+                $alreadyRanToday = $lastTimezone === $timezone
+                    && $lastRanAt
+                    && Carbon::parse($lastRanAt, $timezone)->isSameDay(now($timezone));
+
+                if ($alreadyRanToday) {
                     continue;
                 }
 
