@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Actions\ComputeRollupStats;
-use App\Models\DailyUptimeRollup;
+use App\Actions\PersistDailyRollups;
 use App\Models\Monitor;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -19,8 +19,10 @@ class ComputeDailyUptimeRollups extends Command
 
     protected $description = 'Compute daily uptime rollups from monitor checks';
 
-    public function __construct(private readonly ComputeRollupStats $computeRollupStats)
-    {
+    public function __construct(
+        private readonly ComputeRollupStats $computeRollupStats,
+        private readonly PersistDailyRollups $persistDailyRollups,
+    ) {
         parent::__construct();
     }
 
@@ -94,42 +96,10 @@ class ComputeDailyUptimeRollups extends Command
 
             $stats = $this->computeRollupStats->handle($monitorIds, $startOfDay, $endOfDay);
 
-            // Zero-check policy (see plan 017): delete stale rows for
-            // monitors with no checks this date instead of leaving them.
-            DailyUptimeRollup::query()
-                ->whereIn('monitor_id', $monitorIds)
-                ->whereDate('date', $date)
-                ->whereNotIn('monitor_id', $stats->keys())
-                ->delete();
+            $result = $this->persistDailyRollups->handle($monitorIds, $date, $stats);
 
-            foreach ($monitors as $monitor) {
-                if (! $stats->has($monitor->id)) {
-                    continue;
-                }
-
-                $stat = $stats->get($monitor->id);
-
-                $rollup = DailyUptimeRollup::updateOrCreate(
-                    [
-                        'monitor_id' => $monitor->id,
-                        'date' => $startOfDay->toDateString(),
-                    ],
-                    [
-                        'total_checks' => $stat->total_checks,
-                        'successful_checks' => $stat->successful_checks,
-                        'uptime_percentage' => $stat->uptime_percentage,
-                        'avg_response_time_ms' => $stat->avg_response_time_ms,
-                        'min_response_time_ms' => $stat->min_response_time_ms,
-                        'max_response_time_ms' => $stat->max_response_time_ms,
-                    ]
-                );
-
-                if ($rollup->wasRecentlyCreated) {
-                    $created++;
-                } else {
-                    $updated++;
-                }
-            }
+            $created += $result['created'];
+            $updated += $result['updated'];
         });
 
         return ['created' => $created, 'updated' => $updated];
