@@ -30,10 +30,15 @@ class SecurityHeaders
     private function contentSecurityPolicy(): string
     {
         $parsedUrl = parse_url((string) config('app.url')) ?: [];
-        $isProduction = ($parsedUrl['scheme'] ?? 'http') === 'https';
-        $host = $parsedUrl['host'] ?? 'localhost';
-        $wsScheme = $isProduction ? 'wss' : 'ws';
-        $port = isset($parsedUrl['port']) ? ':'.$parsedUrl['port'] : '';
+        $isHttps = ($parsedUrl['scheme'] ?? 'http') === 'https';
+
+        // Mirror the same Reverb external endpoint HandleInertiaRequests
+        // shares with the frontend, so the CSP always matches where the
+        // browser actually connects (see config/reverb.php).
+        $reverbHost = (string) config('reverb.apps.apps.0.options.host', $parsedUrl['host'] ?? 'localhost');
+        $reverbPort = (int) config('reverb.apps.apps.0.options.port', 443);
+        $reverbScheme = config('reverb.apps.apps.0.options.scheme', $isHttps ? 'https' : 'http');
+        $wsScheme = $reverbScheme === 'https' ? 'wss' : 'ws';
 
         $directives = [
             "default-src 'self'",
@@ -41,7 +46,7 @@ class SecurityHeaders
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com",
             "img-src 'self'",
-            "connect-src 'self' {$wsScheme}://{$host}{$port}",
+            "connect-src 'self' {$wsScheme}://{$reverbHost}:{$reverbPort}",
             "base-uri 'self'",
             "form-action 'self'",
             "frame-ancestors 'self'",
