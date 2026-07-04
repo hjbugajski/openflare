@@ -1,3 +1,5 @@
+import { bucketDuration } from '@/lib/format/bucket';
+
 export interface RelativeTimeParts {
   value: number;
   unit: string;
@@ -29,19 +31,7 @@ export function formatRelativeTime(
     return options?.format ? null : 'just now';
   }
 
-  let value: number;
-  let unit: string;
-
-  if (seconds < 3600) {
-    value = Math.floor(seconds / 60);
-    unit = 'm';
-  } else if (seconds < 86400) {
-    value = Math.floor(seconds / 3600);
-    unit = 'h';
-  } else {
-    value = Math.floor(seconds / 86400);
-    unit = 'd';
-  }
+  const { value, unit } = bucketDuration(diff, { includeDays: true });
 
   const formatted = `${value}${unit} ago`;
   const parts = {

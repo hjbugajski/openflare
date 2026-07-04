@@ -1,3 +1,5 @@
+import { bucketDuration } from '@/lib/format/bucket';
+
 export interface DurationParts {
   value: number | string;
   unit: string;
@@ -10,26 +12,20 @@ export function formatDurationParts(start: string, end: string | null): Duration
   const endTime = end ? new Date(end).getTime() : Date.now();
   const diff = endTime - startTime;
 
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
+  const bucket = bucketDuration(diff, { includeDays: true });
 
-  if (days > 0) {
-    const remainingHours = hours % 24;
-    return remainingHours > 0
-      ? { value: days, unit: 'd', suffixValue: remainingHours, suffixUnit: 'h' }
-      : { value: days, unit: 'd' };
+  if (bucket.unit === 'm' && bucket.value === 0) {
+    return { value: '<1', unit: 'm' };
   }
-  if (hours > 0) {
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0
-      ? { value: hours, unit: 'h', suffixValue: remainingMinutes, suffixUnit: 'm' }
-      : { value: hours, unit: 'h' };
-  }
-  if (minutes > 0) {
-    return { value: minutes, unit: 'm' };
-  }
-  return { value: '<1', unit: 'm' };
+
+  return bucket.remainder !== undefined
+    ? {
+        value: bucket.value,
+        unit: bucket.unit,
+        suffixValue: bucket.remainder,
+        suffixUnit: bucket.remainderUnit,
+      }
+    : { value: bucket.value, unit: bucket.unit };
 }
 
 export function formatDuration(start: string, end: string | null): string {
