@@ -18,7 +18,8 @@ COPY routes ./routes
 COPY database ./database
 
 # Create required directories and generate routes
-# (fake key - only needed for Laravel to boot, not used for encryption)
+# (fake key - only needed for Laravel to boot, not used for encryption;
+# APP_ENV=local so production-only security checks don't abort the build)
 RUN mkdir -p bootstrap/cache \
     storage/framework/views \
     storage/framework/cache \
@@ -27,7 +28,8 @@ RUN mkdir -p bootstrap/cache \
     resources/js/actions \
     resources/js/routes \
     resources/js/wayfinder \
-    && APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
+    && APP_ENV=local \
+    APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
     php artisan wayfinder:generate --with-form
 
 # ==============================================================================
@@ -37,8 +39,8 @@ FROM node:26-alpine AS frontend
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+# Install pnpm (corepack is no longer bundled with Node >= 25)
+RUN npm install -g pnpm@11.9.0
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
@@ -83,8 +85,9 @@ RUN --mount=type=cache,target=/tmp/cache \
 COPY . .
 
 # Create cache directory (excluded by .dockerignore) and generate autoloader
+# (APP_ENV=local so package:discover's artisan boot skips production-only checks)
 RUN mkdir -p bootstrap/cache && \
-    composer dump-autoload --optimize --no-dev
+    APP_ENV=local composer dump-autoload --optimize --no-dev
 
 # ==============================================================================
 # Stage 4: Production image
