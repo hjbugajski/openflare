@@ -1,45 +1,47 @@
 <?php
 
+use App\Events\IncidentOpened;
+use App\Events\IncidentResolved;
+use App\Events\MonitorChecked;
+use App\Models\Incident;
 use App\Models\Monitor;
+use App\Models\MonitorCheck;
 use App\Models\User;
+use Illuminate\Broadcasting\PrivateChannel;
 
-it('authorizes monitor channel for monitor owner', function () {
+it('authorizes users channel for the matching user', function () {
     $user = User::factory()->create();
-    $monitor = Monitor::factory()->create([
-        'user_id' => $user->uuid,
-    ]);
 
     $channels = app('Illuminate\Broadcasting\BroadcastManager')->getChannels();
-    $callback = $channels['monitors.{monitorId}'];
+    $callback = $channels['users.{userId}'];
 
-    $authorized = $callback($user, $monitor->id);
+    $authorized = $callback($user, (string) $user->uuid);
 
     expect($authorized)->toBeTrue();
 });
 
-it('denies monitor channel for non-owner', function () {
-    $owner = User::factory()->create();
+it('denies users channel for a different user', function () {
+    $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
-    $monitor = Monitor::factory()->create([
-        'user_id' => $owner->uuid,
-    ]);
-
     $channels = app('Illuminate\Broadcasting\BroadcastManager')->getChannels();
-    $callback = $channels['monitors.{monitorId}'];
+    $callback = $channels['users.{userId}'];
 
-    $authorized = $callback($otherUser, $monitor->id);
+    $authorized = $callback($user, (string) $otherUser->uuid);
 
     expect($authorized)->toBeFalse();
 });
 
-it('denies monitor channel for non-existent monitor', function () {
+it('broadcasts monitor and incident events on the owning user\'s private channel', function () {
     $user = User::factory()->create();
+    $monitor = Monitor::factory()->create(['user_id' => $user->uuid]);
+    $check = MonitorCheck::factory()->create(['monitor_id' => $monitor->id]);
+    $incident = Incident::factory()->create(['monitor_id' => $monitor->id]);
 
-    $channels = app('Illuminate\Broadcasting\BroadcastManager')->getChannels();
-    $callback = $channels['monitors.{monitorId}'];
-
-    $authorized = $callback($user, 'non-existent-id');
-
-    expect($authorized)->toBeFalse();
+    expect((new MonitorChecked($monitor, $check))->broadcastOn())
+        ->toEqual([new PrivateChannel('users.'.$monitor->user_id)]);
+    expect((new IncidentOpened($monitor, $incident))->broadcastOn())
+        ->toEqual([new PrivateChannel('users.'.$monitor->user_id)]);
+    expect((new IncidentResolved($monitor, $incident))->broadcastOn())
+        ->toEqual([new PrivateChannel('users.'.$monitor->user_id)]);
 });

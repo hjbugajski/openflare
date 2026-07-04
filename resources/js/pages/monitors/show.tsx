@@ -87,6 +87,10 @@ export default function MonitorsShow({
 
   const handleMonitorChecked = useCallback(
     (e: MonitorCheckedEvent) => {
+      if (e.monitor_id !== monitor.id) {
+        return;
+      }
+
       const newCheck: MonitorCheck = {
         id: e.check.id,
         monitor_id: e.monitor_id,
@@ -100,11 +104,15 @@ export default function MonitorsShow({
       setLatestCheck(newCheck);
       scheduleReload('checks');
     },
-    [scheduleReload],
+    [scheduleReload, monitor.id],
   );
 
   const handleIncidentOpened = useCallback(
     (e: IncidentOpenedEvent) => {
+      if (e.monitor_id !== monitor.id) {
+        return;
+      }
+
       const newIncident: Incident = {
         id: e.incident.id,
         monitor_id: e.monitor_id,
@@ -116,18 +124,33 @@ export default function MonitorsShow({
       setCurrentIncident(newIncident);
       scheduleReload('incidents');
     },
-    [scheduleReload],
+    [scheduleReload, monitor.id],
   );
 
-  const handleIncidentResolved = useCallback(() => {
-    setCurrentIncident(null);
-    scheduleReload('incidents');
-  }, [scheduleReload]);
+  const handleIncidentResolved = useCallback(
+    (e: IncidentResolvedEvent) => {
+      if (e.monitor_id !== monitor.id) {
+        return;
+      }
 
-  useEcho<MonitorCheckedEvent>(`monitors.${monitor.id}`, '.monitor.checked', handleMonitorChecked);
-  useEcho<IncidentOpenedEvent>(`monitors.${monitor.id}`, '.incident.opened', handleIncidentOpened);
+      setCurrentIncident(null);
+      scheduleReload('incidents');
+    },
+    [scheduleReload, monitor.id],
+  );
+
+  useEcho<MonitorCheckedEvent>(
+    `users.${auth.user!.uuid}`,
+    '.monitor.checked',
+    handleMonitorChecked,
+  );
+  useEcho<IncidentOpenedEvent>(
+    `users.${auth.user!.uuid}`,
+    '.incident.opened',
+    handleIncidentOpened,
+  );
   useEcho<IncidentResolvedEvent>(
-    `monitors.${monitor.id}`,
+    `users.${auth.user!.uuid}`,
     '.incident.resolved',
     handleIncidentResolved,
   );

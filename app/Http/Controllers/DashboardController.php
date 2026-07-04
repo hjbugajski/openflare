@@ -88,7 +88,6 @@ class DashboardController extends Controller
         return Inertia::render('dashboard/index', [
             'counts' => $counts,
             'incidents' => array_merge($incidents->toArray(), ['total' => $incidentsTotal]),
-            'monitorIds' => $monitorIds->values(),
         ]);
     }
 }

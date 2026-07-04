@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
 
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -18,7 +18,7 @@ import { formatDurationParts } from '@/lib/format/duration';
 import { formatNumber } from '@/lib/format/number';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { show } from '@/routes/monitors';
-import type { CursorPaginated, IncidentWithMonitor } from '@/types';
+import type { CursorPaginated, IncidentWithMonitor, PageProps } from '@/types';
 import type {
   IncidentOpenedEvent,
   IncidentResolvedEvent,
@@ -34,29 +34,10 @@ interface MonitorCounts {
 interface Props {
   counts: MonitorCounts;
   incidents: CursorPaginated<IncidentWithMonitor>;
-  monitorIds: string[];
 }
 
 const RELOAD_DEBOUNCE_MS = 2000;
 const INITIAL_SORTING = [{ id: 'started_at', desc: true }];
-
-function MonitorChannelListener({
-  monitorId,
-  onMonitorChecked,
-  onIncidentOpened,
-  onIncidentResolved,
-}: {
-  monitorId: string;
-  onMonitorChecked: (event: MonitorCheckedEvent) => void;
-  onIncidentOpened: (event: IncidentOpenedEvent) => void;
-  onIncidentResolved: (event: IncidentResolvedEvent) => void;
-}) {
-  useEcho<MonitorCheckedEvent>(`monitors.${monitorId}`, '.monitor.checked', onMonitorChecked);
-  useEcho<IncidentOpenedEvent>(`monitors.${monitorId}`, '.incident.opened', onIncidentOpened);
-  useEcho<IncidentResolvedEvent>(`monitors.${monitorId}`, '.incident.resolved', onIncidentResolved);
-
-  return null;
-}
 
 const getIncidentDurationMs = (incident: IncidentWithMonitor) => {
   const start = new Date(incident.started_at).getTime();
@@ -143,7 +124,8 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
   },
 ];
 
-export default function DashboardIndex({ counts, incidents, monitorIds }: Props) {
+export default function DashboardIndex({ counts, incidents }: Props) {
+  const { auth } = usePage<PageProps>().props;
   const total = counts.up + counts.down + counts.inactive;
 
   const pendingReloads = useRef<Set<string>>(new Set());
@@ -181,19 +163,25 @@ export default function DashboardIndex({ counts, incidents, monitorIds }: Props)
     scheduleReload('incidents');
   }, [scheduleReload]);
 
+  useEcho<MonitorCheckedEvent>(
+    `users.${auth.user!.uuid}`,
+    '.monitor.checked',
+    handleMonitorChecked,
+  );
+  useEcho<IncidentOpenedEvent>(
+    `users.${auth.user!.uuid}`,
+    '.incident.opened',
+    handleIncidentOpened,
+  );
+  useEcho<IncidentResolvedEvent>(
+    `users.${auth.user!.uuid}`,
+    '.incident.resolved',
+    handleIncidentResolved,
+  );
+
   return (
     <AppLayout>
       <Head title="Overview" />
-
-      {monitorIds.map((monitorId) => (
-        <MonitorChannelListener
-          key={monitorId}
-          monitorId={monitorId}
-          onMonitorChecked={handleMonitorChecked}
-          onIncidentOpened={handleIncidentOpened}
-          onIncidentResolved={handleIncidentResolved}
-        />
-      ))}
 
       <Heading title="overview" />
       <Stats.Root>

@@ -37,24 +37,6 @@ interface Props {
 
 const RELOAD_DEBOUNCE_MS = 2000;
 
-function MonitorChannelListener({
-  monitorId,
-  onMonitorChecked,
-  onIncidentOpened,
-  onIncidentResolved,
-}: {
-  monitorId: string;
-  onMonitorChecked: (event: MonitorCheckedEvent) => void;
-  onIncidentOpened: (event: IncidentOpenedEvent) => void;
-  onIncidentResolved: (event: IncidentResolvedEvent) => void;
-}) {
-  useEcho<MonitorCheckedEvent>(`monitors.${monitorId}`, '.monitor.checked', onMonitorChecked);
-  useEcho<IncidentOpenedEvent>(`monitors.${monitorId}`, '.incident.opened', onIncidentOpened);
-  useEcho<IncidentResolvedEvent>(`monitors.${monitorId}`, '.incident.resolved', onIncidentResolved);
-
-  return null;
-}
-
 function MonitorCard({ monitor, timezone }: { monitor: Monitor; timezone: string }) {
   const status = monitor.latest_check?.status;
   const hasIncident = monitor.current_incident !== null;
@@ -174,6 +156,22 @@ export default function MonitorsIndex({ monitors }: Props) {
     scheduleReload('monitors');
   }, [scheduleReload]);
 
+  useEcho<MonitorCheckedEvent>(
+    `users.${auth.user!.uuid}`,
+    '.monitor.checked',
+    handleMonitorChecked,
+  );
+  useEcho<IncidentOpenedEvent>(
+    `users.${auth.user!.uuid}`,
+    '.incident.opened',
+    handleIncidentOpened,
+  );
+  useEcho<IncidentResolvedEvent>(
+    `users.${auth.user!.uuid}`,
+    '.incident.resolved',
+    handleIncidentResolved,
+  );
+
   const handleViewChange = useCallback(
     (value: string[]) => {
       if (value.length > 0) {
@@ -188,16 +186,6 @@ export default function MonitorsIndex({ monitors }: Props) {
   return (
     <AppLayout>
       <Head title="Monitors" />
-
-      {sortedMonitors.map((monitor) => (
-        <MonitorChannelListener
-          key={monitor.id}
-          monitorId={monitor.id}
-          onMonitorChecked={handleMonitorChecked}
-          onIncidentOpened={handleIncidentOpened}
-          onIncidentResolved={handleIncidentResolved}
-        />
-      ))}
 
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
