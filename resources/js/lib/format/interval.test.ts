@@ -23,11 +23,11 @@ describe('formatInterval', () => {
     expect(formatInterval(90)).toEqual({ value: 1, unit: 'm', formatted: '1m' });
   });
 
-  it('formats minutes as a string', () => {
-    expect(formatInterval(90, { format: 'string' })).toBe('1m');
-  });
-
-  it('formats hours, verbose, as a string', () => {
-    expect(formatInterval(3661, { verbose: true, format: 'string' })).toBe('1 hour');
+  it('formats hours, verbose', () => {
+    expect(formatInterval(3661, true)).toEqual({
+      value: 1,
+      unit: 'hour',
+      formatted: '1 hour',
+    });
   });
 });

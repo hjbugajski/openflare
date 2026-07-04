@@ -1,7 +1,6 @@
 import { useCallback, useRef } from 'react';
 
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEcho } from '@laravel/echo-react';
+import { Head, Link, router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { ServerDataTable } from '@/components/server-data-table';
@@ -17,13 +16,9 @@ import { formatDateTime } from '@/lib/format/date-time';
 import { formatDurationParts } from '@/lib/format/duration';
 import { formatNumber } from '@/lib/format/number';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
+import { useUserChannel } from '@/lib/hooks/use-user-channel';
 import { show } from '@/routes/monitors';
-import type { CursorPaginated, IncidentWithMonitor, PageProps } from '@/types';
-import type {
-  IncidentOpenedEvent,
-  IncidentResolvedEvent,
-  MonitorCheckedEvent,
-} from '@/types/events';
+import type { CursorPaginated, IncidentWithMonitor } from '@/types';
 
 interface MonitorCounts {
   up: number;
@@ -125,7 +120,6 @@ const columns: ColumnDef<IncidentWithMonitor>[] = [
 ];
 
 export default function DashboardIndex({ counts, incidents }: Props) {
-  const { auth } = usePage<PageProps>().props;
   const total = counts.up + counts.down + counts.inactive;
 
   const pendingReloads = useRef<Set<string>>(new Set());
@@ -163,21 +157,11 @@ export default function DashboardIndex({ counts, incidents }: Props) {
     scheduleReload('incidents');
   }, [scheduleReload]);
 
-  useEcho<MonitorCheckedEvent>(
-    `users.${auth.user!.uuid}`,
-    '.monitor.checked',
-    handleMonitorChecked,
-  );
-  useEcho<IncidentOpenedEvent>(
-    `users.${auth.user!.uuid}`,
-    '.incident.opened',
-    handleIncidentOpened,
-  );
-  useEcho<IncidentResolvedEvent>(
-    `users.${auth.user!.uuid}`,
-    '.incident.resolved',
-    handleIncidentResolved,
-  );
+  useUserChannel({
+    onMonitorChecked: handleMonitorChecked,
+    onIncidentOpened: handleIncidentOpened,
+    onIncidentResolved: handleIncidentResolved,
+  });
 
   return (
     <AppLayout>

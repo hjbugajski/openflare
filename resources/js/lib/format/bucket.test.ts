@@ -50,4 +50,33 @@ describe('bucketDuration', () => {
   it('buckets exact days without a remainder', () => {
     expect(bucketDuration(3 * 86400 * 1000)).toEqual({ value: 3, unit: 'd' });
   });
+
+  it('buckets 0ms as 0 minutes by default', () => {
+    expect(bucketDuration(0)).toEqual({ value: 0, unit: 'm' });
+  });
+
+  it('buckets 0ms as 0 seconds when includeSeconds is set', () => {
+    expect(bucketDuration(0, { includeSeconds: true })).toEqual({ value: 0, unit: 's' });
+  });
+
+  it('rolls the exact minute boundary into minutes, not seconds', () => {
+    expect(bucketDuration(60_000, { includeSeconds: true })).toEqual({ value: 1, unit: 'm' });
+  });
+
+  it('rolls the exact hour boundary into hours with no remainder', () => {
+    expect(bucketDuration(3_600_000)).toEqual({ value: 1, unit: 'h' });
+  });
+
+  it('rolls the exact day boundary into days with no remainder', () => {
+    expect(bucketDuration(86_400_000)).toEqual({ value: 1, unit: 'd' });
+  });
+
+  it('keeps the exact day boundary in hours when includeDays is false', () => {
+    expect(bucketDuration(86_400_000, { includeDays: false })).toEqual({ value: 24, unit: 'h' });
+  });
+
+  it('clamps negative durations to zero', () => {
+    expect(bucketDuration(-1000)).toEqual({ value: 0, unit: 'm' });
+    expect(bucketDuration(-1000, { includeSeconds: true })).toEqual({ value: 0, unit: 's' });
+  });
 });

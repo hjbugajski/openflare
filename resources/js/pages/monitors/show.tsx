@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEcho } from '@laravel/echo-react';
 
 import { ChecksTable } from '@/components/monitors/checks-table';
 import { DeleteMonitorDialog } from '@/components/monitors/delete-monitor-dialog';
@@ -21,6 +20,7 @@ import AppLayout from '@/layouts/app-layout';
 import { formatInterval } from '@/lib/format/interval';
 import { formatNumber } from '@/lib/format/number';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
+import { useUserChannel } from '@/lib/hooks/use-user-channel';
 import { edit } from '@/routes/monitors';
 import {
   type CursorPaginated,
@@ -139,21 +139,11 @@ export default function MonitorsShow({
     [scheduleReload, monitor.id],
   );
 
-  useEcho<MonitorCheckedEvent>(
-    `users.${auth.user!.uuid}`,
-    '.monitor.checked',
-    handleMonitorChecked,
-  );
-  useEcho<IncidentOpenedEvent>(
-    `users.${auth.user!.uuid}`,
-    '.incident.opened',
-    handleIncidentOpened,
-  );
-  useEcho<IncidentResolvedEvent>(
-    `users.${auth.user!.uuid}`,
-    '.incident.resolved',
-    handleIncidentResolved,
-  );
+  useUserChannel({
+    onMonitorChecked: handleMonitorChecked,
+    onIncidentOpened: handleIncidentOpened,
+    onIncidentResolved: handleIncidentResolved,
+  });
 
   const status = latestCheck?.status;
   const hasIncident = currentIncident !== null;

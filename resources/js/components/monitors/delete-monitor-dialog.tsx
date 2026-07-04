@@ -1,9 +1,7 @@
 import { useCallback } from 'react';
 
-import { router } from '@inertiajs/react';
-
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
-import { toast } from '@/components/ui/toast';
+import { inertiaDelete } from '@/lib/http/inertia-delete';
 import { destroy } from '@/routes/monitors';
 
 interface DeleteMonitorDialogProps {
@@ -21,26 +19,9 @@ export function DeleteMonitorDialog({
 }: DeleteMonitorDialogProps) {
   const handleDelete = useCallback(
     () =>
-      new Promise<void>((resolve, reject) => {
-        let settled = false;
-        router.delete(destroy(monitorId).url, {
-          onSuccess: () => {
-            toast.success({ title: 'monitor deleted' });
-            settled = true;
-            resolve();
-          },
-          onError: () => {
-            toast.destructive({ title: 'failed to delete monitor' });
-            settled = true;
-            reject(new Error('failed to delete monitor'));
-          },
-          onFinish: () => {
-            if (!settled) {
-              toast.destructive({ title: 'failed to delete monitor' });
-              reject(new Error('failed to delete monitor'));
-            }
-          },
-        });
+      inertiaDelete(destroy(monitorId).url, {
+        successTitle: 'monitor deleted',
+        errorTitle: 'failed to delete monitor',
       }),
     [monitorId],
   );

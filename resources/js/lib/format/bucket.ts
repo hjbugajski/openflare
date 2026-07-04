@@ -17,7 +17,7 @@ const DAY = 86400;
 /** Buckets a duration (in ms) into the largest applicable unit, with an optional remainder in the next-smaller unit. */
 export function bucketDuration(ms: number, options: BucketOptions = {}): BucketResult {
   const { includeDays = true, includeSeconds = false } = options;
-  const totalSeconds = Math.floor(ms / 1000);
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
 
   if (includeSeconds && totalSeconds < MINUTE) {
     return { value: totalSeconds, unit: 's' };

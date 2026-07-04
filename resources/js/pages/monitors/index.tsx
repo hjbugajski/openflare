@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEcho } from '@laravel/echo-react';
 
 import { IconGrid } from '@/components/icons/grid';
 import { IconTable } from '@/components/icons/table';
@@ -23,13 +22,9 @@ import { formatNumber } from '@/lib/format/number';
 import { formatRelativeTime } from '@/lib/format/relative-time';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { usePreferencePatch } from '@/lib/hooks/use-preference-patch';
+import { useUserChannel } from '@/lib/hooks/use-user-channel';
 import { create, show } from '@/routes/monitors';
 import { type Monitor, type MonitorViewMode, type PageProps } from '@/types';
-import type {
-  IncidentOpenedEvent,
-  IncidentResolvedEvent,
-  MonitorCheckedEvent,
-} from '@/types/events';
 
 interface Props {
   monitors: Monitor[];
@@ -156,21 +151,11 @@ export default function MonitorsIndex({ monitors }: Props) {
     scheduleReload('monitors');
   }, [scheduleReload]);
 
-  useEcho<MonitorCheckedEvent>(
-    `users.${auth.user!.uuid}`,
-    '.monitor.checked',
-    handleMonitorChecked,
-  );
-  useEcho<IncidentOpenedEvent>(
-    `users.${auth.user!.uuid}`,
-    '.incident.opened',
-    handleIncidentOpened,
-  );
-  useEcho<IncidentResolvedEvent>(
-    `users.${auth.user!.uuid}`,
-    '.incident.resolved',
-    handleIncidentResolved,
-  );
+  useUserChannel({
+    onMonitorChecked: handleMonitorChecked,
+    onIncidentOpened: handleIncidentOpened,
+    onIncidentResolved: handleIncidentResolved,
+  });
 
   const handleViewChange = useCallback(
     (value: string[]) => {
