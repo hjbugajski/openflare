@@ -41,15 +41,20 @@ export function useInertiaAppForm<TData extends FormData>({
     defaultValues,
     validators,
     onSubmit: ({ value }: { value: TData }) => {
-      router.visit(action, {
-        method,
-        data: value,
-        onSuccess: () => {
-          onSuccess?.();
-        },
-        onError: () => {
-          onError?.();
-        },
+      return new Promise<void>((resolve) => {
+        router.visit(action, {
+          method,
+          data: value,
+          onSuccess: () => {
+            onSuccess?.();
+          },
+          onError: () => {
+            onError?.();
+          },
+          onFinish: () => {
+            resolve();
+          },
+        });
       });
     },
   });
