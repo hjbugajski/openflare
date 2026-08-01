@@ -31,36 +31,50 @@ export function TableShell<TData, TValue>({ table, columns }: TableShellProps<TD
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b border-border">
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className={cn(
-                    'px-3 py-2 text-left text-xs font-medium whitespace-nowrap text-muted-foreground uppercase',
-                    header.column.columnDef.meta?.className,
-                  )}
-                >
-                  {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
-                      <span aria-hidden className="text-muted-foreground">
-                        {header.column.getIsSorted() === 'asc' ? (
-                          <IconArrowUp className="size-3" />
-                        ) : header.column.getIsSorted() === 'desc' ? (
-                          <IconArrowDown className="size-3" />
-                        ) : (
-                          <IconArrowsSort className="size-3" />
-                        )}
-                      </span>
-                    </button>
-                  ) : (
-                    flexRender(header.column.columnDef.header, header.getContext())
-                  )}
-                </th>
-              ))}
+              {headerGroup.headers.map((header) => {
+                const sortDirection = header.column.getIsSorted();
+
+                return (
+                  <th
+                    key={header.id}
+                    // WAI-ARIA: unsorted columns omit the attribute rather than declaring "none"
+                    aria-sort={
+                      sortDirection === 'asc'
+                        ? 'ascending'
+                        : sortDirection === 'desc'
+                          ? 'descending'
+                          : undefined
+                    }
+                    className={cn(
+                      'px-3 py-2 text-left text-xs font-medium whitespace-nowrap text-muted-foreground uppercase',
+                      header.column.columnDef.meta?.className,
+                    )}
+                  >
+                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        <span>
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </span>
+                        <span aria-hidden className="text-muted-foreground">
+                          {sortDirection === 'asc' ? (
+                            <IconArrowUp className="size-3" />
+                          ) : sortDirection === 'desc' ? (
+                            <IconArrowDown className="size-3" />
+                          ) : (
+                            <IconArrowsSort className="size-3" />
+                          )}
+                        </span>
+                      </button>
+                    ) : (
+                      flexRender(header.column.columnDef.header, header.getContext())
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           ))}
         </thead>

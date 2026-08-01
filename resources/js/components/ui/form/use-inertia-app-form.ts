@@ -19,6 +19,8 @@ interface UseInertiaFormOptions<TData extends FormData> {
     onBlur?: StandardSchemaV1<TData>;
     onSubmit?: StandardSchemaV1<TData>;
   };
+  /** Maps form state to the request payload, for values that must not be sent verbatim. */
+  transform?: (values: TData) => FormData;
   onSuccess?: () => void;
   onError?: () => void;
 }
@@ -28,6 +30,7 @@ export function useInertiaAppForm<TData extends FormData>({
   action,
   method = 'post',
   validators,
+  transform,
   onSuccess,
   onError,
 }: UseInertiaFormOptions<TData>) {
@@ -44,7 +47,7 @@ export function useInertiaAppForm<TData extends FormData>({
       return new Promise<void>((resolve) => {
         router.visit(action, {
           method,
-          data: value,
+          data: transform ? transform(value) : value,
           onSuccess: () => {
             onSuccess?.();
           },

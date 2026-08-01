@@ -26,6 +26,25 @@ export const notifierConfigSchema = z.object({
 export type NotifierConfig = z.infer<typeof notifierConfigSchema>;
 
 /**
+ * Narrows a config to the keys the given type actually uses.
+ *
+ * The form keeps every type's config in state so switching back and forth does
+ * not discard input, but the backend validates every config key it receives —
+ * leftover input from a previously selected type would 422 against a field the
+ * form no longer renders, leaving the error with nowhere to show.
+ */
+export function configForType(type: string, config: NotifierConfig): NotifierConfig {
+  switch (type) {
+    case 'discord':
+      return { webhook_url: config.webhook_url };
+    case 'email':
+      return { email: config.email };
+    default:
+      return {};
+  }
+}
+
+/**
  * Validates notifier config based on type.
  * Used by both form submission and test notification.
  */

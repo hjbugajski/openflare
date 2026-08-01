@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format/number';
+import { resolveRollupTimezone } from '@/lib/timezone';
 import type { DailyUptimeRollup } from '@/types';
 
 const FULL_HEIGHT_STYLE = { height: '100%' };
@@ -91,7 +92,7 @@ export function UptimeSparkline({
   className,
   timezone,
 }: UptimeSparklineProps) {
-  const resolvedTimezone = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const resolvedTimezone = resolveRollupTimezone(timezone);
   const rollupMap = useMemo(() => new Map(data.map((r) => [r.date.slice(0, 10), r])), [data]);
   const dates = useMemo(() => buildDateRange(days, resolvedTimezone), [days, resolvedTimezone]);
   const heightStyle = useMemo(() => ({ height }), [height]);

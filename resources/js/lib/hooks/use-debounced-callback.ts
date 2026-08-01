@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * Creates a debounced callback that delays invocation until after `delay` ms
@@ -13,6 +13,20 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
 
   // Keep callback ref updated
   callbackRef.current = callback;
+
+  /*
+   * Drop a pending invocation on unmount — otherwise a callback scheduled just
+   * before navigating away still fires, acting on the page that no longer exists.
+   */
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    },
+    [],
+  );
 
   return useCallback(
     (...args: Parameters<T>) => {

@@ -27,7 +27,14 @@ export function useUserChannel({
   const { auth } = usePage<PageProps>().props;
   const channel = `users.${auth.user?.uuid ?? ''}`;
 
-  useEcho<MonitorCheckedEvent>(channel, '.monitor.checked', onMonitorChecked);
-  useEcho<IncidentOpenedEvent>(channel, '.incident.opened', onIncidentOpened);
-  useEcho<IncidentResolvedEvent>(channel, '.incident.resolved', onIncidentResolved);
+  /*
+   * `useEcho` wraps the handler in a `useCallback` keyed on the dependency
+   * argument, which defaults to `[]` — passing the handler explicitly keeps a
+   * caller that rebuilds it from being stuck with the first-render closure.
+   */
+  useEcho<MonitorCheckedEvent>(channel, '.monitor.checked', onMonitorChecked, [onMonitorChecked]);
+  useEcho<IncidentOpenedEvent>(channel, '.incident.opened', onIncidentOpened, [onIncidentOpened]);
+  useEcho<IncidentResolvedEvent>(channel, '.incident.resolved', onIncidentResolved, [
+    onIncidentResolved,
+  ]);
 }

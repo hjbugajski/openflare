@@ -23,6 +23,7 @@ import { formatRelativeTime } from '@/lib/format/relative-time';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { usePreferencePatch } from '@/lib/hooks/use-preference-patch';
 import { useUserChannel } from '@/lib/hooks/use-user-channel';
+import { resolveRollupTimezone } from '@/lib/timezone';
 import { create, show } from '@/routes/monitors';
 import { type Monitor, type MonitorViewMode, type PageProps } from '@/types';
 
@@ -109,9 +110,7 @@ function MonitorCard({ monitor, timezone }: { monitor: Monitor; timezone: string
 export default function MonitorsIndex({ monitors }: Props) {
   const { auth } = usePage<PageProps>().props;
   const defaultView: MonitorViewMode = auth.user?.preferences?.monitors_view ?? 'cards';
-  const browserTimezone =
-    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
-  const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
+  const timezone = resolveRollupTimezone(auth.user?.preferences?.timezone);
   const [viewMode, setViewMode] = usePreferencePatch('monitors_view', defaultView);
 
   const sortedMonitors = [...monitors].sort((left, right) =>

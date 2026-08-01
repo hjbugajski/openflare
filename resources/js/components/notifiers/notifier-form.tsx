@@ -13,11 +13,16 @@ import {
   NOTIFIER_TYPE_DESCRIPTIONS,
   NOTIFIER_TYPE_LABELS,
   type NotifierFormValues,
+  configForType,
   notifierSchema,
 } from '@/lib/schemas/notifier';
 import { type MonitorSummary, type NotifierType } from '@/types';
 
 export type { NotifierFormValues };
+
+function toPayload(values: NotifierFormValues) {
+  return { ...values, config: configForType(values.type, values.config) };
+}
 
 export interface NotifierFormProps {
   defaultValues: NotifierFormValues;
@@ -51,6 +56,7 @@ export function NotifierForm({
     validators: {
       onSubmit: notifierSchema,
     },
+    transform: toPayload,
   });
 
   const currentType = useStore(form.store, (state) => state.values.type);
