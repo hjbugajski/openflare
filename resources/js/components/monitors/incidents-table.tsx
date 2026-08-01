@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ValueUnit } from '@/components/ui/value-unit';
 import { formatDateTime } from '@/lib/format/date-time';
 import { formatDurationParts } from '@/lib/format/duration';
-import type { CursorPaginated, Incident } from '@/types';
+import type { Incident, Paginated } from '@/types';
 
 const RELOAD_ONLY = ['incidents'];
 const INITIAL_SORTING: SortingState = [{ id: 'started_at', desc: true }];
@@ -80,7 +80,7 @@ const columns: ColumnDef<Incident>[] = [
 ];
 
 interface IncidentsTableProps {
-  incidents: CursorPaginated<Incident>;
+  incidents: Paginated<Incident>;
 }
 
 export function IncidentsTable({ incidents }: IncidentsTableProps) {
@@ -88,7 +88,7 @@ export function IncidentsTable({ incidents }: IncidentsTableProps) {
     <ServerDataTable
       columns={columns}
       paginated={incidents}
-      cursorParam="incidents_cursor"
+      pageParam="incidents_page"
       sortParam="incidents_sort"
       directionParam="incidents_direction"
       reloadOnly={RELOAD_ONLY}

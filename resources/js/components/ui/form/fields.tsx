@@ -10,9 +10,9 @@ import {
 } from 'react';
 
 import { type AnyFieldMeta } from '@tanstack/react-form';
+import { IconChevronGrabberVertical } from 'central-icons/IconChevronGrabberVertical';
+import { IconSearchOptions } from 'central-icons/IconSearchOptions';
 
-import { IconChevronGrabberVertical } from '@/components/icons/chevron-grabber-vertical';
-import { IconSearchOptions } from '@/components/icons/search-options';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox } from '@/components/ui/combobox';
 import { useFieldContext } from '@/components/ui/form/form-context';
@@ -115,7 +115,6 @@ export function NumberInput(props: Omit<ComponentProps<'input'>, 'type' | 'onCha
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value === '' ? undefined : e.target.valueAsNumber;
-      // Only pass valid numbers or undefined; NaN gets converted to undefined
       field.handleChange(Number.isNaN(value) ? undefined : value);
     },
     [field],
@@ -173,12 +172,11 @@ export function SelectField({ items, disabled }: SelectFieldProps) {
   const fieldId = useFieldId();
   const hasError = !field.state.meta.isValid && field.state.meta.isTouched;
 
-  // Determine if we should preserve numeric type based on current field value
   const isNumeric = typeof field.state.value === 'number';
 
   const handleValueChange = useCallback(
     (value: unknown) => {
-      // Base UI may return string even for numeric values; coerce if needed
+      // Base UI may return a string even for numeric values
       if (isNumeric && typeof value === 'string') {
         const parsed = Number(value);
         field.handleChange(Number.isNaN(parsed) ? value : parsed);

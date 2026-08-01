@@ -6,10 +6,15 @@ import { NotifierForm } from '@/components/notifiers/notifier-form';
 import { Heading } from '@/components/ui/heading';
 import AppLayout from '@/layouts/app-layout';
 import { index as notifiersIndex, update } from '@/routes/notifiers';
-import { type MonitorSummary, type Notifier, type NotifierType } from '@/types';
+import {
+  type MonitorSummary,
+  type Notifier,
+  type NotifierConfig,
+  type NotifierType,
+} from '@/types';
 
 interface Props {
-  notifier: Notifier & { monitors: MonitorSummary[] };
+  notifier: Notifier & { config: NotifierConfig; monitors: MonitorSummary[] };
   monitors: MonitorSummary[];
   types: NotifierType[];
 }

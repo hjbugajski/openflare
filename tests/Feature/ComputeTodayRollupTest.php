@@ -48,7 +48,6 @@ it('excludes monitors with no checks today', function () {
     $user = User::factory()->create();
     $monitor = Monitor::factory()->for($user)->create();
 
-    // Create check for yesterday
     MonitorCheck::factory()->create([
         'monitor_id' => $monitor->id,
         'checked_at' => now()->subDay(),
@@ -57,7 +56,6 @@ it('excludes monitors with no checks today', function () {
 
     $result = app(ComputeTodayRollup::class)->handle([$monitor->id]);
 
-    // Monitor with no checks today should not be in result
     expect($result)->toBeEmpty();
 });
 
@@ -102,7 +100,6 @@ it('calculates average response time excluding null values', function () {
         'response_time_ms' => 200,
     ]);
 
-    // Failed checks with null response time
     MonitorCheck::factory()->count(2)->create([
         'monitor_id' => $monitor->id,
         'checked_at' => now(),

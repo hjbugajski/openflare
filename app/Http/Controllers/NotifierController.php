@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\SortsCursorPaginatedResults;
+use App\Http\Controllers\Concerns\SortsPaginatedResults;
 use App\Http\Requests\StoreNotifierRequest;
 use App\Http\Requests\TestNotifierRequest;
 use App\Http\Requests\UpdateNotifierRequest;
@@ -23,7 +23,7 @@ use Throwable;
 
 class NotifierController extends Controller
 {
-    use SortsCursorPaginatedResults;
+    use SortsPaginatedResults;
 
     public function index(): Response
     {
@@ -42,17 +42,16 @@ class NotifierController extends Controller
             ->withCount([
                 'monitors as excluded_monitors_count' => fn ($query) => $query->where('monitor_notifier.is_excluded', true),
             ]);
-        $notifiersTotal = (clone $notifiersQuery)->count();
 
-        $notifiers = $this->finalizeCursorPage(
+        $notifiers = $this->finalizePage(
             $notifiersQuery->orderBy($sort, $direction),
             'notifiers.id',
             $direction,
-            'notifiers_cursor',
+            'notifiers_page',
         );
 
         return Inertia::render('notifiers/index', [
-            'notifiers' => array_merge($notifiers->toArray(), ['total' => $notifiersTotal]),
+            'notifiers' => $notifiers,
             'types' => Notifier::TYPES,
         ]);
     }
@@ -122,7 +121,7 @@ class NotifierController extends Controller
             ->get(['id', 'name', 'url']);
 
         return Inertia::render('notifiers/edit', [
-            'notifier' => $notifier,
+            'notifier' => $notifier->makeVisible('config'),
             'monitors' => $monitors,
             'types' => Notifier::TYPES,
         ]);

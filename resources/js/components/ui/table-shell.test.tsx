@@ -18,6 +18,10 @@ const rows: Row[] = [
 
 const emptyRows: Row[] = [];
 
+const unsortableColumns: ColumnDef<Row>[] = [
+  { accessorKey: 'name', header: 'name', enableSorting: false },
+];
+
 describe('TableShell (via DataTable)', () => {
   it('renders a row per data item', () => {
     render(<DataTable columns={columns} data={rows} />);
@@ -44,5 +48,25 @@ describe('TableShell (via DataTable)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'name' }));
     expect(getCellText()).toEqual(['bravo', 'alpha']);
+  });
+
+  it('reports the sort direction through aria-sort', () => {
+    render(<DataTable columns={columns} data={rows} />);
+
+    const header = () => screen.getByRole('columnheader');
+
+    expect(header()).not.toHaveAttribute('aria-sort');
+
+    fireEvent.click(screen.getByRole('button', { name: 'name' }));
+    expect(header()).toHaveAttribute('aria-sort', 'ascending');
+
+    fireEvent.click(screen.getByRole('button', { name: 'name' }));
+    expect(header()).toHaveAttribute('aria-sort', 'descending');
+  });
+
+  it('omits aria-sort on columns that cannot be sorted', () => {
+    render(<DataTable columns={unsortableColumns} data={rows} />);
+
+    expect(screen.getByRole('columnheader')).not.toHaveAttribute('aria-sort');
   });
 });

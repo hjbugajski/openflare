@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format/number';
+import { resolveRollupTimezone } from '@/lib/timezone';
 import type { DailyUptimeRollup } from '@/types';
 
 const FULL_HEIGHT_STYLE = { height: '100%' };
@@ -19,19 +20,14 @@ function getBarStyle(upPercent: number, height: number) {
   const downPercent = 100 - upPercent;
 
   if (downPercent === 0) {
-    // 100% uptime - full green
     return { upHeight: '100%', downHeight: '0%' };
   }
 
-  // Minimum visible height for failures (at least 3px or 15% of bar, whichever is larger)
   const minDownPx = Math.max(3, height * 0.15);
   const minDownPercent = (minDownPx / height) * 100;
 
-  // Scale the down portion to be more visible
-  // Use a sqrt scale to emphasize small failures while not overwhelming large ones
+  // sqrt scale emphasizes small failures without underrepresenting major outages
   const scaledDownPercent = Math.max(minDownPercent, Math.sqrt(downPercent) * 10);
-
-  // Cap at actual percentage or 50%, whichever is larger (don't underrepresent major outages)
   const finalDownPercent = Math.min(Math.max(scaledDownPercent, downPercent), 100);
   const finalUpPercent = 100 - finalDownPercent;
 
@@ -91,7 +87,7 @@ export function UptimeSparkline({
   className,
   timezone,
 }: UptimeSparklineProps) {
-  const resolvedTimezone = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const resolvedTimezone = resolveRollupTimezone(timezone);
   const rollupMap = useMemo(() => new Map(data.map((r) => [r.date.slice(0, 10), r])), [data]);
   const dates = useMemo(() => buildDateRange(days, resolvedTimezone), [days, resolvedTimezone]);
   const heightStyle = useMemo(() => ({ height }), [height]);
@@ -108,7 +104,6 @@ export function UptimeSparkline({
           const rollup = rollupMap.get(date);
 
           if (!rollup || rollup.total_checks === 0) {
-            // No data for this day - muted bar
             return (
               <Tooltip.Root key={date}>
                 <Tooltip.Trigger
@@ -145,7 +140,7 @@ export function UptimeSparkline({
                 <span className="sr-only">
                   {date}: {upPercent.toFixed(2)}% up
                 </span>
-                {/* oxlint-disable react-perf/jsx-no-new-object-as-prop -- dynamic per-bar style in render loop */}
+                {/* oxlint-disable react-perf/jsx-no-new-object-as-prop */}
                 {downPercent > 0 ? (
                   <div className="w-full bg-danger" style={{ height: downHeight }} />
                 ) : null}

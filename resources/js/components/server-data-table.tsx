@@ -1,26 +1,38 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import {
   type ColumnDef,
   type SortingState,
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { IconChevronDoubleLeft } from 'central-icons/IconChevronDoubleLeft';
+import { IconChevronDoubleRight } from 'central-icons/IconChevronDoubleRight';
+import { IconChevronGrabberVertical } from 'central-icons/IconChevronGrabberVertical';
+import { IconChevronLeftSmall } from 'central-icons/IconChevronLeftSmall';
+import { IconChevronRightSmall } from 'central-icons/IconChevronRightSmall';
 
-import { IconChevronLeft } from '@/components/icons/chevron-left';
-import { IconChevronRight } from '@/components/icons/chevron-right';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import { TableShell } from '@/components/ui/table-shell';
 import { formatNumber } from '@/lib/format/number';
-import type { CursorPaginated } from '@/types';
+import type { Paginated } from '@/types';
+
+// `page.url` is path-relative; the base exists only to make it parseable.
+const URL_BASE = 'http://localhost';
 
 interface ServerDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
-  paginated: CursorPaginated<TData>;
-  cursorParam?: string;
-  sortParam?: string;
-  directionParam?: string;
+  paginated: Paginated<TData>;
+  /*
+   * Param names are required so every table states the contract its server
+   * controller reads — a defaulted name that disagrees with the backend
+   * makes pagination a silent no-op.
+   */
+  pageParam: string;
+  sortParam: string;
+  directionParam: string;
   reloadOnly?: string[];
   initialSorting?: SortingState;
 }
@@ -28,26 +40,30 @@ interface ServerDataTableProps<TData, TValue> {
 export function ServerDataTable<TData, TValue>({
   columns,
   paginated,
-  cursorParam = 'cursor',
-  sortParam = 'sort',
-  directionParam = 'direction',
+  pageParam,
+  sortParam,
+  directionParam,
   reloadOnly,
   initialSorting = [],
 }: ServerDataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = useState<SortingState>(() => {
-    if (typeof window === 'undefined') {
-      return initialSorting;
-    }
-
-    const url = new URL(window.location.href);
-    const sort = url.searchParams.get(sortParam);
+  /*
+   * Sort is derived from the Inertia page url on every navigation, never held
+   * in local state: a non-GET redirect (a row delete landing back on the bare
+   * index) drops the query string while `preserveState` keeps the component
+   * mounted, and mount-time state would then keep resending params the server
+   * no longer has.
+   */
+  const { url } = usePage();
+  const sorting = useMemo<SortingState>(() => {
+    const params = new URL(url, URL_BASE).searchParams;
+    const sort = params.get(sortParam);
 
     if (!sort) {
       return initialSorting;
     }
 
-    return [{ id: sort, desc: url.searchParams.get(directionParam) === 'desc' }];
-  });
+    return [{ id: sort, desc: params.get(directionParam) === 'desc' }];
+  }, [url, sortParam, directionParam, initialSorting]);
 
   const applySortingParams = useCallback(
     (url: URL, nextSorting: SortingState) => {
@@ -65,89 +81,150 @@ export function ServerDataTable<TData, TValue>({
     [sortParam, directionParam],
   );
 
-  const goToCursor = useCallback(
-    (cursor: string | null, nextSorting: SortingState = sorting) => {
+  /*
+   * Page and sort live in the real URL, never in `preserveUrl` request data:
+   * a debounced `router.reload()` elsewhere on the page resolves against
+   * window.location, so state kept out of the URL silently resets the table.
+   * Each table only ever writes its own params, so sibling tables keep theirs.
+   */
+  const goToPage = useCallback(
+    (page: number, nextSorting: SortingState = sorting) => {
       const url = new URL(window.location.href);
       applySortingParams(url, nextSorting);
 
+      if (page > 1) {
+        url.searchParams.set(pageParam, String(page));
+      } else {
+        url.searchParams.delete(pageParam);
+      }
+
       router.visit(url.pathname + url.search, {
-        data: cursor ? { [cursorParam]: cursor } : {},
         preserveState: true,
         preserveScroll: true,
-        preserveUrl: true,
         only: reloadOnly,
       });
     },
-    [sorting, cursorParam, reloadOnly, applySortingParams],
+    [sorting, pageParam, reloadOnly, applySortingParams],
   );
 
-  const canPreviousPage = Boolean(paginated.prev_cursor);
-  const canNextPage = Boolean(paginated.next_cursor);
-
-  const totalPages = Math.max(1, Math.ceil(paginated.total / paginated.per_page));
-  const [pageIndex, setPageIndex] = useState(1);
+  const currentPage = paginated.current_page;
+  const lastPage = Math.max(1, paginated.last_page);
+  const canPreviousPage = currentPage > 1;
+  const canNextPage = currentPage < lastPage;
 
   const handlePreviousPage = useCallback(() => {
-    setPageIndex((current) => Math.max(1, current - 1));
-    goToCursor(paginated.prev_cursor);
-  }, [goToCursor, paginated.prev_cursor]);
+    goToPage(currentPage - 1);
+  }, [goToPage, currentPage]);
 
   const handleNextPage = useCallback(() => {
-    setPageIndex((current) => Math.min(totalPages, current + 1));
-    goToCursor(paginated.next_cursor);
-  }, [goToCursor, paginated.next_cursor, totalPages]);
+    goToPage(currentPage + 1);
+  }, [goToPage, currentPage]);
 
-  useEffect(() => {
-    if (!paginated.prev_cursor) {
-      setPageIndex(1);
-      return;
-    }
+  const handleFirstPage = useCallback(() => {
+    goToPage(1);
+  }, [goToPage]);
 
-    setPageIndex((current) => Math.min(current, totalPages));
-  }, [paginated.prev_cursor, totalPages]);
+  const handleLastPage = useCallback(() => {
+    goToPage(lastPage);
+  }, [goToPage, lastPage]);
 
-  const handleSortingChange = (nextSorting: SortingState) => {
-    setSorting(nextSorting);
-    setPageIndex(1);
-    goToCursor(null, nextSorting);
-  };
+  const handlePageSelect = useCallback(
+    (value: unknown) => {
+      goToPage(Number(value));
+    },
+    [goToPage],
+  );
 
-  const handleSortingChangeWrapper = (
+  const pages = useMemo(
+    () => Array.from({ length: lastPage }, (_, index) => index + 1),
+    [lastPage],
+  );
+
+  // Nothing to set locally — the visit writes the new sort to the url, which is
+  // what `sorting` is read back from.
+  const handleSortingChange = (
     nextSorting: SortingState | ((prev: SortingState) => SortingState),
   ) => {
-    const resolvedSorting = typeof nextSorting === 'function' ? nextSorting(sorting) : nextSorting;
-
-    handleSortingChange(resolvedSorting);
+    goToPage(1, typeof nextSorting === 'function' ? nextSorting(sorting) : nextSorting);
   };
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- compiler auto-skips, acknowledged
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: paginated.data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
-    pageCount: -1,
+    /*
+     * Two-state cycling: clearing the sort would drop the params and leave the
+     * header neutral while the server still applies its own default order.
+     */
+    enableSortingRemoval: false,
+    pageCount: lastPage,
     state: {
       pagination: {
-        pageIndex: 0,
+        pageIndex: currentPage - 1,
         pageSize: paginated.per_page,
       },
       sorting,
     },
-    onSortingChange: handleSortingChangeWrapper,
+    onSortingChange: handleSortingChange,
   });
 
   return (
     <div className="space-y-4">
       <TableShell table={table} columns={columns} />
 
-      {paginated.data.length > 0 ? (
+      {/*
+       * An out-of-range page (the last row of page 2 deleted, say) comes back
+       * empty with `last_page` behind `current_page`, so an emptiness-only
+       * check would strand the reader with no way back.
+       */}
+      {paginated.data.length > 0 || canPreviousPage ? (
         <div className="flex items-center justify-between border-t border-border pt-4 text-sm text-muted-foreground">
-          <div>
-            page {formatNumber(pageIndex)} of {formatNumber(totalPages)}
+          <div className="flex items-center gap-1">
+            <span>page</span>
+            <Select.Root
+              value={currentPage}
+              disabled={lastPage === 1}
+              onValueChange={handlePageSelect}
+            >
+              <Select.Trigger
+                aria-label="go to page"
+                disabled={lastPage === 1}
+                className="h-6 w-auto gap-1 border-transparent bg-transparent py-0 pr-1 pl-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <Select.Value>
+                  {currentPage <= lastPage ? formatNumber(currentPage) : ''}
+                </Select.Value>
+                <Select.Icon>
+                  <IconChevronGrabberVertical className="size-3" />
+                </Select.Icon>
+              </Select.Trigger>
+              <Select.Portal>
+                <Select.Positioner>
+                  <Select.Popup>
+                    {pages.map((page) => (
+                      <Select.Item key={page} value={page} className="py-1">
+                        <Select.ItemText>{formatNumber(page)}</Select.ItemText>
+                      </Select.Item>
+                    ))}
+                  </Select.Popup>
+                </Select.Positioner>
+              </Select.Portal>
+            </Select.Root>
+            <span>of {formatNumber(lastPage)}</span>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="tertiary"
+              size="icon"
+              disabled={!canPreviousPage}
+              onClick={handleFirstPage}
+            >
+              <span className="sr-only">first</span>
+              <IconChevronDoubleLeft />
+            </Button>
             <Button
               variant="tertiary"
               size="icon"
@@ -155,11 +232,15 @@ export function ServerDataTable<TData, TValue>({
               onClick={handlePreviousPage}
             >
               <span className="sr-only">previous</span>
-              <IconChevronLeft />
+              <IconChevronLeftSmall />
             </Button>
             <Button variant="tertiary" size="icon" disabled={!canNextPage} onClick={handleNextPage}>
               <span className="sr-only">next</span>
-              <IconChevronRight />
+              <IconChevronRightSmall />
+            </Button>
+            <Button variant="tertiary" size="icon" disabled={!canNextPage} onClick={handleLastPage}>
+              <span className="sr-only">last</span>
+              <IconChevronDoubleRight />
             </Button>
           </div>
         </div>

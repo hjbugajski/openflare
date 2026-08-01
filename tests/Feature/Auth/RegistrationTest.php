@@ -30,19 +30,16 @@ describe('registration when no users exist', function () {
     });
 
     test('registration is protected by cache lock to prevent race conditions', function () {
-        // Acquire the registration lock to simulate a concurrent request
         $lock = Cache::lock('registration_check', 10);
         $lock->get();
 
         try {
-            // Attempt registration while lock is held should fail with 429
             $response = $this->get(route('register'));
             $response->assertStatus(429);
         } finally {
             $lock->release();
         }
 
-        // After lock is released, registration should work
         $this->get(route('register'))->assertOk();
     });
 });

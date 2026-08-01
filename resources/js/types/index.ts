@@ -47,7 +47,6 @@ export interface Monitor {
   last_checked_at: string | null;
   latest_check?: MonitorCheck | null;
   current_incident?: Incident | null;
-  checks_count?: number;
   notifiers?: NotifierSummary[];
   daily_rollups?: DailyUptimeRollup[];
 }
@@ -74,7 +73,6 @@ export interface IncidentWithMonitor extends Incident {
   monitor: MonitorSummary;
 }
 
-/** Summary type for notifier when used in lists/associations */
 export interface NotifierSummary {
   id: string;
   name: string;
@@ -87,7 +85,6 @@ export interface NotifierSummary {
   };
 }
 
-/** Summary type for monitor when used in lists/associations */
 export interface MonitorSummary {
   id: string;
   name: string;
@@ -97,15 +94,17 @@ export interface MonitorSummary {
   };
 }
 
-/** Full notifier with config details */
+export interface NotifierConfig {
+  webhook_url?: string;
+  email?: string;
+}
+
+/** Notifier as serialized to the client; `config` is only sent where it is edited */
 export interface Notifier {
   id: string;
   name: string;
   type: NotifierType;
-  config: {
-    webhook_url?: string;
-    email?: string;
-  };
+  config?: NotifierConfig;
   is_active: boolean;
   is_default: boolean;
   apply_to_all: boolean;
@@ -128,13 +127,11 @@ export interface DailyUptimeRollup {
   max_response_time_ms: number | null;
 }
 
-export interface CursorPaginated<T> {
+export interface Paginated<T> {
   data: T[];
+  current_page: number;
+  last_page: number;
   per_page: number;
-  next_cursor: string | null;
-  prev_cursor: string | null;
-  next_page_url: string | null;
-  prev_page_url: string | null;
   total: number;
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Head, Link, router, usePage } from '@inertiajs/react';
 
@@ -21,15 +21,16 @@ import { formatInterval } from '@/lib/format/interval';
 import { formatNumber } from '@/lib/format/number';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { useUserChannel } from '@/lib/hooks/use-user-channel';
+import { resolveRollupTimezone } from '@/lib/timezone';
 import { edit } from '@/routes/monitors';
 import {
-  type CursorPaginated,
   type DailyUptimeRollup,
   type Incident,
   type Monitor,
   type MonitorCheck,
   type NotifierSummary,
   type PageProps,
+  type Paginated,
 } from '@/types';
 import type {
   IncidentOpenedEvent,
@@ -39,9 +40,9 @@ import type {
 
 interface Props {
   monitor: Monitor;
-  checks: CursorPaginated<MonitorCheck>;
-  incidents: CursorPaginated<Incident>;
-  notifiers: CursorPaginated<NotifierSummary>;
+  checks: Paginated<MonitorCheck>;
+  incidents: Paginated<Incident>;
+  notifiers: Paginated<NotifierSummary>;
   dailyRollups: DailyUptimeRollup[];
 }
 
@@ -55,19 +56,25 @@ export default function MonitorsShow({
   dailyRollups,
 }: Props) {
   const { auth } = usePage<PageProps>().props;
-  const browserTimezone =
-    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
-  const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
+  const timezone = resolveRollupTimezone(auth.user?.preferences?.timezone);
   const [currentIncident, setCurrentIncident] = useState(monitor.current_incident);
   const [latestCheck, setLatestCheck] = useState(monitor.latest_check);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const openDeleteDialog = useCallback(() => setDeleteDialogOpen(true), []);
 
-  // Track what needs reloading, then batch into single request
   const pendingReloads = useRef<Set<string>>(new Set());
+  const navigationsInFlight = useRef(0);
 
   const flushReloads = useDebouncedCallback(() => {
-    if (pendingReloads.current.size === 0) {
+    /*
+     * A partial reload resolves against the url as it was when the request went
+     * out and Inertia does not cancel it against an in-flight navigation, so
+     * firing now would rewind the table props to the page the reader just left.
+     * Inertia forces `async: true` on reloads, so anything synchronous in
+     * flight is a real navigation — the `finish` listener below flushes once it
+     * lands.
+     */
+    if (navigationsInFlight.current > 0 || pendingReloads.current.size === 0) {
       return;
     }
 
@@ -76,6 +83,31 @@ export default function MonitorsShow({
 
     router.reload({ only });
   }, RELOAD_DEBOUNCE_MS);
+
+  useEffect(() => {
+    const stopListeningToStart = router.on('start', ({ detail }) => {
+      if (!detail.visit.async) {
+        navigationsInFlight.current += 1;
+      }
+    });
+
+    const stopListeningToFinish = router.on('finish', ({ detail }) => {
+      if (detail.visit.async) {
+        return;
+      }
+
+      navigationsInFlight.current = Math.max(0, navigationsInFlight.current - 1);
+
+      if (navigationsInFlight.current === 0 && pendingReloads.current.size > 0) {
+        flushReloads();
+      }
+    });
+
+    return () => {
+      stopListeningToStart();
+      stopListeningToFinish();
+    };
+  }, [flushReloads]);
 
   const scheduleReload = useCallback(
     (key: string) => {

@@ -24,7 +24,6 @@ trait HasNotifierRules
             'is_active' => $sometimes ? ['sometimes', 'boolean'] : ['boolean'],
             'is_default' => $sometimes ? ['sometimes', 'boolean'] : ['boolean'],
 
-            // Monitor associations
             'apply_to_existing' => ['boolean'],
             'monitors' => ['array'],
             'monitors.*' => [
@@ -37,7 +36,6 @@ trait HasNotifierRules
                 Rule::exists(Monitor::class, 'id')->where('user_id', Auth::user()->uuid),
             ],
 
-            // Discord-specific
             'config.webhook_url' => [
                 Rule::requiredIf($type === Notifier::TYPE_DISCORD),
                 'nullable',
@@ -45,7 +43,6 @@ trait HasNotifierRules
                 'regex:'.Notifier::DISCORD_WEBHOOK_URL_REGEX,
             ],
 
-            // Email-specific
             'config.email' => [
                 Rule::requiredIf($type === Notifier::TYPE_EMAIL),
                 'nullable',

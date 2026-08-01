@@ -49,7 +49,9 @@ class ComputeRollupStats
                 // row represents at least one matching check, so this never
                 // divides by zero.
                 $stat->uptime_percentage = round(($stat->successful_checks / $stat->total_checks) * 100, 2);
-                $stat->avg_response_time_ms = $stat->avg_response_time_ms !== null ? (int) round($stat->avg_response_time_ms) : null;
+                // Postgres returns aggregates as strings; round() rejects
+                // them under strict_types
+                $stat->avg_response_time_ms = $stat->avg_response_time_ms !== null ? (int) round((float) $stat->avg_response_time_ms) : null;
                 $stat->min_response_time_ms = $stat->min_response_time_ms !== null ? (int) $stat->min_response_time_ms : null;
                 $stat->max_response_time_ms = $stat->max_response_time_ms !== null ? (int) $stat->max_response_time_ms : null;
 

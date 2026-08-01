@@ -12,7 +12,7 @@ beforeEach(function () {
 test('enabling 2FA redirects to setup page', function () {
     $this->actingAs($this->user)
         ->withSession(['auth.password_confirmed_at' => time()])
-        ->get(route('settings.two-factor.enable'))
+        ->post(route('settings.two-factor.enable'))
         ->assertRedirect(route('settings.two-factor.setup'));
 
     $this->user->refresh();
@@ -23,7 +23,7 @@ test('enabling 2FA redirects to setup page', function () {
 test('setup page shows QR code and secret key', function () {
     $this->actingAs($this->user)
         ->withSession(['auth.password_confirmed_at' => time()])
-        ->get(route('settings.two-factor.enable'));
+        ->post(route('settings.two-factor.enable'));
 
     $this->user->refresh();
 
@@ -57,7 +57,7 @@ test('setup page redirects to account if 2FA already confirmed', function () {
 test('confirm page can be viewed during setup', function () {
     $this->actingAs($this->user)
         ->withSession(['auth.password_confirmed_at' => time()])
-        ->get(route('settings.two-factor.enable'));
+        ->post(route('settings.two-factor.enable'));
 
     $this->user->refresh();
 
@@ -87,14 +87,12 @@ test('confirm page redirects to account if 2FA already confirmed', function () {
 });
 
 test('valid code confirms 2FA and redirects to recovery codes', function () {
-    // Enable 2FA first
     $this->actingAs($this->user)
         ->withSession(['auth.password_confirmed_at' => time()])
-        ->get(route('settings.two-factor.enable'));
+        ->post(route('settings.two-factor.enable'));
 
     $this->user->refresh();
 
-    // Generate valid TOTP code
     $google2fa = app(Google2FA::class);
     $secret = decrypt($this->user->two_factor_secret);
     $validCode = $google2fa->getCurrentOtp($secret);
@@ -109,10 +107,9 @@ test('valid code confirms 2FA and redirects to recovery codes', function () {
 });
 
 test('invalid code does not confirm 2FA', function () {
-    // Enable 2FA first
     $this->actingAs($this->user)
         ->withSession(['auth.password_confirmed_at' => time()])
-        ->get(route('settings.two-factor.enable'));
+        ->post(route('settings.two-factor.enable'));
 
     $this->actingAs($this->user)
         ->withSession(['auth.password_confirmed_at' => time()])
@@ -177,10 +174,44 @@ test('2FA can be disabled', function () {
 
     $this->actingAs($user)
         ->withSession(['auth.password_confirmed_at' => time()])
-        ->get(route('settings.two-factor.disable'))
+        ->delete(route('settings.two-factor.disable'))
         ->assertRedirect(route('settings.show'));
 
     $user->refresh();
     expect($user->two_factor_secret)->toBeNull();
     expect($user->two_factor_confirmed_at)->toBeNull();
+});
+
+test('enabling 2FA is not reachable with a GET request', function () {
+    $this->actingAs($this->user)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->get(route('settings.two-factor.enable'))
+        ->assertMethodNotAllowed();
+
+    $this->user->refresh();
+    expect($this->user->two_factor_secret)->toBeNull();
+});
+
+test('disabling 2FA is not reachable with a GET request', function () {
+    $user = User::factory()->withTwoFactor()->create();
+
+    $this->actingAs($user)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->get(route('settings.two-factor.disable'))
+        ->assertMethodNotAllowed();
+
+    $user->refresh();
+    expect($user->two_factor_secret)->not->toBeNull();
+    expect($user->two_factor_confirmed_at)->not->toBeNull();
+});
+
+test('enabling 2FA without a confirmed password returns to settings after confirming', function () {
+    $this->actingAs($this->user)
+        ->post(route('settings.two-factor.enable'))
+        ->assertRedirect(route('password.confirm'));
+
+    $this->user->refresh();
+    expect($this->user->two_factor_secret)->toBeNull();
+    // The intended URL is replayed with GET, so it must not be the POST route.
+    expect(session('url.intended'))->toBe(route('settings.show'));
 });

@@ -1,8 +1,8 @@
 import type { ComponentProps } from 'react';
 
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox';
+import { IconCheckmark2Small } from 'central-icons/IconCheckmark2Small';
 
-import { IconCheck } from '@/components/icons/check';
 import { cn } from '@/lib/cn';
 
 function Root({ className, ...props }: ComponentProps<typeof BaseCheckbox.Root>) {
@@ -23,7 +23,7 @@ function Root({ className, ...props }: ComponentProps<typeof BaseCheckbox.Root>)
 function Indicator({ className, ...props }: ComponentProps<typeof BaseCheckbox.Indicator>) {
   return (
     <BaseCheckbox.Indicator className={cn('text-accent-foreground', className)} {...props}>
-      <IconCheck className="size-4" />
+      <IconCheckmark2Small className="size-4" />
     </BaseCheckbox.Indicator>
   );
 }

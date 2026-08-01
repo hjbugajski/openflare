@@ -5,7 +5,6 @@ cd /var/www/html
 
 echo "==> Starting OpenFlare deployment..."
 
-# Graceful shutdown handler
 shutdown() {
     echo "==> Received shutdown signal, stopping gracefully..."
     if [ -f /var/run/supervisor.sock ]; then
@@ -15,14 +14,14 @@ shutdown() {
 }
 trap shutdown SIGTERM SIGINT
 
-# Database setup (SQLite only - Postgres requires no file setup)
+# SQLite only; Postgres requires no file setup
 DB_CONNECTION="${DB_CONNECTION:-sqlite}"
 
 if [ "$DB_CONNECTION" = "sqlite" ]; then
     DB_PATH="${DB_DATABASE:-database/database.sqlite}"
     DB_DIR="$(dirname "$DB_PATH")"
 
-    # Ensure directory exists and is writable (for WAL mode -wal/-shm files)
+    # The directory must be writable too: WAL mode creates -wal/-shm siblings
     echo "==> Setting up SQLite directory at $DB_DIR..."
     mkdir -p "$DB_DIR"
     chown www-data:www-data "$DB_DIR"
@@ -34,7 +33,7 @@ if [ "$DB_CONNECTION" = "sqlite" ]; then
     fi
     chown www-data:www-data "$DB_PATH"
 
-    # Enable WAL mode for better concurrent access and crash recovery
+    # WAL mode: concurrent reads during writes, and crash recovery
     echo "==> Configuring SQLite for production..."
     sqlite3 "$DB_PATH" "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;"
 else
@@ -52,19 +51,16 @@ touch "$LOCK_FILE"
 php artisan migrate --force
 rm -f "$LOCK_FILE"
 
-# Create storage link if not exists
 if [ ! -L public/storage ]; then
     echo "==> Creating storage link..."
     php artisan storage:link || true
 fi
 
-# Cache configuration for production (explicit ordering)
 echo "==> Optimizing for production..."
 php artisan config:cache
 php artisan event:cache
 php artisan route:cache
 php artisan view:cache
 
-# Start the application
 echo "==> Starting services..."
 exec "$@"

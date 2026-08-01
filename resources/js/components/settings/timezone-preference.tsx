@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react';
 
-import { IconSearchOptions } from '@/components/icons/search-options';
+import { IconSearchOptions } from 'central-icons/IconSearchOptions';
+
 import { Card } from '@/components/ui/card';
 import { Combobox } from '@/components/ui/combobox';
 import { Heading } from '@/components/ui/heading';

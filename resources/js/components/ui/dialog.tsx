@@ -1,9 +1,9 @@
 import { type ComponentProps, type ReactNode, createContext, useContext, useMemo } from 'react';
 
 import { Dialog as BaseDialog, type DialogRootProps } from '@base-ui/react/dialog';
+import { IconCrossMedium } from 'central-icons/IconCrossMedium';
 import { type VariantProps, cva } from 'class-variance-authority';
 
-import { IconClose } from '@/components/icons/close';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 
@@ -139,7 +139,7 @@ function Header({ className, children, closeButton, ...props }: DialogHeaderProp
           render={<Button variant="tertiary" size="icon" className="absolute top-3 right-3" />}
         >
           <span className="sr-only">Close</span>
-          <IconClose className="h-4 w-4" />
+          <IconCrossMedium className="h-4 w-4" />
         </Close>
       ) : null}
     </div>

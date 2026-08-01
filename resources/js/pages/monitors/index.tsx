@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useRef } from 'react';
 
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { IconLayoutGrid2 } from 'central-icons/IconLayoutGrid2';
+import { IconTable } from 'central-icons/IconTable';
 
-import { IconGrid } from '@/components/icons/grid';
-import { IconTable } from '@/components/icons/table';
 import { MonitorStatusBadge } from '@/components/monitors/monitor-status-badge';
 import { MonitorsTable } from '@/components/monitors/monitors-table';
 import { UptimePercentage } from '@/components/monitors/uptime-percentage';
@@ -23,6 +23,7 @@ import { formatRelativeTime } from '@/lib/format/relative-time';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { usePreferencePatch } from '@/lib/hooks/use-preference-patch';
 import { useUserChannel } from '@/lib/hooks/use-user-channel';
+import { resolveRollupTimezone } from '@/lib/timezone';
 import { create, show } from '@/routes/monitors';
 import { type Monitor, type MonitorViewMode, type PageProps } from '@/types';
 
@@ -109,9 +110,7 @@ function MonitorCard({ monitor, timezone }: { monitor: Monitor; timezone: string
 export default function MonitorsIndex({ monitors }: Props) {
   const { auth } = usePage<PageProps>().props;
   const defaultView: MonitorViewMode = auth.user?.preferences?.monitors_view ?? 'cards';
-  const browserTimezone =
-    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
-  const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
+  const timezone = resolveRollupTimezone(auth.user?.preferences?.timezone);
   const [viewMode, setViewMode] = usePreferencePatch('monitors_view', defaultView);
 
   const sortedMonitors = [...monitors].sort((left, right) =>
@@ -184,7 +183,7 @@ export default function MonitorsIndex({ monitors }: Props) {
                 <Tooltip.Trigger
                   render={
                     <ToggleGroup.Item value="cards" aria-label="Card view">
-                      <IconGrid className="size-4" />
+                      <IconLayoutGrid2 className="size-4" />
                     </ToggleGroup.Item>
                   }
                 />

@@ -18,6 +18,8 @@ class SsrfGuard
         '192.0.2.0/24',      // TEST-NET-1 (documentation)
         '198.51.100.0/24',   // TEST-NET-2 (documentation)
         '203.0.113.0/24',    // TEST-NET-3 (documentation)
+        '192.88.99.0/24',    // 6to4 relay anycast (RFC 7526, deprecated)
+        '198.18.0.0/15',     // Benchmarking (RFC 2544)
         '224.0.0.0/4',       // Multicast
         '240.0.0.0/4',       // Reserved for future use
         '255.255.255.255/32', // Broadcast
@@ -64,6 +66,7 @@ class SsrfGuard
         }
 
         $hex = bin2hex($packed);
+        $firstByte = hexdec(substr($hex, 0, 2));
 
         // Loopback (::1)
         if ($hex === '00000000000000000000000000000001') {
@@ -75,20 +78,33 @@ class SsrfGuard
             return true;
         }
 
-        // Link-local (fe80::/10)
-        if (str_starts_with($hex, 'fe8') || str_starts_with($hex, 'fe9') ||
-            str_starts_with($hex, 'fea') || str_starts_with($hex, 'feb')) {
+        // Link-local (fe80::/10) and deprecated site-local (fec0::/10)
+        if ($firstByte === 0xFE && hexdec(substr($hex, 2, 2)) >= 0x80) {
             return true;
         }
 
         // Unique local (fc00::/7)
-        $firstByte = hexdec(substr($hex, 0, 2));
         if ($firstByte >= 0xFC && $firstByte <= 0xFD) {
             return true;
         }
 
         // Multicast (ff00::/8)
         if ($firstByte === 0xFF) {
+            return true;
+        }
+
+        // Teredo (2001::/32) - tunnels traffic to an embedded IPv4 endpoint
+        if (str_starts_with($hex, '20010000')) {
+            return true;
+        }
+
+        // Documentation (2001:db8::/32)
+        if (str_starts_with($hex, '20010db8')) {
+            return true;
+        }
+
+        // ORCHIDv2 (2001:20::/28) - non-routable cryptographic identifiers
+        if (str_starts_with($hex, '2001002')) {
             return true;
         }
 
@@ -112,6 +128,19 @@ class SsrfGuard
         if (str_starts_with($hex, '0064ff9b') && substr($hex, 8, 16) === str_repeat('0', 16)) {
             $ipv4Hex = substr($hex, 24, 8);
             $ipv4 = long2ip((int) hexdec($ipv4Hex));
+
+            return $this->isBlockedIpv4($ipv4);
+        }
+
+        // NAT64 local-use prefix (64:ff9b:1::/48, RFC 8215) - a site picks the
+        // embedded IPv4 space itself, so nothing about it is verifiable
+        if (str_starts_with($hex, '0064ff9b0001')) {
+            return true;
+        }
+
+        // IPv4-compatible (::a.b.c.d, deprecated) - check embedded IPv4
+        if (str_starts_with($hex, str_repeat('0', 24))) {
+            $ipv4 = long2ip((int) hexdec(substr($hex, 24, 8)));
 
             return $this->isBlockedIpv4($ipv4);
         }

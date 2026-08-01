@@ -1,22 +1,22 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
+import { IconCrossMedium } from 'central-icons/IconCrossMedium';
 
-import { IconClose } from '@/components/icons/close';
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { inertiaDelete } from '@/lib/http/inertia-delete';
 import { detach } from '@/routes/monitors/notifiers';
-import type { CursorPaginated, NotifierSummary } from '@/types';
+import type { NotifierSummary, Paginated } from '@/types';
 
 const RELOAD_ONLY = ['notifiers'];
 const INITIAL_SORTING: SortingState = [{ id: 'name', desc: false }];
 
 interface NotifiersTableProps {
   monitorId: string;
-  notifiers: CursorPaginated<NotifierSummary>;
+  notifiers: Paginated<NotifierSummary>;
 }
 
 export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
@@ -94,10 +94,10 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
         header: '',
         enableSorting: false,
         cell: ({ row }) => (
-          // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop -- row-specific callback in column def
+          // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop
           <Button variant="tertiary" size="icon" onClick={() => setNotifierToRemove(row.original)}>
             <span className="sr-only">remove</span>
-            <IconClose className="h-4 w-4" />
+            <IconCrossMedium className="h-4 w-4" />
           </Button>
         ),
         meta: {
@@ -127,7 +127,7 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
       <ServerDataTable
         columns={columns}
         paginated={notifiers}
-        cursorParam="notifiers_cursor"
+        pageParam="notifiers_page"
         sortParam="notifiers_sort"
         directionParam="notifiers_direction"
         reloadOnly={RELOAD_ONLY}

@@ -30,7 +30,9 @@ return [
             'connection' => null,
             'table' => 'jobs',
             'queue' => 'default',
-            'retry_after' => 180,
+            // Must stay above the longest job timeout (CheckMonitor::$timeout,
+            // 180s) or a still-running check gets released and run twice.
+            'retry_after' => 240,
             'after_commit' => true,
         ],
 

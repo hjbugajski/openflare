@@ -49,6 +49,17 @@ describe('index', function () {
             );
     });
 
+    it('does not expose the decrypted config', function () {
+        $notifier = Notifier::factory()->discord()->create(['user_id' => $this->user->uuid]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('notifiers.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->missing('notifiers.data.0.config'));
+
+        expect($response->content())->not->toContain($notifier->config['webhook_url']);
+    });
+
     it('includes is_default field', function () {
         Notifier::factory()->default()->create(['user_id' => $this->user->uuid]);
 
@@ -210,7 +221,6 @@ describe('store', function () {
         expect($notifier->monitors->pluck('id')->sort()->values())
             ->toEqual($monitors->pluck('id')->sort()->values());
 
-        // Should not attach to other user's monitors
         $this->assertDatabaseMissing('monitor_notifier', [
             'notifier_id' => $notifier->id,
             'monitor_id' => $otherUserMonitor->id,
@@ -312,6 +322,19 @@ describe('edit', function () {
         $this->actingAs($this->user)
             ->get(route('notifiers.edit', $notifier))
             ->assertForbidden();
+    });
+
+    it('includes the decrypted config so the form can be prefilled', function () {
+        $notifier = Notifier::factory()->discord()->create([
+            'user_id' => $this->user->uuid,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('notifiers.edit', $notifier))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('notifier.config.webhook_url', $notifier->config['webhook_url'])
+            );
     });
 });
 
@@ -522,17 +545,19 @@ describe('test', function () {
     it('sends test email notification', function () {
         Mail::fake();
 
+        // Only addresses the user controls are accepted; see
+        // NotifierTestEmailRestrictionTest.
         $this->actingAs($this->user)
             ->postJson(route('notifiers.test'), [
                 'type' => 'email',
                 'config' => [
-                    'email' => 'test@example.com',
+                    'email' => $this->user->email,
                 ],
             ])
             ->assertOk()
             ->assertJson(['success' => true]);
 
-        Mail::assertSent(TestNotification::class, fn ($mail) => $mail->hasTo('test@example.com'));
+        Mail::assertSent(TestNotification::class, fn ($mail) => $mail->hasTo($this->user->email));
     });
 
     it('validates discord webhook url', function () {

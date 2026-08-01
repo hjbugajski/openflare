@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { toast } from '@/components/ui/toast';
 import { apiFetch } from '@/lib/http/api-fetch';
-import { type NotifierConfig, validateNotifierConfig } from '@/lib/schemas/notifier';
+import { type NotifierConfig, configForType, validateNotifierConfig } from '@/lib/schemas/notifier';
 import { test } from '@/routes/notifiers';
 
 interface TestResponse {
@@ -33,7 +33,7 @@ export function useNotifierTest({ getType, getConfig }: UseNotifierTestOptions) 
     try {
       const { ok, data } = await apiFetch<TestResponse>(test().url, {
         method: 'POST',
-        body: { type, config },
+        body: { type, config: configForType(type, config) },
       });
 
       if (ok && data?.success) {

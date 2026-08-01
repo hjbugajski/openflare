@@ -14,17 +14,17 @@ import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
 import { formatNumber } from '@/lib/format/number';
 import { create, destroy, edit } from '@/routes/notifiers';
-import { type CursorPaginated, type Notifier } from '@/types';
+import { type Notifier, type Paginated } from '@/types';
 
 interface Props {
-  notifiers: CursorPaginated<Notifier>;
+  notifiers: Paginated<Notifier>;
   types: string[];
 }
 
-// Handle pattern for row actions: selection determines payload (notifier to delete)
 const deleteDialog = Dialog.createHandle<Notifier>();
 
 const INITIAL_SORTING = [{ id: 'name', desc: false }];
+const RELOAD_ONLY = ['notifiers'];
 
 const columns: ColumnDef<Notifier>[] = [
   {
@@ -130,6 +130,10 @@ export default function NotifiersIndex({ notifiers }: Props) {
           <ServerDataTable
             columns={columns}
             paginated={notifiers}
+            pageParam="notifiers_page"
+            sortParam="sort"
+            directionParam="direction"
+            reloadOnly={RELOAD_ONLY}
             initialSorting={INITIAL_SORTING}
           />
         </Card.Root>
@@ -156,7 +160,7 @@ export default function NotifiersIndex({ notifiers }: Props) {
                 <Button
                   variant="destructive"
                   disabled={isDeleting}
-                  // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop -- payload comes from render prop
+                  // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop
                   onClick={() => payload && handleDeleteConfirm(payload)}
                 >
                   {isDeleting ? 'deleting...' : 'delete'}

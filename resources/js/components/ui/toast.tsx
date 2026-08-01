@@ -1,9 +1,9 @@
 import { type ComponentProps, type ReactNode, createContext, useContext, useMemo } from 'react';
 
 import { Toast as BaseToast } from '@base-ui/react/toast';
+import { IconCrossMedium } from 'central-icons/IconCrossMedium';
 import { type VariantProps, cva } from 'class-variance-authority';
 
-import { IconClose } from '@/components/icons/close';
 import { cn } from '@/lib/cn';
 
 type ToastVariant = 'default' | 'accent' | 'info' | 'warning' | 'success' | 'destructive';
@@ -57,7 +57,7 @@ function ToastList() {
           {toast.title && <Title>{toast.title}</Title>}
           {toast.description && <Description>{toast.description}</Description>}
           <Close aria-label="close">
-            <IconClose className="size-4" />
+            <IconCrossMedium className="size-4" />
           </Close>
         </Content>
       </Root>
@@ -84,18 +84,12 @@ function Viewport({ className, ...props }: ComponentProps<typeof BaseToast.Viewp
 const rootVariants = cva(
   [
     'pointer-events-auto absolute right-0 bottom-0 w-full border-t transition-all duration-200',
-    // z-index stacking: 0th toast at front
     '[z-calc(100-var(--toast-index))]',
-    // scale down toasts behind front
     'scale-[calc(1-0.05*var(--toast-index))]',
-    // translate up slightly when stacked (collapsed)
     'translate-y-[calc(var(--toast-index)*-0.5rem)]',
-    // when expanded, use negative offset-y to expand upward
     'data-expanded:translate-y-[calc(var(--toast-offset-y)*-1)]',
     'data-expanded:scale-100',
-    // entry animation
     'data-starting-style:translate-x-[calc(100%+1rem)] data-starting-style:opacity-0',
-    // exit animation
     'data-ending-style:translate-x-[calc(100%+1rem)] data-ending-style:opacity-0',
   ],
   {
@@ -150,7 +144,6 @@ function Content({ className, ...props }: ComponentProps<typeof BaseToast.Conten
     <BaseToast.Content
       className={cn(
         'flex w-full flex-col gap-1 overflow-hidden p-4 pr-10 transition-opacity duration-200',
-        // hide content and disable interaction on toasts behind front when collapsed
         'data-behind:pointer-events-none data-behind:opacity-0',
         'data-expanded:pointer-events-auto data-expanded:opacity-100',
         className,

@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 use App\Rules\SafeUrl;
 
-function validateUrl(string $url): bool
+/**
+ * @param  array<string, list<string>>  $dns  Hostname to resolved addresses; hosts
+ *                                            not listed resolve to a public address, so no test ever hits the network.
+ */
+function validateUrl(string $url, array $dns = []): bool
 {
-    $rule = new SafeUrl;
+    $rule = new SafeUrl(fn (string $host): array => $dns[$host] ?? ['93.184.216.34']);
     $passed = true;
 
     $rule->validate('url', $url, function () use (&$passed) {
@@ -109,9 +113,7 @@ describe('SafeUrl Rule - Allowed URLs', function () {
     });
 
     it('allows public IP addresses', function () {
-        // Google DNS
         expect(validateUrl('http://8.8.8.8/'))->toBeTrue();
-        // Cloudflare DNS
         expect(validateUrl('http://1.1.1.1/'))->toBeTrue();
     });
 
@@ -133,6 +135,66 @@ describe('SafeUrl Rule - Invalid URLs', function () {
     it('rejects URLs without host', function () {
         expect(validateUrl('http://'))->toBeFalse();
         expect(validateUrl('https://'))->toBeFalse();
+    });
+});
+
+describe('SafeUrl Rule - hostname resolution', function () {
+    it('blocks a hostname resolving to a private IPv4', function () {
+        expect(validateUrl('https://internal.example.com/', [
+            'internal.example.com' => ['10.1.2.3'],
+        ]))->toBeFalse();
+    });
+
+    it('blocks an AAAA-only hostname resolving to loopback or unique local', function () {
+        expect(validateUrl('https://v6.example.com/', ['v6.example.com' => ['::1']]))->toBeFalse();
+        expect(validateUrl('https://v6.example.com/', ['v6.example.com' => ['fd00::1']]))->toBeFalse();
+    });
+
+    it('blocks a hostname whose records mix a public A with an internal AAAA', function () {
+        expect(validateUrl('https://mixed.example.com/', [
+            'mixed.example.com' => ['8.8.8.8', 'fe80::1'],
+        ]))->toBeFalse();
+    });
+
+    it('allows a hostname resolving only to public addresses', function () {
+        expect(validateUrl('https://public.example.com/', [
+            'public.example.com' => ['8.8.8.8', '2606:4700:4700::1111'],
+        ]))->toBeTrue();
+    });
+});
+
+describe('SafeUrl Rule - unresolvable hosts', function () {
+    it('fails a hostname with no A or AAAA records', function () {
+        expect(validateUrl('https://nxdomain.example.com/', [
+            'nxdomain.example.com' => [],
+        ]))->toBeFalse();
+    });
+
+    it('fails numeric-literal hosts that parse_url does not hand back as IPs', function () {
+        // No resolver answers these, yet curl would happily dial 127.0.0.1 for
+        // all three, so they must not slip past an empty answer.
+        expect(validateUrl('http://2130706433/', ['2130706433' => []]))->toBeFalse();
+        expect(validateUrl('http://0x7f000001/', ['0x7f000001' => []]))->toBeFalse();
+        expect(validateUrl('http://127.1/', ['127.1' => []]))->toBeFalse();
+    });
+
+    it('still allows IP literals, which are never resolved', function () {
+        expect(validateUrl('http://8.8.8.8/', ['8.8.8.8' => []]))->toBeTrue();
+        expect(validateUrl('http://[2606:4700:4700::1111]/', [
+            '2606:4700:4700::1111' => [],
+        ]))->toBeTrue();
+    });
+});
+
+describe('SafeUrl Rule - scheme case', function () {
+    it('accepts uppercase http schemes', function () {
+        expect(validateUrl('HTTPS://example.com/'))->toBeTrue();
+        expect(validateUrl('HtTp://example.com/'))->toBeTrue();
+    });
+
+    it('rejects uppercase non-http schemes', function () {
+        expect(validateUrl('FILE:///etc/passwd'))->toBeFalse();
+        expect(validateUrl('FTP://example.com/'))->toBeFalse();
     });
 });
 

@@ -78,16 +78,14 @@ class DashboardController extends Controller
             $incidentsQuery->orderBy($sort, $direction);
         }
 
-        $incidentsTotal = (clone $incidentsQuery)->count();
-
         $incidents = $incidentsQuery
             ->orderBy('incidents.id', $direction)
-            ->cursorPaginate(10, ['*'], 'incidents_cursor')
+            ->paginate(10, ['*'], 'incidents_page')
             ->withQueryString();
 
         return Inertia::render('dashboard/index', [
             'counts' => $counts,
-            'incidents' => array_merge($incidents->toArray(), ['total' => $incidentsTotal]),
+            'incidents' => $incidents,
         ]);
     }
 }

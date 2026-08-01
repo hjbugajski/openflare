@@ -34,11 +34,7 @@ function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
   return headers;
 }
 
-/**
- * Fetch utility for JSON API endpoints with automatic CSRF handling.
- * Use for non-Inertia JSON endpoints (e.g., notifier test).
- * For Inertia mutations, use router.visit/patch/delete instead.
- */
+/** Adds CSRF handling for non-Inertia JSON endpoints; use router.visit/patch/delete for Inertia. */
 export async function apiFetch<T = unknown>(
   url: string,
   options: ApiFetchOptions = {},
@@ -57,7 +53,6 @@ export async function apiFetch<T = unknown>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // Parse response safely - handle empty body (204), non-JSON, or errors
   let data: T | null = null;
   const text = await response.text();
 
