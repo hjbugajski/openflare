@@ -221,7 +221,6 @@ describe('store', function () {
         expect($notifier->monitors->pluck('id')->sort()->values())
             ->toEqual($monitors->pluck('id')->sort()->values());
 
-        // Should not attach to other user's monitors
         $this->assertDatabaseMissing('monitor_notifier', [
             'notifier_id' => $notifier->id,
             'monitor_id' => $otherUserMonitor->id,

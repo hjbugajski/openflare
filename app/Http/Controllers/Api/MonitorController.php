@@ -80,14 +80,12 @@ class MonitorController extends Controller
                 'avg_response_time_ms' => $rollup->avg_response_time_ms,
             ]);
 
-        // Calculate overall stats using weighted average for response time
         $totalChecks = $rollups->sum('total_checks');
         $successfulChecks = $rollups->sum('successful_checks');
         $overallUptime = $totalChecks > 0
             ? round(($successfulChecks / $totalChecks) * 100, 2)
             : null;
 
-        // Weighted average: sum(avg_response_time * total_checks) / total_checks
         $weightedResponseTimeSum = $rollups->sum(function ($rollup) {
             return ($rollup['avg_response_time_ms'] ?? 0) * $rollup['total_checks'];
         });

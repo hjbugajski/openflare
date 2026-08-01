@@ -114,7 +114,6 @@ it('creates an incident when status changes from up to down', function () {
         'failure_confirmation_threshold' => 1,
     ]));
 
-    // Create a previous "up" check
     MonitorCheck::factory()->up()->create([
         'monitor_id' => $monitor->id,
         'checked_at' => now()->subMinutes(5),
@@ -220,13 +219,11 @@ it('resolves an incident when status changes from down to up', function () {
         'recovery_confirmation_threshold' => 1,
     ]));
 
-    // Create a previous "down" check
     MonitorCheck::factory()->down()->create([
         'monitor_id' => $monitor->id,
         'checked_at' => now()->subMinutes(5),
     ]);
 
-    // Create an ongoing incident
     $incident = Incident::factory()->ongoing()->create([
         'monitor_id' => $monitor->id,
     ]);
@@ -760,7 +757,6 @@ it('catches up to next future slot when significantly behind schedule', function
         'https://example.com' => Http::response('OK', 200),
     ]);
 
-    // Simulate being 2.5 intervals behind
     $scheduledAt = now()->subSeconds(150);
 
     $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
@@ -773,9 +769,7 @@ it('catches up to next future slot when significantly behind schedule', function
 
     $monitor->refresh();
 
-    // Should skip ahead to the next future slot
     expect($monitor->next_check_at->isFuture())->toBeTrue();
-    // Should be within the next interval from now
     expect($monitor->next_check_at->diffInSeconds(now()))->toBeLessThanOrEqual(60);
 });
 

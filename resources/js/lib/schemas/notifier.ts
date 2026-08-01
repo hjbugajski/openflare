@@ -49,10 +49,6 @@ export function configForType(type: string, config: NotifierConfig): NotifierCon
   }
 }
 
-/**
- * Validates notifier config based on type.
- * Used by both form submission and test notification.
- */
 export function validateNotifierConfig(
   type: string,
   config: NotifierConfig,

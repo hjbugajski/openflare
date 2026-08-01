@@ -69,8 +69,6 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Get the tags that should be assigned to the job.
-     *
      * @return array<int, string>
      */
     public function tags(): array
@@ -117,7 +115,6 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
 
         $check = $this->performCheck();
 
-        // Wrap check save, incident handling, and scheduling update in one transaction for atomicity
         DB::transaction(function () use ($check) {
             $this->monitor->checks()->save($check);
             $this->handleStatusChange($check);

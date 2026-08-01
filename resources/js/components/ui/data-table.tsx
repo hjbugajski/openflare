@@ -23,7 +23,7 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- compiler auto-skips, acknowledged
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

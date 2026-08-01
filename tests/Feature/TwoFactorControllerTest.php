@@ -87,14 +87,12 @@ test('confirm page redirects to account if 2FA already confirmed', function () {
 });
 
 test('valid code confirms 2FA and redirects to recovery codes', function () {
-    // Enable 2FA first
     $this->actingAs($this->user)
         ->withSession(['auth.password_confirmed_at' => time()])
         ->post(route('settings.two-factor.enable'));
 
     $this->user->refresh();
 
-    // Generate valid TOTP code
     $google2fa = app(Google2FA::class);
     $secret = decrypt($this->user->two_factor_secret);
     $validCode = $google2fa->getCurrentOtp($secret);
@@ -109,7 +107,6 @@ test('valid code confirms 2FA and redirects to recovery codes', function () {
 });
 
 test('invalid code does not confirm 2FA', function () {
-    // Enable 2FA first
     $this->actingAs($this->user)
         ->withSession(['auth.password_confirmed_at' => time()])
         ->post(route('settings.two-factor.enable'));

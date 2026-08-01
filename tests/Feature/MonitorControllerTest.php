@@ -156,7 +156,6 @@ describe('store', function () {
             'expected_status_code' => 200,
             'failure_confirmation_threshold' => 3,
             'recovery_confirmation_threshold' => 3,
-            // No notifiers specified - should auto-attach defaults
         ];
 
         $this->actingAs($this->user)

@@ -39,7 +39,6 @@ class MonitorController extends Controller
         $today = $now->toDateString();
         $thirtyDaysAgo = $now->copy()->subDays(30)->toDateString();
 
-        // Get historical rollups (excluding today)
         $rollups = DailyUptimeRollup::query()
             ->whereIn('monitor_id', $monitorIds)
             ->where('date', '>=', $thirtyDaysAgo)
@@ -48,14 +47,11 @@ class MonitorController extends Controller
             ->get()
             ->groupBy('monitor_id');
 
-        // Compute today's rollups on-the-fly
         $todayRollups = $this->computeTodayRollup->handle($monitorIds, $timezone);
 
-        // Attach rollups to monitors
         $monitorsWithRollups = $monitors->map(function ($monitor) use ($rollups, $todayRollups) {
             $monitorRollups = $rollups->get($monitor->id, collect())->values();
 
-            // Append today's rollup if it exists
             if ($todayRollups->has($monitor->id)) {
                 $monitorRollups = $monitorRollups->push($todayRollups->get($monitor->id));
             }
@@ -189,7 +185,6 @@ class MonitorController extends Controller
         $today = $now->toDateString();
         $thirtyDaysAgo = $now->copy()->subDays(30)->toDateString();
 
-        // Get historical rollups (excluding today)
         $dailyRollups = $monitor->dailyUptimeRollups()
             ->where('date', '>=', $thirtyDaysAgo)
             ->where('date', '<', $today)
@@ -198,7 +193,6 @@ class MonitorController extends Controller
             ->values()
             ->toArray();
 
-        // Compute today's rollup on-the-fly
         $todayRollups = $this->computeTodayRollup->handle([$monitor->id], $timezone);
         if ($todayRollups->has($monitor->id)) {
             $dailyRollups[] = $todayRollups->get($monitor->id);

@@ -113,9 +113,7 @@ describe('SafeUrl Rule - Allowed URLs', function () {
     });
 
     it('allows public IP addresses', function () {
-        // Google DNS
         expect(validateUrl('http://8.8.8.8/'))->toBeTrue();
-        // Cloudflare DNS
         expect(validateUrl('http://1.1.1.1/'))->toBeTrue();
     });
 

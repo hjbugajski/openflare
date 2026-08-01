@@ -26,7 +26,6 @@ class TwoFactorController extends Controller
     {
         $user = $request->user();
 
-        // Must have 2FA secret but not confirmed to view setup
         if (is_null($user->two_factor_secret)) {
             return redirect()->route('settings.show');
         }
@@ -46,7 +45,6 @@ class TwoFactorController extends Controller
     {
         $user = $request->user();
 
-        // Must have 2FA secret but not confirmed
         if (is_null($user->two_factor_secret)) {
             return redirect()->route('settings.show');
         }
@@ -75,12 +73,10 @@ class TwoFactorController extends Controller
     {
         $user = $request->user();
 
-        // Must have 2FA fully enabled and confirmed
         if (! $user->hasEnabledTwoFactorAuthentication() || is_null($user->two_factor_confirmed_at)) {
             return redirect()->route('settings.show');
         }
 
-        // Only show codes if they were just generated (security measure)
         if (! session()->has('show_recovery_codes')) {
             return redirect()->route('settings.show');
         }

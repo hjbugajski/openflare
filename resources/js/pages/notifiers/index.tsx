@@ -21,7 +21,6 @@ interface Props {
   types: string[];
 }
 
-// Handle pattern for row actions: selection determines payload (notifier to delete)
 const deleteDialog = Dialog.createHandle<Notifier>();
 
 const INITIAL_SORTING = [{ id: 'name', desc: false }];
@@ -161,7 +160,7 @@ export default function NotifiersIndex({ notifiers }: Props) {
                 <Button
                   variant="destructive"
                   disabled={isDeleting}
-                  // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop -- payload comes from render prop
+                  // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop
                   onClick={() => payload && handleDeleteConfirm(payload)}
                 >
                   {isDeleting ? 'deleting...' : 'delete'}

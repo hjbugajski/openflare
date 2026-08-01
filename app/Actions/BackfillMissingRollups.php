@@ -12,9 +12,6 @@ use Illuminate\Support\Facades\Schema;
 
 class BackfillMissingRollups
 {
-    /**
-     * Check for and backfill any missing rollup days.
-     */
     public function handle(): void
     {
         if (! Schema::hasTable('daily_uptime_rollups')) {
@@ -26,7 +23,6 @@ class BackfillMissingRollups
             ->first();
 
         if (! $latestRollup) {
-            // No rollups exist yet, compute the last 30 days
             $this->runRollupCommand(30);
 
             return;
@@ -35,7 +31,6 @@ class BackfillMissingRollups
         $latestDate = Carbon::parse($latestRollup->date);
         $yesterday = now()->subDay()->startOfDay();
 
-        // Calculate days between latest rollup and yesterday
         $daysMissing = (int) $latestDate->diffInDays($yesterday, false);
 
         if ($daysMissing > 0) {
@@ -48,9 +43,6 @@ class BackfillMissingRollups
         }
     }
 
-    /**
-     * Run the rollup command for the specified number of days.
-     */
     protected function runRollupCommand(int $days): void
     {
         Artisan::call('monitors:compute-rollups', [

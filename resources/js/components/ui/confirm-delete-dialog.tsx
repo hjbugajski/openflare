@@ -14,10 +14,8 @@ interface ConfirmDeleteDialogProps {
 }
 
 /**
- * Reusable confirmation dialog for delete/remove actions.
- *
- * Use this for simple confirmations where the parent already knows the entity.
- * For row actions where selection determines payload, use Dialog.createHandle pattern.
+ * Use for simple confirmations where the parent already knows the entity. For row actions where
+ * selection determines the payload, use the Dialog.createHandle pattern.
  */
 export function ConfirmDeleteDialog({
   open,

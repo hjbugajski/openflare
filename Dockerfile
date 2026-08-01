@@ -1,8 +1,5 @@
 # syntax=docker/dockerfile:1
 
-# ==============================================================================
-# Stage 1: Generate Wayfinder routes
-# ==============================================================================
 FROM composer:2 AS wayfinder
 
 WORKDIR /app
@@ -21,11 +18,10 @@ COPY config ./config
 COPY routes ./routes
 COPY database ./database
 
-# Create required directories and generate routes
-# (fake key - only needed for Laravel to boot, not used for encryption;
+# Fake key - only needed for Laravel to boot, not used for encryption;
 # APP_ENV=local so production-only security checks don't abort the build;
 # APP_URL='' so forceRootUrl is empty and wayfinder emits relative URLs
-# instead of baking the build-time host into the JS bundle)
+# instead of baking the build-time host into the JS bundle.
 RUN mkdir -p bootstrap/cache \
     storage/framework/views \
     storage/framework/cache \
@@ -39,52 +35,43 @@ RUN mkdir -p bootstrap/cache \
     APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
     php artisan wayfinder:generate --with-form
 
-# ==============================================================================
-# Stage 2: Build frontend assets
-# ==============================================================================
 FROM node:26-alpine AS frontend
 
 WORKDIR /app
 
-# Install pnpm (corepack is no longer bundled with Node >= 25)
+# corepack is no longer bundled with Node >= 25
 RUN npm install -g pnpm@11.9.0
 
-# Copy package files. pnpm-workspace.yaml carries the allowBuilds entry for
-# the Central Icons license check and its minimumReleaseAge exemption —
-# without it the install fails policy verification.
+# pnpm-workspace.yaml carries the allowBuilds entry for the Central Icons
+# license check and its minimumReleaseAge exemption — without it the install
+# fails policy verification.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-# Install dependencies with persistent cache. The Central Icons license key is
-# exposed only for this instruction via a BuildKit secret so it never lands in
-# a layer, the build cache, or `docker history`:
+# The Central Icons license key is exposed only for this instruction via a
+# BuildKit secret so it never lands in a layer, the build cache, or
+# `docker history`:
 #   docker build --secret id=central_license_key,env=CENTRAL_LICENSE_KEY .
 RUN --mount=type=cache,target=/pnpm/store \
     --mount=type=secret,id=central_license_key,env=CENTRAL_LICENSE_KEY \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile
 
-# Copy source files
 COPY resources ./resources
 COPY vite.config.ts tsconfig.json ./
 
-# Copy generated wayfinder routes
 COPY --from=wayfinder /app/resources/js/actions ./resources/js/actions
 COPY --from=wayfinder /app/resources/js/routes ./resources/js/routes
 COPY --from=wayfinder /app/resources/js/wayfinder ./resources/js/wayfinder
 
-# Build assets
 RUN pnpm run build
 
-# ==============================================================================
-# Stage 3: Install PHP dependencies
-# ==============================================================================
 FROM composer:2 AS composer
 
 WORKDIR /app
 
 COPY composer.json composer.lock ./
 
-# Install dependencies without dev packages (sharing=locked: see wayfinder stage)
+# sharing=locked: see wayfinder stage
 RUN --mount=type=cache,target=/tmp/cache,sharing=locked \
     composer config cache-files-dir /tmp/cache && \
     composer install \
@@ -94,20 +81,15 @@ RUN --mount=type=cache,target=/tmp/cache,sharing=locked \
     --prefer-dist \
     --ignore-platform-reqs
 
-# Copy application for autoload generation
 COPY . .
 
-# Create cache directory (excluded by .dockerignore) and generate autoloader
-# (APP_ENV=local so package:discover's artisan boot skips production-only checks)
+# bootstrap/cache is excluded by .dockerignore, so recreate it;
+# APP_ENV=local so package:discover's artisan boot skips production-only checks
 RUN mkdir -p bootstrap/cache && \
     APP_ENV=local composer dump-autoload --optimize --no-dev
 
-# ==============================================================================
-# Stage 4: Production image
-# ==============================================================================
 FROM php:8.4-fpm-alpine
 
-# Install system dependencies
 RUN apk add --no-cache \
     nginx \
     supervisor \
@@ -127,33 +109,25 @@ RUN apk add --no-cache \
     opcache \
     && rm -rf /var/cache/apk/*
 
-# Configure PHP for production
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-# Configure opcache
 COPY docker/php.ini /usr/local/etc/php/conf.d/99-custom.ini
 
-# Configure PHP-FPM
 COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-openflare.conf
 RUN sed -i 's/^listen = .*/listen = 127.0.0.1:9000/' /usr/local/etc/php-fpm.d/www.conf && \
     sed -i 's/^;clear_env = .*/clear_env = no/' /usr/local/etc/php-fpm.d/www.conf
 
-# Set working directory
 WORKDIR /var/www/html
 
-# Copy application from composer stage
 COPY --from=composer /app/vendor ./vendor
 COPY . .
 
-# Copy built frontend assets
 COPY --from=frontend /app/public/build ./public/build
 
-# Copy docker configuration files
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 
-# Create required directories and set permissions
 RUN mkdir -p \
     storage/app/public \
     storage/framework/cache/data \
@@ -172,13 +146,10 @@ RUN mkdir -p \
     database \
     && chmod +x /entrypoint.sh
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://127.0.0.1:8080/up || exit 1
 
-# Expose the port (Railway provides $PORT)
 EXPOSE 8080
 
-# Start via entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

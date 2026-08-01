@@ -28,8 +28,6 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * The attributes that are mass assignable.
-     *
      * @var list<string>
      */
     protected $fillable = [
@@ -40,8 +38,6 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
      * @var list<string>
      */
     protected $hidden = [
@@ -52,8 +48,6 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
      * @return array<string, string>
      */
     protected function casts(): array
@@ -66,17 +60,11 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
-    /**
-     * Get a user preference value.
-     */
     public function getPreference(string $key, mixed $default = null): mixed
     {
         return data_get($this->preferences, $key, $default);
     }
 
-    /**
-     * Set a user preference value.
-     */
     public function setPreference(string $key, mixed $value): void
     {
         $preferences = $this->preferences ?? [];

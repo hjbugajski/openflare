@@ -94,7 +94,7 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
         header: '',
         enableSorting: false,
         cell: ({ row }) => (
-          // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop -- row-specific callback in column def
+          // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop
           <Button variant="tertiary" size="icon" onClick={() => setNotifierToRemove(row.original)}>
             <span className="sr-only">remove</span>
             <IconCrossMedium className="h-4 w-4" />

@@ -157,7 +157,6 @@ class Monitor extends Model
 
     /**
      * Get notifiers that should receive notifications for this monitor.
-     * Includes: explicitly attached (not excluded) + apply_to_all (not excluded).
      *
      * @return Collection<int, Notifier>
      */

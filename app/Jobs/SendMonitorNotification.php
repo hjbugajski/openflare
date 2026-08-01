@@ -32,9 +32,6 @@ class SendMonitorNotification implements ShouldBeUnique, ShouldQueue
      */
     public int $timeout = 45;
 
-    /**
-     * The number of seconds after which the job's unique lock will be released.
-     */
     public int $uniqueFor = 300;
 
     public function __construct(
@@ -47,7 +44,6 @@ class SendMonitorNotification implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Get the unique ID for the job.
      * Prevents duplicate notifications for the same monitor+notifier+status+check.
      */
     public function uniqueId(): string
@@ -61,8 +57,6 @@ class SendMonitorNotification implements ShouldBeUnique, ShouldQueue
     }
 
     /**
-     * Get the tags that should be assigned to the job.
-     *
      * @return array<int, string>
      */
     public function tags(): array

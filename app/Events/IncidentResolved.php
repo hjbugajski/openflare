@@ -23,8 +23,6 @@ class IncidentResolved implements ShouldBroadcast
     ) {}
 
     /**
-     * Get the channels the event should broadcast on.
-     *
      * @return array<int, Channel>
      */
     public function broadcastOn(): array
@@ -35,8 +33,6 @@ class IncidentResolved implements ShouldBroadcast
     }
 
     /**
-     * Get the data to broadcast.
-     *
      * @return array<string, mixed>
      */
     public function broadcastWith(): array
@@ -52,9 +48,6 @@ class IncidentResolved implements ShouldBroadcast
         ];
     }
 
-    /**
-     * The event's broadcast name.
-     */
     public function broadcastAs(): string
     {
         return 'incident.resolved';

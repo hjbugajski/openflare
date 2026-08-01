@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-/**
- * Creates a debounced callback that delays invocation until after `delay` ms
- * have elapsed since the last call. Useful for batching rapid events.
- */
 export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
   callback: T,
   delay: number,
@@ -11,7 +7,6 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callbackRef = useRef(callback);
 
-  // Keep callback ref updated
   callbackRef.current = callback;
 
   /*

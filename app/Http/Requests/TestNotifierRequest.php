@@ -21,7 +21,6 @@ class TestNotifierRequest extends FormRequest
         return [
             'type' => ['required', 'string', Rule::in(Notifier::TYPES)],
 
-            // Discord-specific
             'config.webhook_url' => [
                 'required_if:type,discord',
                 'nullable',
@@ -29,7 +28,6 @@ class TestNotifierRequest extends FormRequest
                 'regex:'.Notifier::DISCORD_WEBHOOK_URL_REGEX,
             ],
 
-            // Email-specific
             'config.email' => [
                 'required_if:type,email',
                 'nullable',

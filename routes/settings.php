@@ -14,7 +14,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('settings/preferences', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.update');
     Route::delete('settings', [SettingsController::class, 'destroy'])->name('settings.destroy');
 
-    // Two-Factor Authentication
     Route::prefix('settings/two-factor')->middleware(ConfirmPassword::class)->group(function () {
         Route::post('/enable', [TwoFactorController::class, 'enable'])->name('settings.two-factor.enable');
         Route::get('/setup', [TwoFactorController::class, 'setup'])->name('settings.two-factor.setup');

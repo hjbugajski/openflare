@@ -129,7 +129,6 @@ export function ServerDataTable<TData, TValue>({
   }, [goToPage, lastPage]);
 
   const handlePageSelect = useCallback(
-    // Base UI hands back the item value untyped.
     (value: unknown) => {
       goToPage(Number(value));
     },
@@ -149,7 +148,7 @@ export function ServerDataTable<TData, TValue>({
     goToPage(1, typeof nextSorting === 'function' ? nextSorting(sorting) : nextSorting);
   };
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- compiler auto-skips, acknowledged
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: paginated.data,
     columns,
@@ -195,7 +194,6 @@ export function ServerDataTable<TData, TValue>({
                 disabled={lastPage === 1}
                 className="h-6 w-auto gap-1 border-transparent bg-transparent py-0 pr-1 pl-2 text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                {/* Out of range: no item matches, so show a blank trigger. */}
                 <Select.Value>
                   {currentPage <= lastPage ? formatNumber(currentPage) : ''}
                 </Select.Value>

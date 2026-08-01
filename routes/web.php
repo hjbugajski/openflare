@@ -79,7 +79,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('notifiers.test')
         ->middleware(['throttle:notifications', 'throttle:notifier-test-daily']);
 
-    // API endpoints for real-time data
     Route::prefix('api')->name('api.')->middleware('throttle:api')->group(function () {
         Route::get('monitors/{monitor}', [ApiMonitorController::class, 'show'])->name('monitors.show');
         Route::get('monitors/{monitor}/checks', [ApiMonitorController::class, 'checks'])->name('monitors.checks');

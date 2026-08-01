@@ -15,8 +15,6 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
 /**
- * Comprehensive test data seeder covering all monitor scenarios for frontend testing.
- *
  * Run with: php artisan db:seed --class=TestDataSeeder
  */
 class TestDataSeeder extends Seeder
@@ -48,9 +46,6 @@ class TestDataSeeder extends Seeder
         $this->createNotifiers();
     }
 
-    /**
-     * Monitors that are completely healthy - 100% uptime, no incidents.
-     */
     private function createHealthyMonitors(): void
     {
         $monitors = [
@@ -66,12 +61,8 @@ class TestDataSeeder extends Seeder
         }
     }
 
-    /**
-     * Monitors currently experiencing downtime with active incidents.
-     */
     private function createDownMonitors(): void
     {
-        // Recently went down (5 minutes ago)
         $monitor1 = $this->createMonitor([
             'name' => 'Payment Gateway',
             'url' => 'https://example.com/payments/status',
@@ -89,7 +80,6 @@ class TestDataSeeder extends Seeder
             'cause' => 'Connection timeout - server not responding',
         ]);
 
-        // Down for several hours
         $monitor2 = $this->createMonitor([
             'name' => 'Email Service',
             'url' => 'https://example.com/mail/health',
@@ -107,7 +97,6 @@ class TestDataSeeder extends Seeder
             'cause' => 'HTTP 503 Service Unavailable',
         ]);
 
-        // Down for over a day (major outage)
         $monitor3 = $this->createMonitor([
             'name' => 'Legacy System',
             'url' => 'https://example.com/legacy/api/ping',
@@ -126,12 +115,8 @@ class TestDataSeeder extends Seeder
         ]);
     }
 
-    /**
-     * Paused monitors (is_active = false).
-     */
     private function createPausedMonitors(): void
     {
-        // Paused with historical data
         $monitor1 = $this->createMonitor([
             'name' => 'Staging Server',
             'url' => 'https://example.com/staging',
@@ -142,7 +127,6 @@ class TestDataSeeder extends Seeder
         $this->createChecksHistory($monitor1, hours: 24, downPeriods: [], stopAt: now()->subDays(3));
         $this->createRollupsWithOutages($monitor1, days: 14, outagePercentage: 0);
 
-        // Paused with no data (never ran)
         $this->createMonitor([
             'name' => 'Development API',
             'url' => 'https://example.com/dev/api/health',
@@ -153,7 +137,6 @@ class TestDataSeeder extends Seeder
             'next_check_at' => null,
         ]);
 
-        // Paused after experiencing issues
         $monitor3 = $this->createMonitor([
             'name' => 'Deprecated Service',
             'url' => 'https://example.com/deprecated/status',
@@ -167,12 +150,8 @@ class TestDataSeeder extends Seeder
         $this->createRollupsWithOutages($monitor3, days: 30, outagePercentage: 5);
     }
 
-    /**
-     * Newly created monitors awaiting first check.
-     */
     private function createPendingMonitors(): void
     {
-        // Just created, waiting for first check
         $this->createMonitor([
             'name' => 'New Microservice',
             'url' => 'https://example.com/services/new/health',
@@ -183,7 +162,6 @@ class TestDataSeeder extends Seeder
             'next_check_at' => now(),
         ]);
 
-        // Created a minute ago, still pending
         $this->createMonitor([
             'name' => 'Beta Feature API',
             'url' => 'https://example.com/api/v2/beta/status',
@@ -195,12 +173,8 @@ class TestDataSeeder extends Seeder
         ]);
     }
 
-    /**
-     * Monitors with varying uptime percentages to test sparkline visualization.
-     */
     private function createMonitorsWithVaryingUptime(): void
     {
-        // 99.9% uptime (near perfect)
         $monitor1 = $this->createMonitor([
             'name' => 'High Availability DB',
             'url' => 'https://example.com/db/health',
@@ -224,7 +198,7 @@ class TestDataSeeder extends Seeder
             ['days_ago' => 12, 'uptime' => 100],
             ['days_ago' => 13, 'uptime' => 100],
             ['days_ago' => 14, 'uptime' => 100],
-            ['days_ago' => 15, 'uptime' => 97.92], // Brief outage
+            ['days_ago' => 15, 'uptime' => 97.92],
             ['days_ago' => 16, 'uptime' => 100],
             ['days_ago' => 17, 'uptime' => 100],
             ['days_ago' => 18, 'uptime' => 100],
@@ -241,7 +215,6 @@ class TestDataSeeder extends Seeder
             ['days_ago' => 29, 'uptime' => 100],
         ]);
 
-        // 95% uptime (occasional issues)
         $monitor2 = $this->createMonitor([
             'name' => 'Third Party Integration',
             'url' => 'https://example.com/integrations/partner/v1/ping',
@@ -282,7 +255,6 @@ class TestDataSeeder extends Seeder
             ['days_ago' => 29, 'uptime' => 100],
         ]);
 
-        // 80% uptime (problematic service)
         $monitor3 = $this->createMonitor([
             'name' => 'Unstable External API',
             'url' => 'https://example.com/external/flaky/status',
@@ -323,7 +295,6 @@ class TestDataSeeder extends Seeder
             ['days_ago' => 29, 'uptime' => 83.33],
         ]);
 
-        // Recently recovered (was down, now up)
         $monitor4 = $this->createMonitor([
             'name' => 'Recovered Service',
             'url' => 'https://example.com/recovered/api',
@@ -334,7 +305,7 @@ class TestDataSeeder extends Seeder
             ['start' => now()->subHours(6), 'end' => now()->subHours(1)],
         ]);
         $this->createCustomRollups($monitor4, [
-            ['days_ago' => 0, 'uptime' => 79.17], // Today had 5 hours of downtime
+            ['days_ago' => 0, 'uptime' => 79.17],
             ['days_ago' => 1, 'uptime' => 100],
             ['days_ago' => 2, 'uptime' => 100],
             ['days_ago' => 3, 'uptime' => 100],
@@ -342,7 +313,6 @@ class TestDataSeeder extends Seeder
             ['days_ago' => 5, 'uptime' => 100],
             ['days_ago' => 6, 'uptime' => 100],
         ]);
-        // Add resolved incident
         Incident::factory()->create([
             'monitor_id' => $monitor4->id,
             'started_at' => now()->subHours(6),
@@ -351,9 +321,6 @@ class TestDataSeeder extends Seeder
         ]);
     }
 
-    /**
-     * Monitors with different check intervals.
-     */
     private function createMonitorsWithDifferentIntervals(): void
     {
         $intervals = [
@@ -376,12 +343,8 @@ class TestDataSeeder extends Seeder
         }
     }
 
-    /**
-     * Monitors with extensive incident history.
-     */
     private function createMonitorsWithIncidentHistory(): void
     {
-        // Many resolved incidents
         $monitor1 = $this->createMonitor([
             'name' => 'Incident Prone Service',
             'url' => 'https://example.com/incidents/health',
@@ -406,7 +369,7 @@ class TestDataSeeder extends Seeder
 
         for ($i = 0; $i < 15; $i++) {
             $startedAt = now()->subDays(rand(1, 29))->subHours(rand(0, 23));
-            $duration = rand(5, 180); // 5 minutes to 3 hours
+            $duration = rand(5, 180);
             Incident::factory()->create([
                 'monitor_id' => $monitor1->id,
                 'started_at' => $startedAt,
@@ -415,7 +378,6 @@ class TestDataSeeder extends Seeder
             ]);
         }
 
-        // Single long incident (extended outage)
         $monitor2 = $this->createMonitor([
             'name' => 'Major Outage History',
             'url' => 'https://example.com/outage/status',
@@ -432,12 +394,8 @@ class TestDataSeeder extends Seeder
         ]);
     }
 
-    /**
-     * Edge cases for comprehensive testing.
-     */
     private function createEdgeCaseMonitors(): void
     {
-        // Very long URL
         $monitor1 = $this->createMonitor([
             'name' => 'Long URL Service',
             'url' => 'https://example.com/api/v1/health/check?token=abc123def456ghi789jkl012mno345pqr678stu901vwx234yz&region=us-east-1&cluster=primary&environment=production',
@@ -447,7 +405,6 @@ class TestDataSeeder extends Seeder
         $this->createChecksHistory($monitor1, hours: 6, downPeriods: []);
         $this->createPerfectRollups($monitor1, days: 7);
 
-        // Very long name
         $monitor2 = $this->createMonitor([
             'name' => 'Super Important Production Critical Infrastructure Health Monitoring Endpoint',
             'url' => 'https://example.com/critical/health',
@@ -457,7 +414,6 @@ class TestDataSeeder extends Seeder
         $this->createChecksHistory($monitor2, hours: 6, downPeriods: []);
         $this->createPerfectRollups($monitor2, days: 7);
 
-        // HEAD method
         $monitor3 = $this->createMonitor([
             'name' => 'HEAD Request Monitor',
             'url' => 'https://example.com/head',
@@ -467,7 +423,6 @@ class TestDataSeeder extends Seeder
         $this->createChecksHistory($monitor3, hours: 6, downPeriods: []);
         $this->createPerfectRollups($monitor3, days: 7);
 
-        // Custom expected status code (201)
         $monitor4 = $this->createMonitor([
             'name' => 'Custom Status Code',
             'url' => 'https://example.com/custom/create',
@@ -478,7 +433,6 @@ class TestDataSeeder extends Seeder
         $this->createChecksHistory($monitor4, hours: 6, downPeriods: []);
         $this->createPerfectRollups($monitor4, days: 7);
 
-        // Custom timeout
         $monitor5 = $this->createMonitor([
             'name' => 'Slow Endpoint',
             'url' => 'https://example.com/slow/heavy-computation',
@@ -489,7 +443,6 @@ class TestDataSeeder extends Seeder
         $this->createChecksHistory($monitor5, hours: 12, downPeriods: [], avgResponseTime: 3000, responseTimeVariance: 2000);
         $this->createPerfectRollups($monitor5, days: 7, avgResponseTime: 3000);
 
-        // Monitor with very fast response times
         $monitor6 = $this->createMonitor([
             'name' => 'Edge Cache',
             'url' => 'https://example.com/edge/cached',
@@ -499,7 +452,6 @@ class TestDataSeeder extends Seeder
         $this->createChecksHistory($monitor6, hours: 6, downPeriods: [], avgResponseTime: 15, responseTimeVariance: 10);
         $this->createPerfectRollups($monitor6, days: 7, avgResponseTime: 15);
 
-        // Monitor with only today's data (new monitor)
         $monitor7 = $this->createMonitor([
             'name' => 'Just Started Today',
             'url' => 'https://example.com/new/status',
@@ -538,8 +490,6 @@ class TestDataSeeder extends Seeder
     }
 
     /**
-     * Create check history for a monitor using batch inserts.
-     *
      * @param  array<array{start: Carbon, end: Carbon|null}>  $downPeriods
      */
     private function createChecksHistory(
@@ -595,19 +545,16 @@ class TestDataSeeder extends Seeder
             $checks[] = $check;
             $currentTime->addSeconds($monitor->interval);
 
-            // Batch insert every 500 records
             if (count($checks) >= 500) {
                 MonitorCheck::insert($checks);
                 $checks = [];
             }
         }
 
-        // Insert remaining checks
         if (count($checks) > 0) {
             MonitorCheck::insert($checks);
         }
 
-        // Update monitor timestamps
         $latestCheck = $monitor->checks()->latest('checked_at')->first();
         if ($latestCheck) {
             $monitor->update([
@@ -616,9 +563,6 @@ class TestDataSeeder extends Seeder
         }
     }
 
-    /**
-     * Create perfect uptime rollups.
-     */
     private function createPerfectRollups(Monitor $monitor, int $days, int $avgResponseTime = 150): void
     {
         $rollups = [];
@@ -641,9 +585,6 @@ class TestDataSeeder extends Seeder
         DailyUptimeRollup::insert($rollups);
     }
 
-    /**
-     * Create rollups with simulated outages.
-     */
     private function createRollupsWithOutages(Monitor $monitor, int $days, float $outagePercentage): void
     {
         $rollups = [];
@@ -671,8 +612,6 @@ class TestDataSeeder extends Seeder
     }
 
     /**
-     * Create rollups with custom uptime values per day.
-     *
      * @param  array<array{days_ago: int, uptime: float}>  $uptimeData
      */
     private function createCustomRollups(Monitor $monitor, array $uptimeData): void
@@ -699,12 +638,8 @@ class TestDataSeeder extends Seeder
         DailyUptimeRollup::insert($rollups);
     }
 
-    /**
-     * Create notifiers covering all scenarios.
-     */
     private function createNotifiers(): void
     {
-        // Default Discord notifier (apply_to_all)
         Notifier::factory()->discord()->create([
             'user_id' => $this->user->uuid,
             'name' => 'Team Alerts',
@@ -715,7 +650,6 @@ class TestDataSeeder extends Seeder
             ],
         ]);
 
-        // Active Discord notifier attached to specific monitors
         $discordSpecific = Notifier::factory()->discord()->create([
             'user_id' => $this->user->uuid,
             'name' => 'Critical Services',
@@ -725,10 +659,8 @@ class TestDataSeeder extends Seeder
                 'webhook_url' => 'https://discord.com/api/webhooks/987654321098765432/zyxwvutsrqponmlkjihgfedcba',
             ],
         ]);
-        // Attach to first 3 monitors
         $discordSpecific->monitors()->attach(array_slice(array_column($this->monitors, 'id'), 0, 3));
 
-        // Inactive Discord notifier
         Notifier::factory()->discord()->inactive()->create([
             'user_id' => $this->user->uuid,
             'name' => 'Old Webhook (Disabled)',
@@ -739,7 +671,6 @@ class TestDataSeeder extends Seeder
             ],
         ]);
 
-        // Active email notifier (apply_to_all)
         Notifier::factory()->email()->create([
             'user_id' => $this->user->uuid,
             'name' => 'On-Call Email',
@@ -750,7 +681,6 @@ class TestDataSeeder extends Seeder
             ],
         ]);
 
-        // Active email notifier attached to specific monitors
         $emailSpecific = Notifier::factory()->email()->create([
             'user_id' => $this->user->uuid,
             'name' => 'Payment Alerts',
@@ -760,10 +690,8 @@ class TestDataSeeder extends Seeder
                 'email' => 'payments@example.com',
             ],
         ]);
-        // Attach to monitors 4-6
         $emailSpecific->monitors()->attach(array_slice(array_column($this->monitors, 'id'), 3, 3));
 
-        // Inactive email notifier
         Notifier::factory()->email()->inactive()->create([
             'user_id' => $this->user->uuid,
             'name' => 'Legacy Email (Disabled)',
@@ -774,7 +702,6 @@ class TestDataSeeder extends Seeder
             ],
         ]);
 
-        // Notifier with no monitors attached (not apply_to_all)
         Notifier::factory()->discord()->create([
             'user_id' => $this->user->uuid,
             'name' => 'Unused Webhook',

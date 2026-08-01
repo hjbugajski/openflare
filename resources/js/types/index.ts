@@ -73,7 +73,6 @@ export interface IncidentWithMonitor extends Incident {
   monitor: MonitorSummary;
 }
 
-/** Summary type for notifier when used in lists/associations */
 export interface NotifierSummary {
   id: string;
   name: string;
@@ -86,7 +85,6 @@ export interface NotifierSummary {
   };
 }
 
-/** Summary type for monitor when used in lists/associations */
 export interface MonitorSummary {
   id: string;
   name: string;

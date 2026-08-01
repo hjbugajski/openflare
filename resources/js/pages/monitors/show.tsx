@@ -62,7 +62,6 @@ export default function MonitorsShow({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const openDeleteDialog = useCallback(() => setDeleteDialogOpen(true), []);
 
-  // Track what needs reloading, then batch into single request
   const pendingReloads = useRef<Set<string>>(new Set());
   const navigationsInFlight = useRef(0);
 

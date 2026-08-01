@@ -10,7 +10,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Users
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
@@ -27,14 +26,12 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Password reset tokens
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
 
-        // Sessions
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();
@@ -44,7 +41,6 @@ return new class extends Migration
             $table->integer('last_activity')->index();
         });
 
-        // Cache
         Schema::create('cache', function (Blueprint $table) {
             $table->string('key')->primary();
             $table->mediumText('value');
@@ -57,7 +53,6 @@ return new class extends Migration
             $table->integer('expiration');
         });
 
-        // Jobs
         Schema::create('jobs', function (Blueprint $table) {
             $table->id();
             $table->string('queue')->index();
@@ -91,7 +86,6 @@ return new class extends Migration
             $table->timestamp('failed_at')->useCurrent();
         });
 
-        // Monitors
         Schema::create('monitors', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->references('uuid')->on('users')->cascadeOnDelete();
@@ -109,7 +103,6 @@ return new class extends Migration
             $table->index(['is_active', 'next_check_at']);
         });
 
-        // Monitor checks
         Schema::create('monitor_checks', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('monitor_id')->constrained()->cascadeOnDelete();
@@ -124,7 +117,6 @@ return new class extends Migration
             $table->index('checked_at');
         });
 
-        // Incidents
         Schema::create('incidents', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('monitor_id')->constrained()->cascadeOnDelete();
@@ -136,7 +128,6 @@ return new class extends Migration
             $table->index(['monitor_id', 'started_at']);
         });
 
-        // Daily uptime rollups
         Schema::create('daily_uptime_rollups', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('monitor_id')->constrained()->cascadeOnDelete();
@@ -153,7 +144,6 @@ return new class extends Migration
             $table->index('date');
         });
 
-        // Notifiers
         Schema::create('notifiers', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->references('uuid')->on('users')->cascadeOnDelete();
@@ -167,7 +157,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Monitor-notifier pivot
         Schema::create('monitor_notifier', function (Blueprint $table) {
             $table->foreignUuid('monitor_id')->constrained()->cascadeOnDelete();
             $table->foreignUuid('notifier_id')->constrained()->cascadeOnDelete();
