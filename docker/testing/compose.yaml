@@ -1,3 +1,6 @@
+# Default project name for direct `docker compose -f ...` use.
+# scripts/test-pgsql.sh overrides it per checkout so concurrent worktrees do not
+# share a database or tear down each other's containers.
 name: openflare-test-pgsql
 
 services:
@@ -10,7 +13,9 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U openflare -d openflare_test']
+      # -h 127.0.0.1 forces a TCP probe; the default unix-socket probe reports
+      # ready while initdb is still finishing and TCP is not listening yet.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U openflare -d openflare_test']
       interval: 1s
       timeout: 3s
       retries: 30

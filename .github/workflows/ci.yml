@@ -80,7 +80,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U openflare -d openflare_test"
+          --health-cmd "pg_isready -h 127.0.0.1 -U openflare -d openflare_test"
           --health-interval 2s
           --health-timeout 5s
           --health-retries 15
@@ -126,20 +126,10 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
-      - name: Prepare environment
-        run: cp .env.example .env
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
-
-      - name: Generate app key
-        run: php artisan key:generate
-
-      - name: Build frontend assets
-        run: |
-          pnpm install --frozen-lockfile
-          php artisan wayfinder:generate --with-form
-          pnpm run build
+      # Same scripts as the SQLite job so setup/test steps stay in one place;
+      # the job-level DB_* env points them at the postgres service.
+      - name: Setup project
+        run: composer run setup
 
       - name: Run tests against PostgreSQL
-        run: php artisan test
+        run: composer run test

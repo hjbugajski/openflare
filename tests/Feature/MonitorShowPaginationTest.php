@@ -18,18 +18,25 @@ beforeEach(function () {
  * 15 checks that deliberately repeat sort values across the page boundary and
  * leave status_code / response_time_ms / error_message NULL on half of them —
  * the shape that used to 500 or skip rows under keyset pagination.
+ *
+ * The nullable columns step through several distinct values in groups so the
+ * ordering assertions can actually fail: a run of identical values would stay
+ * "sorted" under any ordering, including the regression being guarded. Groups
+ * keep the repeated-value coverage the id tiebreaker exists for. error_message
+ * is zero-padded so binary and locale collations agree on its order.
  */
 function seedChecks(Monitor $monitor): void
 {
     foreach (range(0, 14) as $index) {
         $isUp = $index % 2 === 0;
+        $group = intdiv($index, 4);
 
         MonitorCheck::factory()->create([
             'monitor_id' => $monitor->id,
             'status' => $isUp ? 'up' : 'down',
-            'status_code' => $isUp ? 200 : null,
-            'response_time_ms' => $isUp ? 100 : null,
-            'error_message' => $isUp ? null : 'timeout',
+            'status_code' => $isUp ? 200 + $group : null,
+            'response_time_ms' => $isUp ? 100 + $group : null,
+            'error_message' => $isUp ? null : 'timeout '.str_pad((string) $group, 2, '0', STR_PAD_LEFT),
             // Repeated timestamps force the id tiebreaker to carry the order.
             'checked_at' => now()->subMinutes(intdiv($index, 3)),
         ]);
@@ -127,6 +134,22 @@ it('keeps totals independent of the requested page', function () {
         );
 });
 
+it('returns an empty page for an out-of-range page number', function () {
+    seedChecks($this->monitor);
+
+    // Laravel does not clamp the requested page, so the server echoes it back
+    // with no rows. Pinned because the frontend has to handle that shape.
+    $this->actingAs($this->user)
+        ->get(route('monitors.show', [$this->monitor, 'checks_page' => 999]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('checks.current_page', 999)
+            ->where('checks.total', 15)
+            ->where('checks.last_page', 2)
+            ->has('checks.data', 0)
+        );
+});
+
 it('walks every checks sort across both pages without skipping or repeating rows', function (string $sort, string $direction) {
     seedChecks($this->monitor);
 
@@ -202,7 +225,10 @@ it('orders nullable check columns consistently across the page boundary', functi
     $sorted = $values;
     $direction === 'asc' ? sort($sorted) : rsort($sorted);
 
-    expect($values)->toBe($sorted);
+    // More than one distinct value, or the comparison below holds under any
+    // ordering and the test guards nothing.
+    expect(count(array_unique($values)))->toBeGreaterThan(1)
+        ->and($values)->toBe($sorted);
 })->with([
     ['status_code', 'asc'], ['status_code', 'desc'],
     ['response_time_ms', 'asc'], ['response_time_ms', 'desc'],
