@@ -8,6 +8,13 @@
 - `Http::fake()` and `Http::preventStrayRequests()` for HTTP mocking
 - `Bus::fake()`, `Event::fake()` for asserting dispatches
 - Datasets for validation rule tests
+- Frontend: vitest + happy-dom, compiled with the React Compiler (vitest.config.ts) so component tests match production memoization; `resources/js/test/compiler-check.test.tsx` guards that parity
+- `scripts/test-pgsql.sh` runs the Pest suite against an ephemeral PostgreSQL container (requires Docker) — use it for anything touching raw SQL, casts, or migrations; CI runs the same lane
+
+## Environment gotchas
+
+- `.env` ships without `APP_ENV`, so bare `php artisan ...` boots as production and the Reverb-credential guard refuses. Prefix ad hoc artisan commands with `APP_ENV=local`.
+- Never prefix the test runner with `APP_ENV=local` — shell vars beat phpunit.xml's `APP_ENV=testing`, CSRF stays on, and POST tests fail with 419. Use `vendor/bin/pest` or `APP_ENV=testing php artisan test`.
 
 ## Commands
 
