@@ -18,6 +18,13 @@ interface TableShellProps<TData, TValue> {
 }
 
 export function TableShell<TData, TValue>({ table, columns }: TableShellProps<TData, TValue>) {
+  /*
+   * The TanStack table instance is referentially stable and mutates internally,
+   * so the React Compiler must not memoize this component on it — memoized
+   * output would freeze on the first page of data.
+   */
+  'use no memo';
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
