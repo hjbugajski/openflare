@@ -165,6 +165,29 @@ describe('SafeUrl Rule - hostname resolution', function () {
     });
 });
 
+describe('SafeUrl Rule - unresolvable hosts', function () {
+    it('fails a hostname with no A or AAAA records', function () {
+        expect(validateUrl('https://nxdomain.example.com/', [
+            'nxdomain.example.com' => [],
+        ]))->toBeFalse();
+    });
+
+    it('fails numeric-literal hosts that parse_url does not hand back as IPs', function () {
+        // No resolver answers these, yet curl would happily dial 127.0.0.1 for
+        // all three, so they must not slip past an empty answer.
+        expect(validateUrl('http://2130706433/', ['2130706433' => []]))->toBeFalse();
+        expect(validateUrl('http://0x7f000001/', ['0x7f000001' => []]))->toBeFalse();
+        expect(validateUrl('http://127.1/', ['127.1' => []]))->toBeFalse();
+    });
+
+    it('still allows IP literals, which are never resolved', function () {
+        expect(validateUrl('http://8.8.8.8/', ['8.8.8.8' => []]))->toBeTrue();
+        expect(validateUrl('http://[2606:4700:4700::1111]/', [
+            '2606:4700:4700::1111' => [],
+        ]))->toBeTrue();
+    });
+});
+
 describe('SafeUrl Rule - scheme case', function () {
     it('accepts uppercase http schemes', function () {
         expect(validateUrl('HTTPS://example.com/'))->toBeTrue();

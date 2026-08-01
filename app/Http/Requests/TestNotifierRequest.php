@@ -53,10 +53,14 @@ class TestNotifierRequest extends FormRequest
     }
 
     /**
-     * The test endpoint delivers a real, branded email. Without this rule any
-     * authenticated account could use it to send mail to arbitrary strangers,
-     * so the destination must be an address the user already controls or has
-     * already saved on one of their own notifiers.
+     * The test endpoint delivers a real, branded email, so the destination must
+     * be the account address or one already saved on the user's own notifiers.
+     *
+     * This is a speed bump, not an ownership guarantee: saving a notifier
+     * applies no ownership check of its own, so anyone willing to create an
+     * email notifier first can still name any address. It blocks casual misuse
+     * of the single-request path and would carry real weight if this ever
+     * became multi-user; the daily rate limiter is the actual abuse backstop.
      */
     protected function ownedEmailRule(): Closure
     {

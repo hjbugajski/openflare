@@ -75,7 +75,19 @@ class SafeUrl implements ValidationRule
                 return;
             }
         } else {
-            foreach ($this->resolve($host) as $ip) {
+            $addresses = $this->resolve($host);
+
+            // Fail closed. An empty answer means NXDOMAIN, a resolver failure,
+            // or a host that is not a real name at all (a bare integer such as
+            // 2130706433, or 0x7f000001, which curl would still dial as
+            // 127.0.0.1). Passing here would skip the block-check entirely.
+            if ($addresses === []) {
+                $fail('The URL host could not be resolved.');
+
+                return;
+            }
+
+            foreach ($addresses as $ip) {
                 if ($ssrfGuard->isBlockedIp($ip)) {
                     $fail('The URL must not resolve to private or internal networks.');
 
@@ -98,7 +110,13 @@ class SafeUrl implements ValidationRule
             return ($this->resolver)($host);
         }
 
-        $records = @dns_get_record($host, DNS_A | DNS_AAAA) ?: [];
+        // The two types are queried separately: a combined DNS_A|DNS_AAAA
+        // lookup returns false outright when either type has no answer, so an
+        // IPv4-only host such as api.github.com would look unresolvable.
+        $records = array_merge(
+            @dns_get_record($host, DNS_A) ?: [],
+            @dns_get_record($host, DNS_AAAA) ?: [],
+        );
 
         return array_values(array_filter(
             array_map(fn (array $record) => $record['ip'] ?? $record['ipv6'] ?? null, $records)

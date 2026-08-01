@@ -93,6 +93,21 @@ class SsrfGuard
             return true;
         }
 
+        // Teredo (2001::/32) - tunnels traffic to an embedded IPv4 endpoint
+        if (str_starts_with($hex, '20010000')) {
+            return true;
+        }
+
+        // Documentation (2001:db8::/32)
+        if (str_starts_with($hex, '20010db8')) {
+            return true;
+        }
+
+        // ORCHIDv2 (2001:20::/28) - non-routable cryptographic identifiers
+        if (str_starts_with($hex, '2001002')) {
+            return true;
+        }
+
         // IPv4-mapped (::ffff:0:0/96) - check embedded IPv4
         if (str_starts_with($hex, '00000000000000000000ffff')) {
             $ipv4Hex = substr($hex, 24, 8);
@@ -115,6 +130,12 @@ class SsrfGuard
             $ipv4 = long2ip((int) hexdec($ipv4Hex));
 
             return $this->isBlockedIpv4($ipv4);
+        }
+
+        // NAT64 local-use prefix (64:ff9b:1::/48, RFC 8215) - a site picks the
+        // embedded IPv4 space itself, so nothing about it is verifiable
+        if (str_starts_with($hex, '0064ff9b0001')) {
+            return true;
         }
 
         // IPv4-compatible (::a.b.c.d, deprecated) - check embedded IPv4

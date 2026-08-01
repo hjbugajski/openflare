@@ -110,6 +110,28 @@ describe('SsrfGuard - IPv6', function () {
         expect(isBlockedIp('64:ff9b::808:808'))->toBeFalse();
     });
 
+    it('blocks Teredo (2001::/32)', function () {
+        expect(isBlockedIp('2001:0:4136:e378:8000:63bf:3fff:fdd2'))->toBeTrue();
+        expect(isBlockedIp('2001:1::1'))->toBeFalse(); // just outside 2001::/32
+    });
+
+    it('blocks documentation addresses (2001:db8::/32)', function () {
+        expect(isBlockedIp('2001:db8::1'))->toBeTrue();
+        expect(isBlockedIp('2001:db8:ffff:ffff::1'))->toBeTrue();
+        expect(isBlockedIp('2001:db9::1'))->toBeFalse(); // just outside 2001:db8::/32
+    });
+
+    it('blocks ORCHIDv2 (2001:20::/28)', function () {
+        expect(isBlockedIp('2001:20::1'))->toBeTrue();
+        expect(isBlockedIp('2001:2f:ffff::1'))->toBeTrue();
+        expect(isBlockedIp('2001:30::1'))->toBeFalse(); // just outside 2001:20::/28
+    });
+
+    it('blocks the NAT64 local-use prefix (64:ff9b:1::/48)', function () {
+        expect(isBlockedIp('64:ff9b:1::8.8.8.8'))->toBeTrue();
+        expect(isBlockedIp('64:ff9b:2::1'))->toBeFalse(); // just outside 64:ff9b:1::/48
+    });
+
     it('blocks deprecated site-local (fec0::/10)', function () {
         expect(isBlockedIp('fec0::1'))->toBeTrue();
         expect(isBlockedIp('feff:ffff::1'))->toBeTrue();

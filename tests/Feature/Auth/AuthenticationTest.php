@@ -129,7 +129,7 @@ test('login attempts from rotating source ips are rate limited by email', functi
 
     // Each attempt looks like a different client, so the email|ip bucket never
     // fills; only the email bucket can stop the spray.
-    foreach (range(1, 20) as $i) {
+    foreach (range(1, 10) as $i) {
         $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.$i])
             ->post(route('login.store'), [
                 'email' => $user->email,
@@ -137,11 +137,40 @@ test('login attempts from rotating source ips are rate limited by email', functi
             ])->assertStatus(302);
     }
 
-    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.21'])
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.11'])
         ->post(route('login.store'), [
             'email' => $user->email,
             'password' => 'wrong-password',
         ])->assertTooManyRequests();
 
     $this->assertGuest();
+});
+
+test('the email bucket releases the account within a minute of the attack stopping', function () {
+    $user = User::factory()->withoutTwoFactor()->create();
+
+    // Anyone who knows the address can keep this bucket full, so the window has
+    // to be short enough that the owner is not locked out for long.
+    foreach (range(1, 10) as $i) {
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.$i])
+            ->post(route('login.store'), [
+                'email' => $user->email,
+                'password' => 'wrong-password',
+            ])->assertStatus(302);
+    }
+
+    $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ])->assertTooManyRequests();
+
+    $this->travel(61)->seconds();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect(route('home', absolute: false));
 });

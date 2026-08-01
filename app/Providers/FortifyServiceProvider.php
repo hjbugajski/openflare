@@ -92,10 +92,15 @@ class FortifyServiceProvider extends ServiceProvider
 
             // The email-only bucket keeps the limiter effective when the client
             // IP is attacker-controlled (spoofed X-Forwarded-For behind a
-            // trusted proxy, or a large address pool).
+            // trusted proxy, or a large address pool). Its window is
+            // deliberately short: the route-level throttle counts every request
+            // and is never cleared on success, so anyone who knows the account
+            // email can hold the bucket full. A one-minute decay caps a
+            // targeted lockout at roughly the attack's own duration while still
+            // bottlenecking credential stuffing to 600 guesses an hour.
             return [
                 Limit::perMinute(5)->by($email.'|'.$request->ip()),
-                Limit::perMinutes(15, 20)->by('login-email:'.$email),
+                Limit::perMinute(10)->by('login-email:'.$email),
             ];
         });
     }

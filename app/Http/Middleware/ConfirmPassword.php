@@ -10,9 +10,12 @@ use Illuminate\Http\Request;
 
 /**
  * Requires a recently confirmed password like the framework middleware, but
- * sends unconfirmed state-changing requests back to a GET route once the
- * password is confirmed. The framework stores the current URL as the intended
- * URL and replays it with GET, which would 405 on a POST/DELETE-only route.
+ * pins where the user lands afterwards. For a non-GET request the framework
+ * falls back to `UrlGenerator::previous()`, which trusts the Referer header
+ * and passes an absolute value through untouched — so a request the attacker
+ * can trigger decides the intended URL, and confirming the password sends the
+ * owner wherever that header pointed. Anchoring it to the settings page keeps
+ * that redirect target off the wire.
  */
 class ConfirmPassword extends RequirePassword
 {
