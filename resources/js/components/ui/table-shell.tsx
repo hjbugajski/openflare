@@ -25,8 +25,13 @@ export function TableShell<TData, TValue>({ table, columns }: TableShellProps<TD
    */
   'use no memo';
 
+  /*
+   * relative makes the scroller the containing block for absolutely
+   * positioned descendants (e.g. Tailwind's sr-only labels), so they clip
+   * here instead of stretching the document sideways on narrow viewports.
+   */
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
