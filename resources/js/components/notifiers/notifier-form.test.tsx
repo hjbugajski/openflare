@@ -100,6 +100,16 @@ describe('NotifierForm', () => {
     expect(submittedData().config).not.toHaveProperty('webhook_url');
   });
 
+  it('updates the name placeholder when the type changes', async () => {
+    renderForm();
+
+    expect(screen.getByLabelText(/name/)).toHaveAttribute('placeholder', 'My Discord Server');
+
+    await selectType('email', /email address/);
+
+    expect(screen.getByLabelText(/name/)).toHaveAttribute('placeholder', 'On-Call Email');
+  });
+
   it('renders a server error keyed to the active type field', async () => {
     page.errors = { 'config.email': 'An email address is required.' };
 

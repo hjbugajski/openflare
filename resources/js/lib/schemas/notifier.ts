@@ -18,6 +18,11 @@ export const NOTIFIER_TYPE_DESCRIPTIONS: Record<NotifierType, string> = {
   email: 'send notifications to an email address',
 };
 
+export const NOTIFIER_TYPE_NAME_PLACEHOLDERS: Record<NotifierType, string> = {
+  discord: 'My Discord Server',
+  email: 'On-Call Email',
+};
+
 export const notifierConfigSchema = z.object({
   webhook_url: z.string().optional(),
   email: z.string().optional(),

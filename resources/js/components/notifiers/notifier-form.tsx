@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import {
   NOTIFIER_TYPE_DESCRIPTIONS,
   NOTIFIER_TYPE_LABELS,
+  NOTIFIER_TYPE_NAME_PLACEHOLDERS,
   type NotifierFormValues,
   configForType,
   notifierSchema,
@@ -108,7 +109,7 @@ export function NotifierForm({
           <form.AppField name="name">
             {(field) => (
               <field.Field label="name" serverError={getServerError('name')}>
-                <field.TextInput placeholder="My Discord Server" />
+                <field.TextInput placeholder={NOTIFIER_TYPE_NAME_PLACEHOLDERS[currentType]} />
               </field.Field>
             )}
           </form.AppField>
