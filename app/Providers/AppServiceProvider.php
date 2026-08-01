@@ -21,6 +21,8 @@ use Symfony\Component\Mime\Email;
 
 class AppServiceProvider extends ServiceProvider
 {
+    private const ROLLUP_MAINTENANCE_KEY = 'startup:rollup-maintenance';
+
     public function register(): void {}
 
     public function boot(): void
@@ -126,16 +128,30 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
-        app()->booted(function () {
-            try {
-                app(BackfillMissingRollups::class)->handle();
+        app()->booted(fn () => $this->runStartupRollupMaintenance());
+    }
 
-                if (Cache::add('startup:timezone-rollup-recompute', true, now()->addDay())) {
-                    app(RecomputeAllUserRollups::class)->handle();
-                }
-            } catch (\Throwable $e) {
-                report($e);
-            }
-        });
+    /**
+     * Recover rollups the scheduler missed. Runs at most once a day across
+     * every console process: unguarded, the backfill sees a missing day
+     * between 00:00 and the 00:15 schedule and recomputes inline on every
+     * scheduler tick and every queue-worker restart.
+     */
+    public function runStartupRollupMaintenance(): void
+    {
+        if (! Cache::add(self::ROLLUP_MAINTENANCE_KEY, true, now()->addDay())) {
+            return;
+        }
+
+        try {
+            app(BackfillMissingRollups::class)->handle();
+            app(RecomputeAllUserRollups::class)->handle();
+        } catch (\Throwable $e) {
+            // Release the guard so a transient failure doesn't disable
+            // rollup recovery for the rest of the day.
+            Cache::forget(self::ROLLUP_MAINTENANCE_KEY);
+
+            report($e);
+        }
     }
 }

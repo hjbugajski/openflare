@@ -33,7 +33,13 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 120;
+    /**
+     * Comfortably above the worst case a monitor can configure: timeout
+     * validates up to 120s (HasMonitorRules) plus a 10s connect timeout, so a
+     * lower job timeout would SIGALRM the worker before the check is recorded.
+     * config/queue.php retry_after must stay above this.
+     */
+    public int $timeout = 180;
 
     public int $maxExceptions = 3;
 
@@ -77,6 +83,16 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
             'monitor_name' => $this->monitor->name,
             'exception' => $exception?->getMessage(),
         ]);
+
+        // Advance the schedule even though nothing was recorded. The dispatcher
+        // selects monitors whose next_check_at is due, so leaving it in the past
+        // would re-dispatch a permanently failing job on every scheduler tick.
+        Monitor::query()
+            ->whereKey($this->monitor->id)
+            ->update([
+                'last_checked_at' => now(),
+                'next_check_at' => now()->addSeconds(max(1, (int) $this->monitor->interval)),
+            ]);
     }
 
     public function handle(): void
@@ -134,7 +150,10 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         }
 
         $host = parse_url($this->monitor->url, PHP_URL_HOST);
-        $scheme = parse_url($this->monitor->url, PHP_URL_SCHEME);
+        // parse_url preserves the scheme's case; curl lowercases it before
+        // connecting. Comparing the raw value would derive port 80 for
+        // "HTTPS://…" and silently make the CURLOPT_RESOLVE pin below inert.
+        $scheme = strtolower((string) parse_url($this->monitor->url, PHP_URL_SCHEME));
         $port = parse_url($this->monitor->url, PHP_URL_PORT) ?? ($scheme === 'https' ? 443 : 80);
 
         $hostLiteral = trim((string) $host, '[]');
@@ -290,12 +309,15 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
             $startedAt = $recentChecks->sortBy('checked_at')->first()?->checked_at ?? $newCheck->checked_at;
 
             try {
-                $incident = Incident::create([
+                // Nested transaction so the insert runs inside its own SAVEPOINT:
+                // on Postgres a unique violation aborts the enclosing transaction,
+                // which would take the check row and schedule update down with it.
+                $incident = DB::transaction(fn () => Incident::create([
                     'monitor_id' => $this->monitor->id,
                     'ended_at' => null,
                     'started_at' => $startedAt,
                     'cause' => $newCheck->error_message,
-                ]);
+                ]));
             } catch (UniqueConstraintViolationException) {
                 // Another concurrent worker already opened the incident; nothing to do.
                 return;
@@ -393,13 +415,31 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         ]);
     }
 
+    /**
+     * Fail closed: a notifier whose config cannot be read (rotated APP_KEY,
+     * restored backup, corrupt ciphertext) or whose type is unknown is treated
+     * exactly like one with an empty config and skipped. This runs inside the
+     * check transaction — letting it throw would roll back the check row and
+     * the next_check_at advance, freezing the monitor. Unknown types throw at
+     * dispatch time instead (SendMonitorNotification::handle).
+     */
     protected function notifierHasValidConfig(Notifier $notifier): bool
     {
-        return match ($notifier->type) {
-            Notifier::TYPE_DISCORD => ! empty($notifier->getWebhookUrl()),
-            Notifier::TYPE_EMAIL => ! empty($notifier->getEmail()),
-            default => false,
-        };
+        try {
+            return match ($notifier->type) {
+                Notifier::TYPE_DISCORD => ! empty($notifier->getWebhookUrl()),
+                Notifier::TYPE_EMAIL => ! empty($notifier->getEmail()),
+                default => false,
+            };
+        } catch (Throwable $e) {
+            Log::warning('Notifier config unreadable', [
+                'notifier_id' => $notifier->id,
+                'monitor_id' => $this->monitor->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     protected function calculateNextCheckAt(): Carbon

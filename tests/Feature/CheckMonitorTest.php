@@ -14,8 +14,10 @@ use App\Models\Notifier;
 use App\MonitorStatus;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     Http::preventStrayRequests();
@@ -140,12 +142,15 @@ it('does not create a duplicate open incident when one already exists at the DB 
         'monitor_id' => $monitor->id,
     ]);
 
-    expect(fn () => Incident::create([
+    // Nested in its own transaction so the violation only rolls back to a
+    // savepoint; on Postgres it would otherwise abort the test's own
+    // transaction and fail every assertion after it.
+    expect(fn () => DB::transaction(fn () => Incident::create([
         'monitor_id' => $monitor->id,
         'ended_at' => null,
         'started_at' => now(),
         'cause' => 'second attempt',
-    ]))->toThrow(UniqueConstraintViolationException::class);
+    ])))->toThrow(UniqueConstraintViolationException::class);
 
     expect(Incident::query()->where('monitor_id', $monitor->id)->whereNull('ended_at')->count())->toBe(1);
 });
@@ -960,4 +965,166 @@ it('blocks the check when all resolved IPs are restricted', function () {
         ->status->toBe('down')
         ->status_code->toBe(0)
         ->error_message->toContain('restricted');
+});
+
+it('pins the DNS resolve entry to the https port when the URL scheme is upper case', function () {
+    $resolveEntries = null;
+
+    Http::fake(function ($request, array $options) use (&$resolveEntries) {
+        $resolveEntries = $options['curl'][CURLOPT_RESOLVE] ?? null;
+
+        return Http::response('OK', 200);
+    });
+
+    CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['93.184.216.34'];
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'HTTPS://example.com/health',
+        'expected_status_code' => 200,
+    ]));
+
+    try {
+        CheckMonitor::dispatchSync($monitor);
+    } finally {
+        CheckMonitor::$resolveHostIpsOverride = null;
+    }
+
+    // Port 80 here would leave curl's 443 connection unpinned, reopening the
+    // DNS-rebinding window the resolve pin exists to close.
+    expect($resolveEntries)->toBe(['example.com:443:93.184.216.34']);
+});
+
+it('records the check and advances the schedule when it loses the incident-open race', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
+    Event::fake([IncidentOpened::class, MonitorChecked::class]);
+    Http::fake([
+        'https://example.com' => Http::response('Server Error', 500),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
+        'interval' => 60,
+        'next_check_at' => now()->subMinute(),
+        'last_checked_at' => null,
+    ]));
+
+    // Simulate a concurrent worker committing its open incident after this
+    // job's lockForUpdate lookup but before its own insert: the recent-checks
+    // SELECT is the only query that runs between the two.
+    $raced = false;
+    DB::listen(function ($query) use ($monitor, &$raced) {
+        if ($raced || ! str_starts_with($query->sql, 'select') || ! str_contains($query->sql, 'monitor_checks')) {
+            return;
+        }
+
+        $raced = true;
+
+        DB::table('incidents')->insert([
+            'id' => (string) Str::uuid7(),
+            'monitor_id' => $monitor->id,
+            'started_at' => now(),
+            'ended_at' => null,
+            'cause' => 'opened by a concurrent worker',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
+
+    CheckMonitor::dispatchSync($monitor);
+
+    $monitor->refresh();
+
+    // On Postgres the unique violation aborts its transaction; without the
+    // savepoint around the insert everything below is lost to a 25P02.
+    expect($raced)->toBeTrue();
+    expect(MonitorCheck::query()->where('monitor_id', $monitor->id)->count())->toBe(1);
+    expect($monitor->last_checked_at)->not->toBeNull();
+    expect($monitor->next_check_at->isFuture())->toBeTrue();
+    expect(Incident::query()->where('monitor_id', $monitor->id)->whereNull('ended_at')->count())->toBe(1);
+    Event::assertNotDispatched(IncidentOpened::class);
+    Event::assertDispatched(MonitorChecked::class);
+});
+
+it('advances the schedule when the job fails permanently so it stops re-dispatching', function () {
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'interval' => 60,
+        'next_check_at' => now()->subMinutes(30),
+        'last_checked_at' => null,
+    ]));
+
+    (new CheckMonitor($monitor))->failed(new RuntimeException('boom'));
+
+    $monitor->refresh();
+
+    expect($monitor->last_checked_at)->not->toBeNull();
+    expect($monitor->next_check_at->isFuture())->toBeTrue();
+});
+
+it('keeps the job timeout above the worst-case monitor request budget', function () {
+    // HasMonitorRules caps monitor timeout at 120s and performCheck adds a 10s
+    // connect timeout; a shorter job timeout kills the worker mid-check.
+    expect((new CheckMonitor(new Monitor))->timeout)->toBeGreaterThan(130);
+});
+
+it('still records the check and opens the incident when a notifier config cannot be decrypted', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
+    Bus::fake([SendMonitorNotification::class]);
+    Http::fake([
+        'https://example.com' => Http::response('Server Error', 500),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
+        'next_check_at' => now()->subMinute(),
+        'last_checked_at' => null,
+    ]));
+
+    $healthy = Notifier::factory()->discord()->create(['user_id' => $monitor->user_id]);
+    $broken = Notifier::factory()->discord()->create(['user_id' => $monitor->user_id]);
+
+    // Write raw garbage past the encrypted:array cast, as an APP_KEY rotation
+    // or a restored backup would leave behind.
+    DB::table('notifiers')->where('id', $broken->id)->update(['config' => 'not-valid-ciphertext']);
+
+    $monitor->notifiers()->attach([$healthy->id, $broken->id]);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    $monitor->refresh();
+
+    expect(MonitorCheck::query()->where('monitor_id', $monitor->id)->count())->toBe(1);
+    expect($monitor->next_check_at->isFuture())->toBeTrue();
+    expect(Incident::query()->where('monitor_id', $monitor->id)->whereNull('ended_at')->count())->toBe(1);
+
+    Bus::assertDispatchedTimes(SendMonitorNotification::class, 1);
+    Bus::assertDispatched(SendMonitorNotification::class, fn ($job) => (string) $job->notifier->id === (string) $healthy->id);
+});
+
+it('does not dispatch notifications for a notifier with an unsupported type', function () {
+    config()->set('monitors.failure_confirmation_threshold', 1);
+    Bus::fake([SendMonitorNotification::class]);
+    Http::fake([
+        'https://example.com' => Http::response('Server Error', 500),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'failure_confirmation_threshold' => 1,
+    ]));
+
+    $notifier = Notifier::factory()->create([
+        'user_id' => $monitor->user_id,
+        'type' => 'carrier-pigeon',
+    ]);
+
+    $monitor->notifiers()->attach([$notifier->id]);
+
+    CheckMonitor::dispatchSync($monitor);
+
+    Bus::assertNotDispatched(SendMonitorNotification::class);
 });

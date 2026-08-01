@@ -9,12 +9,14 @@ use App\Models\Monitor;
 use App\Models\MonitorCheck;
 use App\Models\Notifier;
 use App\MonitorStatus;
+use Closure;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use LogicException;
 use Throwable;
 
 class SendMonitorNotification implements ShouldBeUnique, ShouldQueue
@@ -82,13 +84,36 @@ class SendMonitorNotification implements ShouldBeUnique, ShouldQueue
         match ($this->notifier->type) {
             Notifier::TYPE_DISCORD => $this->sendDiscord(),
             Notifier::TYPE_EMAIL => $this->sendEmail(),
-            default => null,
+            default => throw new LogicException("Unhandled notifier type: {$this->notifier->type}"),
         };
+    }
+
+    /**
+     * Read a value from the notifier's encrypted config, treating an unreadable
+     * config (rotated APP_KEY, corrupt ciphertext) as absent. Retrying the job
+     * cannot repair bad ciphertext, so failing loudly here would only burn
+     * attempts.
+     *
+     * @param  Closure(): ?string  $read
+     */
+    protected function readConfigValue(Closure $read): ?string
+    {
+        try {
+            return $read();
+        } catch (Throwable $e) {
+            Log::warning('Notifier config unreadable', [
+                'monitor_id' => $this->monitor->id,
+                'notifier_id' => $this->notifier->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     protected function sendDiscord(): void
     {
-        $webhookUrl = $this->notifier->getWebhookUrl();
+        $webhookUrl = $this->readConfigValue(fn () => $this->notifier->getWebhookUrl());
 
         if (! $webhookUrl) {
             return;
@@ -161,7 +186,7 @@ class SendMonitorNotification implements ShouldBeUnique, ShouldQueue
 
     protected function sendEmail(): void
     {
-        $email = $this->notifier->getEmail();
+        $email = $this->readConfigValue(fn () => $this->notifier->getEmail());
 
         if (! $email) {
             return;

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -98,11 +99,26 @@ class Monitor extends Model
     }
 
     /**
+     * The most recent check, resolved with a correlated subquery rather than
+     * latestOfMany(): that helper always adds a MAX() tiebreaker on the
+     * primary key, and Postgres has no max() aggregate for uuid. Ordering by
+     * id breaks ties on identical checked_at values, and uuid7 keys sort by
+     * creation time.
+     *
      * @return HasOne<MonitorCheck, $this>
      */
     public function latestCheck(): HasOne
     {
-        return $this->hasOne(MonitorCheck::class)->latestOfMany('checked_at');
+        return $this->hasOne(MonitorCheck::class)->where(
+            'monitor_checks.id',
+            fn (QueryBuilder $query) => $query
+                ->select('latest.id')
+                ->from('monitor_checks as latest')
+                ->whereColumn('latest.monitor_id', 'monitor_checks.monitor_id')
+                ->orderByDesc('latest.checked_at')
+                ->orderByDesc('latest.id')
+                ->limit(1)
+        );
     }
 
     /**
@@ -118,7 +134,11 @@ class Monitor extends Model
      */
     public function currentIncident(): HasOne
     {
-        return $this->hasOne(Incident::class)->whereNull('ended_at')->latestOfMany('started_at');
+        // A partial unique index (incidents_monitor_id_open_unique) guarantees
+        // at most one open incident per monitor, so no one-of-many tiebreaker is
+        // needed — and latestOfMany() would emit MAX("id"), which Postgres has
+        // no aggregate for on a uuid primary key.
+        return $this->hasOne(Incident::class)->whereNull('ended_at');
     }
 
     /**

@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Actions\ComputeRollupStats;
 use App\Actions\PersistDailyRollups;
 use App\Models\Monitor;
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -18,6 +19,9 @@ class ComputeDailyUptimeRollups extends Command
         {--days= : Number of past days to compute (overrides --date)}';
 
     protected $description = 'Compute daily uptime rollups from monitor checks';
+
+    /** @var array<string, string>|null */
+    private ?array $timezones = null;
 
     public function __construct(
         private readonly ComputeRollupStats $computeRollupStats,
@@ -81,27 +85,66 @@ class ComputeDailyUptimeRollups extends Command
     }
 
     /**
+     * Rollup rows are keyed by (monitor_id, date), and RecomputeUserRollups
+     * writes the same rows using each owner's preferred timezone. Both writers
+     * must derive the same day window for a given calendar date or they
+     * overwrite each other's numbers, so the date is interpreted in the
+     * monitor owner's timezone here too.
+     *
      * @return array{created: int, updated: int}
      */
     protected function computeRollupsForDate(Carbon $date): array
     {
         $created = 0;
         $updated = 0;
+        $dateString = $date->toDateString();
 
-        $startOfDay = $date->copy()->startOfDay();
-        $endOfDay = $date->copy()->endOfDay();
+        Monitor::query()->chunkById(100, function ($monitors) use ($dateString, &$created, &$updated) {
+            $timezones = $this->timezoneByUser();
+            $groups = $monitors->groupBy(
+                fn (Monitor $monitor) => $timezones[$monitor->user_id] ?? $this->defaultTimezone()
+            );
 
-        Monitor::query()->chunkById(100, function ($monitors) use ($startOfDay, $endOfDay, $date, &$created, &$updated) {
-            $monitorIds = $monitors->pluck('id');
+            foreach ($groups as $timezone => $group) {
+                $localDate = Carbon::parse($dateString, $timezone)->startOfDay();
+                $monitorIds = $group->pluck('id');
 
-            $stats = $this->computeRollupStats->handle($monitorIds, $startOfDay, $endOfDay);
+                $stats = $this->computeRollupStats->handle(
+                    $monitorIds,
+                    $localDate->copy()->utc(),
+                    $localDate->copy()->endOfDay()->utc(),
+                );
 
-            $result = $this->persistDailyRollups->handle($monitorIds, $date, $stats);
+                $result = $this->persistDailyRollups->handle($monitorIds, $localDate, $stats);
 
-            $created += $result['created'];
-            $updated += $result['updated'];
+                $created += $result['created'];
+                $updated += $result['updated'];
+            }
         });
 
         return ['created' => $created, 'updated' => $updated];
+    }
+
+    /**
+     * Owner uuid => preferred timezone, resolved once per command run. Users
+     * with no preference fall back to the app timezone, which is what
+     * RecomputeAllUserRollups leaves them on.
+     *
+     * @return array<string, string>
+     */
+    protected function timezoneByUser(): array
+    {
+        return $this->timezones ??= User::query()
+            ->select(['uuid', 'preferences'])
+            ->get()
+            ->mapWithKeys(fn (User $user) => [
+                $user->uuid => $user->getPreference('timezone') ?: $this->defaultTimezone(),
+            ])
+            ->all();
+    }
+
+    protected function defaultTimezone(): string
+    {
+        return (string) config('app.timezone', 'UTC');
     }
 }

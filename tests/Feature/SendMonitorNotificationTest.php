@@ -8,6 +8,7 @@ use App\Models\Monitor;
 use App\Models\MonitorCheck;
 use App\Models\Notifier;
 use App\MonitorStatus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 
@@ -165,4 +166,37 @@ it('includes response time in discord notification when up', function () {
     Http::assertSent(function ($request) {
         return str_contains($request->body(), '150ms');
     });
+});
+
+it('throws for an unsupported notifier type instead of silently dropping the notification', function () {
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create());
+    $check = MonitorCheck::factory()->down()->create(['monitor_id' => $monitor->id]);
+    $notifier = Notifier::factory()->create(['type' => 'carrier-pigeon']);
+
+    expect(fn () => SendMonitorNotification::dispatchSync($monitor, $check, $notifier, MonitorStatus::Down))
+        ->toThrow(LogicException::class, 'Unhandled notifier type: carrier-pigeon');
+});
+
+it('skips a notifier whose config cannot be decrypted rather than burning retries', function () {
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create());
+    $check = MonitorCheck::factory()->down()->create(['monitor_id' => $monitor->id]);
+    $notifier = Notifier::factory()->discord()->create();
+
+    DB::table('notifiers')->where('id', $notifier->id)->update(['config' => 'not-valid-ciphertext']);
+
+    SendMonitorNotification::dispatchSync($monitor, $check, $notifier->fresh(), MonitorStatus::Down);
+
+    Http::assertNothingSent();
+});
+
+it('skips an email notifier whose config cannot be decrypted', function () {
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create());
+    $check = MonitorCheck::factory()->down()->create(['monitor_id' => $monitor->id]);
+    $notifier = Notifier::factory()->email()->create();
+
+    DB::table('notifiers')->where('id', $notifier->id)->update(['config' => 'not-valid-ciphertext']);
+
+    SendMonitorNotification::dispatchSync($monitor, $check, $notifier->fresh(), MonitorStatus::Down);
+
+    Mail::assertNothingSent();
 });
