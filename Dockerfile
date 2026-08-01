@@ -49,8 +49,10 @@ WORKDIR /app
 # Install pnpm (corepack is no longer bundled with Node >= 25)
 RUN npm install -g pnpm@11.9.0
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy package files. pnpm-workspace.yaml carries the allowBuilds entry for
+# the Central Icons license check and its minimumReleaseAge exemption —
+# without it the install fails policy verification.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies with persistent cache. The Central Icons license key is
 # exposed only for this instruction via a BuildKit secret so it never lands in
