@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { router } from '@inertiajs/react';
 import {
@@ -13,17 +13,17 @@ import { IconChevronRight } from '@/components/icons/chevron-right';
 import { Button } from '@/components/ui/button';
 import { TableShell } from '@/components/ui/table-shell';
 import { formatNumber } from '@/lib/format/number';
-import type { CursorPaginated } from '@/types';
+import type { Paginated } from '@/types';
 
 interface ServerDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
-  paginated: CursorPaginated<TData>;
+  paginated: Paginated<TData>;
   /*
    * Param names are required so every table states the contract its server
    * controller reads — a defaulted name that disagrees with the backend
    * makes pagination a silent no-op.
    */
-  cursorParam: string;
+  pageParam: string;
   sortParam: string;
   directionParam: string;
   reloadOnly?: string[];
@@ -33,7 +33,7 @@ interface ServerDataTableProps<TData, TValue> {
 export function ServerDataTable<TData, TValue>({
   columns,
   paginated,
-  cursorParam,
+  pageParam,
   sortParam,
   directionParam,
   reloadOnly,
@@ -70,51 +70,48 @@ export function ServerDataTable<TData, TValue>({
     [sortParam, directionParam],
   );
 
-  const goToCursor = useCallback(
-    (cursor: string | null, nextSorting: SortingState = sorting) => {
+  /*
+   * Page and sort live in the real URL, never in `preserveUrl` request data:
+   * a debounced `router.reload()` elsewhere on the page resolves against
+   * window.location, so state kept out of the URL silently resets the table.
+   * Each table only ever writes its own params, so sibling tables keep theirs.
+   */
+  const goToPage = useCallback(
+    (page: number, nextSorting: SortingState = sorting) => {
       const url = new URL(window.location.href);
       applySortingParams(url, nextSorting);
 
+      if (page > 1) {
+        url.searchParams.set(pageParam, String(page));
+      } else {
+        url.searchParams.delete(pageParam);
+      }
+
       router.visit(url.pathname + url.search, {
-        data: cursor ? { [cursorParam]: cursor } : {},
         preserveState: true,
         preserveScroll: true,
-        preserveUrl: true,
         only: reloadOnly,
       });
     },
-    [sorting, cursorParam, reloadOnly, applySortingParams],
+    [sorting, pageParam, reloadOnly, applySortingParams],
   );
 
-  const canPreviousPage = Boolean(paginated.prev_cursor);
-  const canNextPage = Boolean(paginated.next_cursor);
-
-  const totalPages = Math.max(1, Math.ceil(paginated.total / paginated.per_page));
-  const [pageIndex, setPageIndex] = useState(1);
+  const currentPage = paginated.current_page;
+  const lastPage = Math.max(1, paginated.last_page);
+  const canPreviousPage = currentPage > 1;
+  const canNextPage = currentPage < lastPage;
 
   const handlePreviousPage = useCallback(() => {
-    setPageIndex((current) => Math.max(1, current - 1));
-    goToCursor(paginated.prev_cursor);
-  }, [goToCursor, paginated.prev_cursor]);
+    goToPage(currentPage - 1);
+  }, [goToPage, currentPage]);
 
   const handleNextPage = useCallback(() => {
-    setPageIndex((current) => Math.min(totalPages, current + 1));
-    goToCursor(paginated.next_cursor);
-  }, [goToCursor, paginated.next_cursor, totalPages]);
-
-  useEffect(() => {
-    if (!paginated.prev_cursor) {
-      setPageIndex(1);
-      return;
-    }
-
-    setPageIndex((current) => Math.min(current, totalPages));
-  }, [paginated.prev_cursor, totalPages]);
+    goToPage(currentPage + 1);
+  }, [goToPage, currentPage]);
 
   const handleSortingChange = (nextSorting: SortingState) => {
     setSorting(nextSorting);
-    setPageIndex(1);
-    goToCursor(null, nextSorting);
+    goToPage(1, nextSorting);
   };
 
   const handleSortingChangeWrapper = (
@@ -132,10 +129,10 @@ export function ServerDataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
-    pageCount: -1,
+    pageCount: lastPage,
     state: {
       pagination: {
-        pageIndex: 0,
+        pageIndex: currentPage - 1,
         pageSize: paginated.per_page,
       },
       sorting,
@@ -150,7 +147,7 @@ export function ServerDataTable<TData, TValue>({
       {paginated.data.length > 0 ? (
         <div className="flex items-center justify-between border-t border-border pt-4 text-sm text-muted-foreground">
           <div>
-            page {formatNumber(pageIndex)} of {formatNumber(totalPages)}
+            page {formatNumber(currentPage)} of {formatNumber(lastPage)}
           </div>
           <div className="flex gap-2">
             <Button

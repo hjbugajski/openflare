@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Concerns;
 
-use Illuminate\Contracts\Pagination\CursorPaginator;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
-trait SortsCursorPaginatedResults
+trait SortsPaginatedResults
 {
     /**
      * Resolve a whitelisted sort column and direction from the request.
@@ -28,14 +28,16 @@ trait SortsCursorPaginatedResults
     }
 
     /**
-     * Apply the id tiebreaker and cursor-paginate a query that already has
-     * its primary `orderBy` applied.
+     * Apply the id tiebreaker and offset-paginate a query that already has its
+     * primary `orderBy` applied. Offset pagination keeps every sort stable and
+     * page-addressable, including nullable columns and raw expressions that
+     * keyset pagination cannot express.
      */
-    protected function finalizeCursorPage(Builder|Relation $query, string $idColumn, string $direction, string $cursorName, int $perPage = 10): CursorPaginator
+    protected function finalizePage(Builder|Relation $query, string $idColumn, string $direction, string $pageName, int $perPage = 10): LengthAwarePaginator
     {
         return $query
             ->orderBy($idColumn, $direction)
-            ->cursorPaginate($perPage, ['*'], $cursorName)
+            ->paginate($perPage, ['*'], $pageName)
             ->withQueryString();
     }
 }

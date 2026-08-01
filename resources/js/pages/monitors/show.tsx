@@ -21,15 +21,16 @@ import { formatInterval } from '@/lib/format/interval';
 import { formatNumber } from '@/lib/format/number';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { useUserChannel } from '@/lib/hooks/use-user-channel';
+import { resolveRollupTimezone } from '@/lib/timezone';
 import { edit } from '@/routes/monitors';
 import {
-  type CursorPaginated,
   type DailyUptimeRollup,
   type Incident,
   type Monitor,
   type MonitorCheck,
   type NotifierSummary,
   type PageProps,
+  type Paginated,
 } from '@/types';
 import type {
   IncidentOpenedEvent,
@@ -39,9 +40,9 @@ import type {
 
 interface Props {
   monitor: Monitor;
-  checks: CursorPaginated<MonitorCheck>;
-  incidents: CursorPaginated<Incident>;
-  notifiers: CursorPaginated<NotifierSummary>;
+  checks: Paginated<MonitorCheck>;
+  incidents: Paginated<Incident>;
+  notifiers: Paginated<NotifierSummary>;
   dailyRollups: DailyUptimeRollup[];
 }
 
@@ -55,9 +56,7 @@ export default function MonitorsShow({
   dailyRollups,
 }: Props) {
   const { auth } = usePage<PageProps>().props;
-  const browserTimezone =
-    typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
-  const timezone = auth.user?.preferences?.timezone ?? browserTimezone;
+  const timezone = resolveRollupTimezone(auth.user?.preferences?.timezone);
   const [currentIncident, setCurrentIncident] = useState(monitor.current_incident);
   const [latestCheck, setLatestCheck] = useState(monitor.latest_check);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

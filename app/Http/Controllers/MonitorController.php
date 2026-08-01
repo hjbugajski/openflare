@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\ComputeTodayRollup;
-use App\Http\Controllers\Concerns\SortsCursorPaginatedResults;
+use App\Http\Controllers\Concerns\SortsPaginatedResults;
 use App\Http\Requests\StoreMonitorRequest;
 use App\Http\Requests\UpdateMonitorRequest;
 use App\Models\DailyUptimeRollup;
@@ -19,7 +19,7 @@ use Inertia\Response;
 
 class MonitorController extends Controller
 {
-    use SortsCursorPaginatedResults;
+    use SortsPaginatedResults;
 
     public function __construct(
         private ComputeTodayRollup $computeTodayRollup,
@@ -30,7 +30,6 @@ class MonitorController extends Controller
         $monitors = Monitor::query()
             ->where('user_id', Auth::user()->uuid)
             ->with(['latestCheck', 'currentIncident'])
-            ->withCount('checks')
             ->latest()
             ->get();
 
@@ -133,14 +132,11 @@ class MonitorController extends Controller
             'checked_at' => 'checked_at',
         ], 'checked_at', 'desc');
 
-        $checksQuery = $monitor->checks();
-        $checksTotal = (clone $checksQuery)->count();
-
-        $checks = $this->finalizeCursorPage(
-            $checksQuery->orderBy($checksSort, $checksDirection),
+        $checks = $this->finalizePage(
+            $monitor->checks()->orderBy($checksSort, $checksDirection),
             'id',
             $checksDirection,
-            'checks_cursor',
+            'checks_page',
         );
 
         [$incidentsSort, $incidentsDirection] = $this->resolveSort('incidents_sort', 'incidents_direction', [
@@ -152,7 +148,6 @@ class MonitorController extends Controller
         ], 'started_at', 'desc');
 
         $incidentsQuery = $monitor->incidents();
-        $incidentsTotal = (clone $incidentsQuery)->count();
 
         if ($incidentsSort === 'status') {
             $incidentsQuery->orderByRaw('CASE WHEN ended_at IS NULL THEN 0 ELSE 1 END '.$incidentsDirection);
@@ -171,7 +166,7 @@ class MonitorController extends Controller
             $incidentsQuery->orderBy($incidentsSort, $incidentsDirection);
         }
 
-        $incidents = $this->finalizeCursorPage($incidentsQuery, 'id', $incidentsDirection, 'incidents_cursor');
+        $incidents = $this->finalizePage($incidentsQuery, 'id', $incidentsDirection, 'incidents_page');
 
         [$notifiersSort, $notifiersDirection] = $this->resolveSort('notifiers_sort', 'notifiers_direction', [
             'name' => 'name',
@@ -180,15 +175,13 @@ class MonitorController extends Controller
             'apply_to_all' => 'apply_to_all',
         ], 'name', 'asc');
 
-        $notifiersQuery = $monitor->notifiers()
-            ->wherePivot('is_excluded', false);
-        $notifiersTotal = (clone $notifiersQuery)->count();
-
-        $notifiers = $this->finalizeCursorPage(
-            $notifiersQuery->orderBy($notifiersSort, $notifiersDirection),
+        $notifiers = $this->finalizePage(
+            $monitor->notifiers()
+                ->wherePivot('is_excluded', false)
+                ->orderBy($notifiersSort, $notifiersDirection),
             'notifiers.id',
             $notifiersDirection,
-            'notifiers_cursor',
+            'notifiers_page',
         );
 
         $timezone = Auth::user()->getPreference('timezone', config('app.timezone'));
@@ -213,9 +206,9 @@ class MonitorController extends Controller
 
         return Inertia::render('monitors/show', [
             'monitor' => $monitor,
-            'checks' => array_merge($checks->toArray(), ['total' => $checksTotal]),
-            'incidents' => array_merge($incidents->toArray(), ['total' => $incidentsTotal]),
-            'notifiers' => array_merge($notifiers->toArray(), ['total' => $notifiersTotal]),
+            'checks' => $checks,
+            'incidents' => $incidents,
+            'notifiers' => $notifiers,
             'dailyRollups' => $dailyRollups,
         ]);
     }

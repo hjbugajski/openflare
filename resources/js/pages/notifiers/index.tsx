@@ -14,10 +14,10 @@ import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
 import { formatNumber } from '@/lib/format/number';
 import { create, destroy, edit } from '@/routes/notifiers';
-import { type CursorPaginated, type Notifier } from '@/types';
+import { type Notifier, type Paginated } from '@/types';
 
 interface Props {
-  notifiers: CursorPaginated<Notifier>;
+  notifiers: Paginated<Notifier>;
   types: string[];
 }
 
@@ -131,7 +131,7 @@ export default function NotifiersIndex({ notifiers }: Props) {
           <ServerDataTable
             columns={columns}
             paginated={notifiers}
-            cursorParam="notifiers_cursor"
+            pageParam="notifiers_page"
             sortParam="sort"
             directionParam="direction"
             reloadOnly={RELOAD_ONLY}

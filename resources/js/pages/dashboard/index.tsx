@@ -18,7 +18,7 @@ import { formatNumber } from '@/lib/format/number';
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback';
 import { useUserChannel } from '@/lib/hooks/use-user-channel';
 import { show } from '@/routes/monitors';
-import type { CursorPaginated, IncidentWithMonitor } from '@/types';
+import type { IncidentWithMonitor, Paginated } from '@/types';
 
 interface MonitorCounts {
   up: number;
@@ -28,7 +28,7 @@ interface MonitorCounts {
 
 interface Props {
   counts: MonitorCounts;
-  incidents: CursorPaginated<IncidentWithMonitor>;
+  incidents: Paginated<IncidentWithMonitor>;
 }
 
 const RELOAD_DEBOUNCE_MS = 2000;
@@ -202,7 +202,7 @@ export default function DashboardIndex({ counts, incidents }: Props) {
           <ServerDataTable
             columns={columns}
             paginated={incidents}
-            cursorParam="incidents_cursor"
+            pageParam="incidents_page"
             sortParam="sort"
             directionParam="direction"
             reloadOnly={RELOAD_ONLY}

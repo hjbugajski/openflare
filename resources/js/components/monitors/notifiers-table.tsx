@@ -9,14 +9,14 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { inertiaDelete } from '@/lib/http/inertia-delete';
 import { detach } from '@/routes/monitors/notifiers';
-import type { CursorPaginated, NotifierSummary } from '@/types';
+import type { NotifierSummary, Paginated } from '@/types';
 
 const RELOAD_ONLY = ['notifiers'];
 const INITIAL_SORTING: SortingState = [{ id: 'name', desc: false }];
 
 interface NotifiersTableProps {
   monitorId: string;
-  notifiers: CursorPaginated<NotifierSummary>;
+  notifiers: Paginated<NotifierSummary>;
 }
 
 export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
@@ -127,7 +127,7 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
       <ServerDataTable
         columns={columns}
         paginated={notifiers}
-        cursorParam="notifiers_cursor"
+        pageParam="notifiers_page"
         sortParam="notifiers_sort"
         directionParam="notifiers_direction"
         reloadOnly={RELOAD_ONLY}
