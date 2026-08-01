@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\ComputeTodayRollup;
+use App\Actions\GetMonitorRollupSeries;
 use App\Http\Controllers\Concerns\SortsPaginatedResults;
 use App\Http\Requests\StoreMonitorRequest;
 use App\Http\Requests\UpdateMonitorRequest;
-use App\Models\DailyUptimeRollup;
 use App\Models\Monitor;
 use App\Models\Notifier;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +21,7 @@ class MonitorController extends Controller
     use SortsPaginatedResults;
 
     public function __construct(
-        private ComputeTodayRollup $computeTodayRollup,
+        private GetMonitorRollupSeries $getMonitorRollupSeries,
     ) {}
 
     public function index(): Response
@@ -33,30 +32,10 @@ class MonitorController extends Controller
             ->latest()
             ->get();
 
-        $monitorIds = $monitors->pluck('id');
-        $timezone = Auth::user()->getPreference('timezone', config('app.timezone'));
-        $now = now($timezone);
-        $today = $now->toDateString();
-        $thirtyDaysAgo = $now->copy()->subDays(30)->toDateString();
+        $series = $this->getMonitorRollupSeries->handle($monitors->pluck('id'), Auth::user());
 
-        $rollups = DailyUptimeRollup::query()
-            ->whereIn('monitor_id', $monitorIds)
-            ->where('date', '>=', $thirtyDaysAgo)
-            ->where('date', '<', $today)
-            ->orderBy('date')
-            ->get()
-            ->groupBy('monitor_id');
-
-        $todayRollups = $this->computeTodayRollup->handle($monitorIds, $timezone);
-
-        $monitorsWithRollups = $monitors->map(function ($monitor) use ($rollups, $todayRollups) {
-            $monitorRollups = $rollups->get($monitor->id, collect())->values();
-
-            if ($todayRollups->has($monitor->id)) {
-                $monitorRollups = $monitorRollups->push($todayRollups->get($monitor->id));
-            }
-
-            $monitor->daily_rollups = $monitorRollups;
+        $monitorsWithRollups = $monitors->map(function ($monitor) use ($series) {
+            $monitor->daily_rollups = $series->get($monitor->id, collect());
 
             return $monitor;
         });
@@ -180,23 +159,9 @@ class MonitorController extends Controller
             'notifiers_page',
         );
 
-        $timezone = Auth::user()->getPreference('timezone', config('app.timezone'));
-        $now = now($timezone);
-        $today = $now->toDateString();
-        $thirtyDaysAgo = $now->copy()->subDays(30)->toDateString();
-
-        $dailyRollups = $monitor->dailyUptimeRollups()
-            ->where('date', '>=', $thirtyDaysAgo)
-            ->where('date', '<', $today)
-            ->orderBy('date')
-            ->get()
-            ->values()
-            ->toArray();
-
-        $todayRollups = $this->computeTodayRollup->handle([$monitor->id], $timezone);
-        if ($todayRollups->has($monitor->id)) {
-            $dailyRollups[] = $todayRollups->get($monitor->id);
-        }
+        $dailyRollups = $this->getMonitorRollupSeries
+            ->handle([$monitor->id], Auth::user())
+            ->get($monitor->id, collect());
 
         return Inertia::render('monitors/show', [
             'monitor' => $monitor,
