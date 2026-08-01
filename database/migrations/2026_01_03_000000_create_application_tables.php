@@ -158,7 +158,8 @@ return new class extends Migration
             $table->foreignUuid('user_id')->references('uuid')->on('users')->cascadeOnDelete();
             $table->string('type');
             $table->string('name');
-            $table->json('config');
+            // Ciphertext from the encrypted:array cast, not queryable JSON
+            $table->text('config');
             $table->boolean('is_active')->default(true);
             $table->boolean('is_default')->default(false);
             $table->boolean('apply_to_all')->default(false);

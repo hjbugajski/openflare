@@ -66,3 +66,65 @@ jobs:
 
       - name: Run tests
         run: composer run test
+
+  test-postgres:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: openflare
+          POSTGRES_PASSWORD: openflare
+          POSTGRES_DB: openflare_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U openflare -d openflare_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
+    env:
+      REVERB_APP_KEY: ci-test-key
+      REVERB_APP_SECRET: ci-test-secret
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: openflare_test
+      DB_USERNAME: openflare
+      DB_PASSWORD: openflare
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Run tests against PostgreSQL
+        run: php artisan test

@@ -1,0 +1,34 @@
+name: openflare-test-pgsql
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: openflare
+      POSTGRES_PASSWORD: openflare
+      POSTGRES_DB: openflare_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U openflare -d openflare_test']
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  test:
+    build: .
+    working_dir: /app
+    volumes:
+      - ../..:/app
+    environment:
+      APP_ENV: testing
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: openflare_test
+      DB_USERNAME: openflare
+      DB_PASSWORD: openflare
+    depends_on:
+      db:
+        condition: service_healthy
+    command: php artisan test
