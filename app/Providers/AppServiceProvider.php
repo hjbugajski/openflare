@@ -118,9 +118,10 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
-        // Skip during infrastructure commands
+        // Skip during infrastructure commands, including package:discover
+        // which runs on every composer install before migrations exist
         $command = $_SERVER['argv'][1] ?? '';
-        $skipCommands = ['migrate', 'config:', 'route:', 'view:', 'event:', 'cache:', 'key:', 'storage:'];
+        $skipCommands = ['migrate', 'package:', 'config:', 'route:', 'view:', 'event:', 'cache:', 'key:', 'storage:'];
 
         foreach ($skipCommands as $skip) {
             if (str_starts_with($command, $skip)) {
@@ -139,17 +140,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function runStartupRollupMaintenance(): void
     {
-        if (! Cache::add(self::ROLLUP_MAINTENANCE_KEY, true, now()->addDay())) {
-            return;
-        }
-
         try {
+            // Inside the try: with the database cache store, even acquiring
+            // the guard touches the DB, which may not be migrated yet.
+            if (! Cache::add(self::ROLLUP_MAINTENANCE_KEY, true, now()->addDay())) {
+                return;
+            }
+
             app(BackfillMissingRollups::class)->handle();
             app(RecomputeAllUserRollups::class)->handle();
         } catch (\Throwable $e) {
             // Release the guard so a transient failure doesn't disable
             // rollup recovery for the rest of the day.
-            Cache::forget(self::ROLLUP_MAINTENANCE_KEY);
+            rescue(fn () => Cache::forget(self::ROLLUP_MAINTENANCE_KEY), report: false);
 
             report($e);
         }
