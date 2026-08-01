@@ -51,8 +51,9 @@ class Notifier extends Model
     ];
 
     /**
-     * Decrypted webhook URLs / email addresses must not leak into page props by
-     * default; call makeVisible('config') where the client genuinely edits it.
+     * Decrypted webhook URLs / email addresses must never leak into page props;
+     * expose derived metadata (a masked preview, a presence flag) instead of
+     * calling makeVisible('config').
      *
      * @var list<string>
      */

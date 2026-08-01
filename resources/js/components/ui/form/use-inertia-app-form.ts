@@ -62,9 +62,22 @@ export function useInertiaAppForm<TData extends FormData>({
     },
   });
 
+  /*
+   * Laravel keys array-element failures by index (`notifiers.0`), which no
+   * field asks for, so an exact miss falls back to the first error nested
+   * under the field's own key.
+   */
   const getServerError = useCallback(
     (fieldName: string): string | undefined => {
-      return serverErrors[fieldName];
+      const exact = serverErrors[fieldName];
+
+      if (exact !== undefined) {
+        return exact;
+      }
+
+      const nestedKey = Object.keys(serverErrors).find((key) => key.startsWith(`${fieldName}.`));
+
+      return nestedKey === undefined ? undefined : serverErrors[nestedKey];
     },
     [serverErrors],
   );

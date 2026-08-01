@@ -798,6 +798,111 @@ it('rolls back check and scheduling update together when incident handling fails
     expect($monitor->next_check_at)->toBeNull();
 });
 
+it('records one check and one interval advance when a post-check failure forces a retry', function () {
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    $scheduledAt = now()->subSeconds(30);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'interval' => 60,
+        'next_check_at' => $scheduledAt,
+        'last_checked_at' => null,
+    ]));
+
+    // A synchronous listener is the one MonitorChecked path after_commit does
+    // not defer, so it stands in for anything that can throw once the check row
+    // is written. The first attempt must leave no trace for the retry to double.
+    $attempts = 0;
+    Event::listen(MonitorChecked::class, function () use (&$attempts) {
+        $attempts++;
+
+        if ($attempts === 1) {
+            throw new RuntimeException('listener blew up');
+        }
+    });
+
+    // handle() directly, not dispatchSync: the sync driver has no retries and
+    // would run failed(), which advances the schedule on its own.
+    expect(fn () => (new CheckMonitor($monitor))->handle())->toThrow(RuntimeException::class, 'listener blew up');
+
+    $monitor->refresh();
+
+    expect(MonitorCheck::query()->where('monitor_id', $monitor->id)->count())->toBe(0);
+    expect($monitor->last_checked_at)->toBeNull();
+    expect($monitor->next_check_at->timestamp)->toBe($scheduledAt->timestamp);
+
+    (new CheckMonitor($monitor))->handle();
+
+    $monitor->refresh();
+
+    expect($attempts)->toBe(2);
+    expect(MonitorCheck::query()->where('monitor_id', $monitor->id)->count())->toBe(1);
+    expect($monitor->last_checked_at)->not->toBeNull();
+    expect($monitor->next_check_at->timestamp)->toBe($scheduledAt->copy()->addSeconds(60)->timestamp);
+});
+
+it('does not resolve or notify twice when a concurrent worker closes the incident first', function () {
+    config()->set('monitors.recovery_confirmation_threshold', 1);
+    Event::fake([IncidentResolved::class, MonitorChecked::class]);
+    Bus::fake([SendMonitorNotification::class]);
+    Http::fake([
+        'https://example.com' => Http::response('OK', 200),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+        'recovery_confirmation_threshold' => 1,
+        'next_check_at' => now()->subMinute(),
+        'last_checked_at' => null,
+    ]));
+
+    $notifier = Notifier::factory()->discord()->create(['user_id' => $monitor->user_id]);
+    $monitor->notifiers()->attach([$notifier->id]);
+
+    MonitorCheck::factory()->down()->create([
+        'monitor_id' => $monitor->id,
+        'checked_at' => now()->subMinutes(5),
+    ]);
+
+    $incident = Incident::factory()->ongoing()->create([
+        'monitor_id' => $monitor->id,
+    ]);
+
+    $racedEndedAt = now()->subMinutes(2);
+
+    // Simulate a concurrent worker committing the resolve after this job's
+    // lockForUpdate lookup but before its own conditional update: the
+    // recent-checks SELECT is the only query that runs between the two.
+    $raced = false;
+    DB::listen(function ($query) use ($incident, $racedEndedAt, &$raced) {
+        if ($raced || ! str_starts_with($query->sql, 'select') || ! str_contains($query->sql, 'monitor_checks')) {
+            return;
+        }
+
+        $raced = true;
+
+        DB::table('incidents')->where('id', $incident->id)->update(['ended_at' => $racedEndedAt]);
+    });
+
+    CheckMonitor::dispatchSync($monitor);
+
+    $monitor->refresh();
+    $incident->refresh();
+
+    expect($raced)->toBeTrue();
+    // The losing worker must not overwrite the winner's resolution timestamp.
+    expect($incident->ended_at->timestamp)->toBe($racedEndedAt->timestamp);
+    expect(MonitorCheck::query()->where('monitor_id', $monitor->id)->count())->toBe(2);
+    expect($monitor->next_check_at->isFuture())->toBeTrue();
+    Event::assertNotDispatched(IncidentResolved::class);
+    Bus::assertNotDispatched(SendMonitorNotification::class);
+});
+
 it('blocks the check and issues no request when resolved IP is restricted', function () {
     CheckMonitor::$resolveHostIpsOverride = fn (string $host) => ['169.254.169.254'];
 
@@ -986,6 +1091,47 @@ it('pins the DNS resolve entry to the https port when the URL scheme is upper ca
     // Port 80 here would leave curl's 443 connection unpinned, reopening the
     // DNS-rebinding window the resolve pin exists to close.
     expect($resolveEntries)->toBe(['example.com:443:93.184.216.34']);
+});
+
+// Http::fake never follows redirects, so the behavioral test below cannot tell
+// a refused redirect from a followed one. This inspects the outgoing options
+// instead, which is the only place the refusal is observable under a fake.
+it('refuses to follow redirects on the check request', function () {
+    $allowRedirects = null;
+
+    Http::fake(function ($request, array $options) use (&$allowRedirects) {
+        $allowRedirects = $options['allow_redirects'] ?? null;
+
+        return Http::response('OK', 200);
+    });
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+    ]));
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect($allowRedirects)->toBeFalse();
+});
+
+it('records a redirect as down instead of chasing it to the redirect target', function () {
+    Http::fake([
+        'https://example.com' => Http::response('', 302, ['Location' => 'http://169.254.169.254/']),
+    ]);
+
+    $monitor = Monitor::withoutEvents(fn () => Monitor::factory()->create([
+        'url' => 'https://example.com',
+        'expected_status_code' => 200,
+    ]));
+
+    CheckMonitor::dispatchSync($monitor);
+
+    expect($monitor->checks)->toHaveCount(1);
+    expect($monitor->checks->first())
+        ->status->toBe('down')
+        ->status_code->toBe(302)
+        ->error_message->toBe('Expected status 200, got 302');
 });
 
 it('records the check and advances the schedule when it loses the incident-open race', function () {

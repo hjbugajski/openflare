@@ -115,6 +115,12 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
 
         $check = $this->performCheck();
 
+        // Every write and dispatch lives inside the transaction so a retry of
+        // this job cannot double-insert the check, double-advance
+        // next_check_at, or double-notify: anything that throws rolls the whole
+        // slot back.
+        // MonitorChecked is ShouldBroadcast, so its BroadcastEvent job still
+        // waits for the commit (config/queue.php after_commit).
         DB::transaction(function () use ($check) {
             $this->monitor->checks()->save($check);
             $this->handleStatusChange($check);
@@ -123,10 +129,13 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
                 'last_checked_at' => $check->checked_at,
                 'next_check_at' => $this->calculateNextCheckAt(),
             ]);
+
+            MonitorChecked::dispatch($this->monitor, $check);
         });
 
-        MonitorChecked::dispatch($this->monitor, $check);
-
+        // Deliberately outside: logging is the one thing here with no bearing
+        // on idempotency, and holding the write lock for its file I/O costs
+        // every concurrent check.
         Log::debug('Monitor check completed', [
             'monitor_id' => $this->monitor->id,
             'status' => $check->status,
@@ -349,9 +358,18 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $currentIncident->update([
-            'ended_at' => $newCheck->checked_at,
-        ]);
+        // Conditional write rather than a plain update: lockForUpdate above
+        // compiles to nothing on SQLite, so the affected-row count is the only
+        // portable proof that this worker — and not a concurrent one — closed
+        // the incident, and therefore owes the resolve event and notifications.
+        $resolved = Incident::query()
+            ->whereKey($currentIncident->id)
+            ->whereNull('ended_at')
+            ->update(['ended_at' => $newCheck->checked_at]);
+
+        if ($resolved !== 1) {
+            return;
+        }
 
         IncidentResolved::dispatch($this->monitor, $currentIncident->fresh());
         $this->sendNotifications(MonitorStatus::Up, $newCheck);

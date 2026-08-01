@@ -23,16 +23,53 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/cn';
 
-const FieldIdContext = createContext<string | null>(null);
+/** Everything `Field` works out about its control and hands down to it. */
+interface FieldWiring {
+  id: string;
+  /**
+   * Null whenever the matching element is not rendered. `aria-describedby` must
+   * only ever point at ids that exist in the DOM, so `Field` — the one component
+   * that knows what it rendered — nulls these out rather than making every input
+   * guess.
+   */
+  descriptionId: string | null;
+  errorId: string | null;
+  /**
+   * Server errors arrive as a prop on `Field` alone, so the controls cannot see
+   * them; only `Field` can decide invalidity for both error sources. Client-side
+   * errors stay gated on `isTouched` so a pristine form does not open red.
+   */
+  invalid: boolean;
+}
 
-function useFieldId(): string {
-  const fieldId = useContext(FieldIdContext);
+const FieldWiringContext = createContext<FieldWiring | null>(null);
 
-  if (!fieldId) {
-    throw new Error('useFieldId must be used within a Field component');
+function useFieldWiring(): FieldWiring {
+  const wiring = useContext(FieldWiringContext);
+
+  if (!wiring) {
+    throw new Error('useFieldWiring must be used within a Field component');
   }
 
-  return fieldId;
+  return wiring;
+}
+
+function describedBy({ descriptionId, errorId }: FieldWiring): string | undefined {
+  return [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
+}
+
+function errorMessageOf(meta: AnyFieldMeta, serverError?: string): string | undefined {
+  if (serverError) {
+    return serverError;
+  }
+
+  if (meta.isValid || !meta.errors.length) {
+    return undefined;
+  }
+
+  const error = meta.errors[0];
+
+  return typeof error === 'string' ? error : (error as { message?: string }).message;
 }
 
 interface FieldErrorProps {
@@ -41,16 +78,7 @@ interface FieldErrorProps {
 }
 
 export function FieldError({ meta, serverError }: FieldErrorProps) {
-  if (serverError) {
-    return <ErrorMessage>{serverError}</ErrorMessage>;
-  }
-
-  if (meta.isValid || !meta.errors.length) {
-    return null;
-  }
-
-  const error = meta.errors[0];
-  const message = typeof error === 'string' ? error : (error as { message?: string }).message;
+  const message = errorMessageOf(meta, serverError);
 
   return message ? <ErrorMessage>{message}</ErrorMessage> : null;
 }
@@ -72,21 +100,34 @@ export function Field({
   const field = useFieldContext<string>();
   const uniqueId = useId();
   const fieldId = `${field.name}-${uniqueId}`;
+  const errorMessage = errorMessageOf(field.state.meta, serverError);
+  const { isValid, isTouched } = field.state.meta;
+
+  const wiring = useMemo(
+    () => ({
+      id: fieldId,
+      descriptionId: description ? `${fieldId}-description` : null,
+      errorId: errorMessage ? `${fieldId}-error` : null,
+      invalid: Boolean(serverError) || (!isValid && isTouched),
+    }),
+    [fieldId, description, errorMessage, serverError, isValid, isTouched],
+  );
 
   return (
     <div {...props} className={cn('grid gap-2', className)}>
       <Label htmlFor={fieldId}>{label}</Label>
-      <FieldIdContext.Provider value={fieldId}>{children}</FieldIdContext.Provider>
-      {description ? <Description>{description}</Description> : null}
-      <FieldError meta={field.state.meta} serverError={serverError} />
+      <FieldWiringContext.Provider value={wiring}>{children}</FieldWiringContext.Provider>
+      {wiring.descriptionId ? (
+        <Description id={wiring.descriptionId}>{description}</Description>
+      ) : null}
+      {wiring.errorId ? <ErrorMessage id={wiring.errorId}>{errorMessage}</ErrorMessage> : null}
     </div>
   );
 }
 
 export function TextInput({ type = 'text', ...props }: Omit<ComponentProps<'input'>, 'onChange'>) {
   const field = useFieldContext<string>();
-  const fieldId = useFieldId();
-  const hasError = !field.state.meta.isValid && field.state.meta.isTouched;
+  const wiring = useFieldWiring();
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value),
@@ -96,11 +137,12 @@ export function TextInput({ type = 'text', ...props }: Omit<ComponentProps<'inpu
   return (
     <Input
       {...props}
-      id={fieldId}
+      id={wiring.id}
       name={field.name}
       type={type}
       value={field.state.value}
-      aria-invalid={hasError || undefined}
+      aria-describedby={describedBy(wiring)}
+      aria-invalid={wiring.invalid || undefined}
       onChange={handleChange}
       onBlur={field.handleBlur}
     />
@@ -109,8 +151,7 @@ export function TextInput({ type = 'text', ...props }: Omit<ComponentProps<'inpu
 
 export function NumberInput(props: Omit<ComponentProps<'input'>, 'type' | 'onChange'>) {
   const field = useFieldContext<number | undefined>();
-  const fieldId = useFieldId();
-  const hasError = !field.state.meta.isValid && field.state.meta.isTouched;
+  const wiring = useFieldWiring();
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -123,11 +164,12 @@ export function NumberInput(props: Omit<ComponentProps<'input'>, 'type' | 'onCha
   return (
     <Input
       {...props}
-      id={fieldId}
+      id={wiring.id}
       name={field.name}
       type="number"
       value={field.state.value ?? ''}
-      aria-invalid={hasError || undefined}
+      aria-describedby={describedBy(wiring)}
+      aria-invalid={wiring.invalid || undefined}
       onChange={handleChange}
       onBlur={field.handleBlur}
     />
@@ -136,8 +178,7 @@ export function NumberInput(props: Omit<ComponentProps<'input'>, 'type' | 'onCha
 
 export function TextAreaInput(props: ComponentProps<typeof Textarea>) {
   const field = useFieldContext<string>();
-  const fieldId = useFieldId();
-  const hasError = !field.state.meta.isValid && field.state.meta.isTouched;
+  const wiring = useFieldWiring();
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => field.handleChange(e.target.value),
@@ -147,10 +188,11 @@ export function TextAreaInput(props: ComponentProps<typeof Textarea>) {
   return (
     <Textarea
       {...props}
-      id={fieldId}
+      id={wiring.id}
       name={field.name}
       value={field.state.value}
-      aria-invalid={hasError || undefined}
+      aria-describedby={describedBy(wiring)}
+      aria-invalid={wiring.invalid || undefined}
       onChange={handleChange}
       onBlur={field.handleBlur}
     />
@@ -169,8 +211,7 @@ interface SelectFieldProps {
 
 export function SelectField({ items, disabled }: SelectFieldProps) {
   const field = useFieldContext<string | number>();
-  const fieldId = useFieldId();
-  const hasError = !field.state.meta.isValid && field.state.meta.isTouched;
+  const wiring = useFieldWiring();
 
   const isNumeric = typeof field.state.value === 'number';
 
@@ -190,9 +231,10 @@ export function SelectField({ items, disabled }: SelectFieldProps) {
   return (
     <Select.Root value={field.state.value} disabled={disabled} onValueChange={handleValueChange}>
       <Select.Trigger
-        id={fieldId}
+        id={wiring.id}
         disabled={disabled}
-        aria-invalid={hasError || undefined}
+        aria-describedby={describedBy(wiring)}
+        aria-invalid={wiring.invalid || undefined}
         onBlur={field.handleBlur}
       >
         <Select.Value>
@@ -237,8 +279,7 @@ export function ComboboxField<T extends ComboboxItem>({
   disabled,
 }: ComboboxFieldProps<T>) {
   const field = useFieldContext<string[]>();
-  const fieldId = useFieldId();
-  const hasError = !field.state.meta.isValid && field.state.meta.isTouched;
+  const wiring = useFieldWiring();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const selectedItems = useMemo(
@@ -261,7 +302,7 @@ export function ComboboxField<T extends ComboboxItem>({
       value={selectedItems}
       onValueChange={handleValueChange}
     >
-      <Combobox.Chips ref={containerRef} className={cn(hasError && 'border-destructive')}>
+      <Combobox.Chips ref={containerRef}>
         <Combobox.Value>
           {(selectedValue: T[]) => (
             <>
@@ -274,8 +315,10 @@ export function ComboboxField<T extends ComboboxItem>({
                 </Combobox.Chip>
               ))}
               <Combobox.Input
-                id={fieldId}
+                id={wiring.id}
                 placeholder={selectedValue.length > 0 ? '' : placeholder}
+                aria-describedby={describedBy(wiring)}
+                aria-invalid={wiring.invalid || undefined}
                 onBlur={field.handleBlur}
               />
             </>

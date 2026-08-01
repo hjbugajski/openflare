@@ -45,6 +45,9 @@ function Chips({ className, ...props }: ComponentProps<typeof BaseCombobox.Chips
         'flex h-9 w-full flex-wrap items-center gap-1 border border-border bg-background px-3 text-sm text-foreground transition outline-none',
         'focus-within:border-muted-foreground focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-1 focus-within:ring-offset-background',
         'data-disabled:cursor-not-allowed data-disabled:opacity-50',
+        // The border lives on the container, but `aria-invalid` belongs on the
+        // input inside it.
+        'has-aria-invalid:border-danger',
         className,
       )}
       {...props}

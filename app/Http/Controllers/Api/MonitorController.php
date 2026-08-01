@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\GetMonitorRollupSeries;
 use App\Http\Controllers\Controller;
 use App\Models\Monitor;
 use Illuminate\Http\JsonResponse;
 
 class MonitorController extends Controller
 {
+    public function __construct(
+        private GetMonitorRollupSeries $getMonitorRollupSeries,
+    ) {}
+
     public function show(Monitor $monitor): JsonResponse
     {
         $this->authorize('view', $monitor);
@@ -64,14 +69,9 @@ class MonitorController extends Controller
     {
         $this->authorize('view', $monitor);
 
-        $timezone = request()->user()->getPreference('timezone', config('app.timezone'));
-        $now = now($timezone);
-        $thirtyDaysAgo = $now->copy()->subDays(30)->toDateString();
-
-        $rollups = $monitor->dailyUptimeRollups()
-            ->where('date', '>=', $thirtyDaysAgo)
-            ->orderBy('date')
-            ->get()
+        $rollups = $this->getMonitorRollupSeries
+            ->handle([$monitor->id], request()->user())
+            ->get($monitor->id, collect())
             ->map(fn ($rollup) => [
                 'date' => $rollup->date->toDateString(),
                 'total_checks' => $rollup->total_checks,

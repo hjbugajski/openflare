@@ -94,17 +94,18 @@ export interface MonitorSummary {
   };
 }
 
-export interface NotifierConfig {
-  webhook_url?: string;
-  email?: string;
+/** What the edit page learns about a stored config without receiving the credential */
+export interface NotifierConfigMeta {
+  has_webhook_url: boolean;
+  webhook_url_preview: string | null;
+  email: string | null;
 }
 
-/** Notifier as serialized to the client; `config` is only sent where it is edited */
+/** Notifier as serialized to the client; the stored config never leaves the server */
 export interface Notifier {
   id: string;
   name: string;
   type: NotifierType;
-  config?: NotifierConfig;
   is_active: boolean;
   is_default: boolean;
   apply_to_all: boolean;

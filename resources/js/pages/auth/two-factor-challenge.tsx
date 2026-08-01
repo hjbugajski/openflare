@@ -10,15 +10,20 @@ import { Heading } from '@/components/ui/heading';
 import AuthLayout from '@/layouts/auth-layout';
 import { store } from '@/routes/two-factor/login';
 
-const twoFactorChallengeSchema = z
-  .object({
-    code: z.string(),
-    recovery_code: z.string(),
-  })
-  .refine((data) => data.code.length > 0 || data.recovery_code.length > 0, {
-    message: 'code or recovery code is required',
-    path: ['code'],
-  });
+/*
+ * Only one of the two fields is mounted at a time, so each mode validates its
+ * own field and binds the error to that field's path — an error on the hidden
+ * field would never reach the screen.
+ */
+const codeSchema = z.object({
+  code: z.string().min(1, 'authentication code is required'),
+  recovery_code: z.string(),
+});
+
+const recoveryCodeSchema = z.object({
+  code: z.string(),
+  recovery_code: z.string().min(1, 'recovery code is required'),
+});
 
 export default function TwoFactorChallenge() {
   const [recovery, setRecovery] = useState(false);
@@ -31,7 +36,7 @@ export default function TwoFactorChallenge() {
     action: store().url,
     method: 'post',
     validators: {
-      onSubmit: twoFactorChallengeSchema,
+      onSubmit: recovery ? recoveryCodeSchema : codeSchema,
     },
   });
 

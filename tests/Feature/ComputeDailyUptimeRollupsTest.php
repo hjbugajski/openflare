@@ -51,6 +51,10 @@ it('still deletes a stale rollup row for a genuinely zero-check date within rete
         'successful_checks' => 10,
     ]);
 
+    // A check older than the target date: the log provably reaches back past
+    // $recentDate, so zero checks on it is a real zero-check day, not a gap.
+    MonitorCheck::factory()->for($monitor)->checkedAt($recentDate->copy()->subDays(3))->create();
+
     Artisan::call('monitors:compute-rollups', ['--date' => $recentDate->toDateString()]);
 
     expect(DailyUptimeRollup::query()

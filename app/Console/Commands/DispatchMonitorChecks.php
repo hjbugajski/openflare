@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Jobs\CheckMonitor;
 use App\Models\Monitor;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class DispatchMonitorChecks extends Command
 {
@@ -62,6 +63,13 @@ class DispatchMonitorChecks extends Command
 
                 return $dispatched < $maxPerRun;
             });
+
+        if ($dispatched > 0 || $skipped > 0) {
+            Log::info('Monitor checks dispatched', [
+                'dispatched' => $dispatched,
+                'skipped' => $skipped,
+            ]);
+        }
 
         $this->info("Dispatched {$dispatched} monitor checks".($skipped > 0 ? " (skipped {$skipped})" : ''));
 

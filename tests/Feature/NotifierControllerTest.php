@@ -6,7 +6,9 @@ use App\Mail\TestNotification;
 use App\Models\Monitor;
 use App\Models\Notifier;
 use App\Models\User;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 beforeEach(function () {
@@ -324,8 +326,26 @@ describe('edit', function () {
             ->assertForbidden();
     });
 
-    it('includes the decrypted config so the form can be prefilled', function () {
+    it('never sends the decrypted webhook url to the client', function () {
         $notifier = Notifier::factory()->discord()->create([
+            'user_id' => $this->user->uuid,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->get(route('notifiers.edit', $notifier))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->missing('notifier.config')
+                ->where('config_meta.has_webhook_url', true)
+                ->where('config_meta.webhook_url_preview', '…'.mb_substr($notifier->config['webhook_url'], -4))
+                ->where('config_meta.email', null)
+            );
+
+        expect($response->content())->not->toContain($notifier->config['webhook_url']);
+    });
+
+    it('exposes the email address so the form can be prefilled', function () {
+        $notifier = Notifier::factory()->email()->create([
             'user_id' => $this->user->uuid,
         ]);
 
@@ -333,7 +353,9 @@ describe('edit', function () {
             ->get(route('notifiers.edit', $notifier))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->where('notifier.config.webhook_url', $notifier->config['webhook_url'])
+                ->where('config_meta.has_webhook_url', false)
+                ->where('config_meta.webhook_url_preview', null)
+                ->where('config_meta.email', $notifier->config['email'])
             );
     });
 });
@@ -394,6 +416,76 @@ describe('update', function () {
                 ],
             ])
             ->assertSessionHasErrors('config.webhook_url');
+    });
+
+    it('keeps the stored config when the request omits it', function () {
+        $notifier = Notifier::factory()->discord()->create([
+            'user_id' => $this->user->uuid,
+        ]);
+        $webhookUrl = $notifier->config['webhook_url'];
+
+        $this->actingAs($this->user)
+            ->put(route('notifiers.update', $notifier), ['name' => 'Renamed'])
+            ->assertRedirect(route('notifiers.index'));
+
+        $notifier->refresh();
+        expect($notifier->name)->toBe('Renamed');
+        expect($notifier->config['webhook_url'])->toBe($webhookUrl);
+    });
+
+    it('rejects a config value that would silently clear the credential', function (string $type, string $key) {
+        $notifier = Notifier::factory()->{$type}()->create([
+            'user_id' => $this->user->uuid,
+        ]);
+        $stored = $notifier->config;
+
+        $this->actingAs($this->user)
+            ->put(route('notifiers.update', $notifier), [
+                'name' => $notifier->name,
+                'config' => [$key => ''],
+            ])
+            ->assertSessionHasErrors("config.{$key}");
+
+        expect($notifier->refresh()->config)->toBe($stored);
+    })->with([
+        'discord' => ['discord', 'webhook_url'],
+        'email' => ['email', 'email'],
+    ]);
+
+    it('rejects a type switch that omits the new config key', function (string $from, string $to, string $key) {
+        $notifier = Notifier::factory()->{$from}()->create([
+            'user_id' => $this->user->uuid,
+        ]);
+
+        $this->actingAs($this->user)
+            ->put(route('notifiers.update', $notifier), [
+                'name' => $notifier->name,
+                'type' => $to,
+            ])
+            ->assertSessionHasErrors("config.{$key}");
+
+        expect($notifier->refresh()->type)->toBe($from);
+    })->with([
+        'discord to email' => ['discord', 'email', 'email'],
+        'email to discord' => ['email', 'discord', 'webhook_url'],
+    ]);
+
+    it('prunes config keys that the new type does not use on a type switch', function () {
+        $notifier = Notifier::factory()->discord()->create([
+            'user_id' => $this->user->uuid,
+        ]);
+
+        $this->actingAs($this->user)
+            ->put(route('notifiers.update', $notifier), [
+                'name' => $notifier->name,
+                'type' => 'email',
+                'config' => ['email' => 'alerts@example.com'],
+            ])
+            ->assertRedirect(route('notifiers.index'));
+
+        $notifier->refresh();
+        expect($notifier->type)->toBe('email');
+        expect($notifier->config)->toBe(['email' => 'alerts@example.com']);
     });
 
     it('syncs monitors on update', function () {
@@ -597,7 +689,53 @@ describe('test', function () {
                 ],
             ])
             ->assertUnprocessable()
-            ->assertJson(['success' => false]);
+            ->assertExactJson([
+                'success' => false,
+                'error' => 'Discord webhook returned status: 400',
+            ]);
+    });
+
+    it('hides transport internals when the discord webhook is unreachable', function () {
+        Log::spy();
+        Http::fake(fn () => throw new ConnectionException('cURL error 6: could not resolve host discord.com'));
+
+        $this->actingAs($this->user)
+            ->postJson(route('notifiers.test'), [
+                'type' => 'discord',
+                'config' => [
+                    'webhook_url' => 'https://discord.com/api/webhooks/123/abc',
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertExactJson([
+                'success' => false,
+                'error' => 'Could not reach the Discord webhook.',
+            ]);
+    });
+
+    it('logs the real error but returns a fixed message when the test email fails', function () {
+        Log::spy();
+        Mail::shouldReceive('to')->andThrow(new RuntimeException('SMTP connect() failed: mailer:1025'));
+
+        $this->actingAs($this->user)
+            ->postJson(route('notifiers.test'), [
+                'type' => 'email',
+                'config' => [
+                    'email' => $this->user->email,
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertExactJson([
+                'success' => false,
+                'error' => 'Could not send the test email.',
+            ]);
+
+        Log::shouldHaveReceived('error')->once()->withArgs(
+            fn (string $message, array $context) => $message === 'Notifier test failed'
+                && $context['type'] === 'email'
+                && $context['exception']->getMessage() === 'SMTP connect() failed: mailer:1025'
+                && ! array_key_exists('config', $context)
+        );
     });
 
     it('validates discord webhook url shape (id/token) on test endpoint', function () {

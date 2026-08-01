@@ -31,19 +31,22 @@ export const notifierConfigSchema = z.object({
 export type NotifierConfig = z.infer<typeof notifierConfigSchema>;
 
 /**
- * Narrows a config to the keys the given type actually uses.
+ * Narrows a config to the key the given type actually uses, dropping it when
+ * blank.
  *
  * The form keeps every type's config in state so switching back and forth does
  * not discard input, but the backend validates every config key it receives —
  * leftover input from a previously selected type would 422 against a field the
- * form no longer renders, leaving the error with nowhere to show.
+ * form no longer renders, leaving the error with nowhere to show. A blank value
+ * is omitted rather than sent: on update an absent key means "keep the stored
+ * credential", while an empty one is rejected.
  */
 export function configForType(type: string, config: NotifierConfig): NotifierConfig {
   switch (type) {
     case 'discord':
-      return { webhook_url: config.webhook_url };
+      return config.webhook_url ? { webhook_url: config.webhook_url } : {};
     case 'email':
-      return { email: config.email };
+      return config.email ? { email: config.email } : {};
     default:
       return {};
   }
@@ -82,18 +85,34 @@ export function validateNotifierConfig(
   return { valid: true };
 }
 
-export const notifierSchema = z
-  .object({
-    name: z.string().min(1, 'name is required'),
-    type: z.enum(NOTIFIER_TYPES, { message: 'type is required' }),
-    config: notifierConfigSchema,
-    is_active: z.boolean(),
-    is_default: z.boolean(),
-    apply_to_existing: z.boolean().optional(),
-    monitors: z.array(z.string()),
-    excluded_monitors: z.array(z.string()).optional(),
-  })
-  .superRefine((data, ctx) => {
+const notifierBaseSchema = z.object({
+  name: z.string().min(1, 'name is required'),
+  type: z.enum(NOTIFIER_TYPES, { message: 'type is required' }),
+  config: notifierConfigSchema,
+  is_active: z.boolean(),
+  is_default: z.boolean(),
+  apply_to_existing: z.boolean().optional(),
+  monitors: z.array(z.string()),
+  excluded_monitors: z.array(z.string()).optional(),
+});
+
+export type NotifierFormValues = z.infer<typeof notifierBaseSchema>;
+
+export interface NotifierSchemaOptions {
+  /**
+   * The edit form never receives the stored webhook URL, so a blank field means
+   * "keep it". Only pass this when the notifier already has one: switching to
+   * Discord from another type has nothing to fall back on.
+   */
+  keepsStoredWebhookUrl?: boolean;
+}
+
+export function notifierSchema({ keepsStoredWebhookUrl = false }: NotifierSchemaOptions = {}) {
+  return notifierBaseSchema.superRefine((data, ctx) => {
+    if (keepsStoredWebhookUrl && data.type === 'discord' && !data.config.webhook_url) {
+      return;
+    }
+
     const result = validateNotifierConfig(data.type, data.config);
     if (!result.valid) {
       const path = data.type === 'discord' ? ['config', 'webhook_url'] : ['config', 'email'];
@@ -104,5 +123,4 @@ export const notifierSchema = z
       });
     }
   });
-
-export type NotifierFormValues = z.infer<typeof notifierSchema>;
+}

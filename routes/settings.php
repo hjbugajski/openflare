@@ -5,7 +5,7 @@ use App\Http\Controllers\TwoFactorController;
 use App\Http\Middleware\ConfirmPassword;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'no-cache'])->group(function () {
     Route::get('settings', [SettingsController::class, 'show'])->name('settings.show');
     Route::patch('settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile.update');
     Route::put('settings/password', [SettingsController::class, 'updatePassword'])

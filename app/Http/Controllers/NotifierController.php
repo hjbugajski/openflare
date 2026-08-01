@@ -11,11 +11,14 @@ use App\Http\Requests\UpdateNotifierRequest;
 use App\Mail\TestNotification;
 use App\Models\Monitor;
 use App\Models\Notifier;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -120,11 +123,41 @@ class NotifierController extends Controller
             ->where('user_id', Auth::user()->uuid)
             ->get(['id', 'name', 'url']);
 
+        $webhookUrl = $notifier->getWebhookUrl();
+
         return Inertia::render('notifiers/edit', [
-            'notifier' => $notifier->makeVisible('config'),
+            'notifier' => $notifier,
+            /*
+             * The webhook URL is a bearer credential — sending it back would put
+             * it in the page props, the `data-page` HTML and window.history,
+             * where it outlives the session. The email address is the account
+             * holder's own, so it stays editable.
+             */
+            'config_meta' => [
+                'has_webhook_url' => filled($webhookUrl),
+                'webhook_url_preview' => filled($webhookUrl) ? '…'.mb_substr($webhookUrl, -4) : null,
+                'email' => $notifier->getEmail(),
+            ],
             'monitors' => $monitors,
             'types' => Notifier::TYPES,
         ]);
+    }
+
+    /**
+     * Absent config keys keep their stored value (the client never receives the
+     * credential to resubmit), and keys the final type does not use are dropped.
+     *
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private function mergeNotifierConfig(Notifier $notifier, string $type, array $config): array
+    {
+        $keys = match ($type) {
+            Notifier::TYPE_DISCORD => ['webhook_url'],
+            Notifier::TYPE_EMAIL => ['email'],
+        };
+
+        return Arr::only([...($notifier->config ?? []), ...$config], $keys);
     }
 
     public function update(UpdateNotifierRequest $request, Notifier $notifier): RedirectResponse
@@ -132,9 +165,12 @@ class NotifierController extends Controller
         $this->authorize('update', $notifier);
 
         $applyToAll = $request->validated('apply_to_existing', false);
+        $attributes = $request->safe()->except(['monitors', 'apply_to_existing', 'excluded_monitors', 'config']);
+        $type = $attributes['type'] ?? $notifier->type;
 
         $notifier->update([
-            ...$request->safe()->except(['monitors', 'apply_to_existing', 'excluded_monitors']),
+            ...$attributes,
+            'config' => $this->mergeNotifierConfig($notifier, $type, $request->validated('config', [])),
             'apply_to_all' => $applyToAll,
         ]);
 
@@ -184,12 +220,29 @@ class NotifierController extends Controller
             };
 
             return response()->json(['success' => true]);
+        } catch (RequestException $e) {
+            return $this->testFailed($type, $e, 'Discord webhook returned status: '.$e->response->status());
         } catch (Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ], 422);
+            return $this->testFailed($type, $e, match ($type) {
+                Notifier::TYPE_DISCORD => 'Could not reach the Discord webhook.',
+                Notifier::TYPE_EMAIL => 'Could not send the test email.',
+            });
         }
+    }
+
+    /**
+     * The exception text can carry mailer internals or the webhook credential,
+     * so it goes to the log and the browser gets a fixed message. The log
+     * context stays credential-free for the same reason.
+     */
+    private function testFailed(string $type, Throwable $e, string $error): JsonResponse
+    {
+        Log::error('Notifier test failed', ['type' => $type, 'exception' => $e]);
+
+        return response()->json([
+            'success' => false,
+            'error' => $error,
+        ], 422);
     }
 
     protected function sendTestDiscord(string $webhookUrl): void
@@ -201,11 +254,7 @@ class NotifierController extends Controller
             'timestamp' => now()->toIso8601String(),
         ];
 
-        $response = Http::timeout(10)->post($webhookUrl, ['embeds' => [$embed]]);
-
-        if ($response->failed()) {
-            throw new \Exception('Discord webhook returned status: '.$response->status());
-        }
+        Http::timeout(10)->post($webhookUrl, ['embeds' => [$embed]])->throw();
     }
 
     protected function sendTestEmail(string $email): void
