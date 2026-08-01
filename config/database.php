@@ -34,7 +34,7 @@ return [
             'busy_timeout' => env('SQLITE_BUSY_TIMEOUT', 5000),
             'journal_mode' => env('SQLITE_JOURNAL_MODE', 'wal'),
             'synchronous' => env('SQLITE_SYNCHRONOUS', 'normal'),
-            'transaction_mode' => 'DEFERRED',
+            'transaction_mode' => env('SQLITE_TRANSACTION_MODE', 'IMMEDIATE'),
         ],
 
         'pgsql' => [

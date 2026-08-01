@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\RecomputeUserRollups;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Jobs\RecomputeUserRollupsJob;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,7 +54,7 @@ class SettingsController extends Controller
         return back()->with('status', 'password-updated');
     }
 
-    public function updatePreferences(Request $request, RecomputeUserRollups $recomputeUserRollups): RedirectResponse
+    public function updatePreferences(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'monitors_view' => ['sometimes', 'string', 'in:cards,table'],
@@ -71,8 +71,11 @@ class SettingsController extends Controller
 
         $user->save();
 
+        // Queued: recomputing 30 days of rollups is far too slow to keep in the
+        // request. The job re-reads the preference when it runs, so it needs no
+        // timezone argument.
         if (array_key_exists('timezone', $validated) && $validated['timezone'] !== $previousTimezone) {
-            $recomputeUserRollups->handle($user, $validated['timezone']);
+            RecomputeUserRollupsJob::dispatch($user);
         }
 
         return back()->with('status', 'preferences-updated');

@@ -133,7 +133,9 @@ it('deletes a stale rollup row when a monitor has zero checks that day', functio
         'successful_checks' => 10,
     ]);
 
-    // No MonitorCheck rows created for $yesterday: zero checks that day.
+    // Nothing on $yesterday, but a check from before it: the log provably
+    // reaches back past the date, so the empty day is genuinely zero checks.
+    MonitorCheck::factory()->for($monitor)->checkedAt($yesterday->copy()->subDays(3))->create();
 
     Artisan::call('monitors:compute-rollups', ['--date' => $yesterday->toDateString()]);
 

@@ -15,8 +15,11 @@ class ComputeRollupStats
      * Aggregate monitor check stats for the given monitors within
      * [$startOfDay, $endOfDay]. Monitors with zero checks in the window are
      * absent from the returned collection (SQL GROUP BY only returns groups
-     * that exist) — callers that persist rollups must treat "absent" as
-     * "delete any existing rollup row for this monitor/date".
+     * that exist). "Absent" means only "no checks in this window" — it does
+     * not mean uptime was zero, and it is not licence to delete: the checks
+     * may have been pruned, or never recorded. Callers that persist rollups
+     * may delete an existing row only once the check log gives grounds for it
+     * (see PersistDailyRollups::handle for the exact test and its limits).
      *
      * @param  Collection<int, string>|array<string>  $monitorIds
      * @return Collection<string, object> keyed by monitor_id, each value has

@@ -48,6 +48,11 @@ return [
 
         'openflare' => [
             'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'debug'),
+            // The monolog driver requires a handler to construct the channel at
+            // all; NullHandler is the cheapest valid one. ConfigureOpenflareLogging
+            // replaces it with the stdout/stderr pair immediately afterwards.
+            'handler' => NullHandler::class,
             'processors' => [PsrLogMessageProcessor::class],
             'tap' => [ConfigureOpenflareLogging::class],
         ],
