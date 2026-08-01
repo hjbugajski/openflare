@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useRef } from 'react';
 
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { IconLayoutGrid2 } from 'central-icons/IconLayoutGrid2';
+import { IconTable } from 'central-icons/IconTable';
 
-import { IconGrid } from '@/components/icons/grid';
-import { IconTable } from '@/components/icons/table';
 import { MonitorStatusBadge } from '@/components/monitors/monitor-status-badge';
 import { MonitorsTable } from '@/components/monitors/monitors-table';
 import { UptimePercentage } from '@/components/monitors/uptime-percentage';
@@ -183,7 +183,7 @@ export default function MonitorsIndex({ monitors }: Props) {
                 <Tooltip.Trigger
                   render={
                     <ToggleGroup.Item value="cards" aria-label="Card view">
-                      <IconGrid className="size-4" />
+                      <IconLayoutGrid2 className="size-4" />
                     </ToggleGroup.Item>
                   }
                 />

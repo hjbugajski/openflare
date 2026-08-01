@@ -10,9 +10,9 @@ import {
 } from 'react';
 
 import { type AnyFieldMeta } from '@tanstack/react-form';
+import { IconChevronGrabberVertical } from 'central-icons/IconChevronGrabberVertical';
+import { IconSearchOptions } from 'central-icons/IconSearchOptions';
 
-import { IconChevronGrabberVertical } from '@/components/icons/chevron-grabber-vertical';
-import { IconSearchOptions } from '@/components/icons/search-options';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox } from '@/components/ui/combobox';
 import { useFieldContext } from '@/components/ui/form/form-context';

@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # ==============================================================================
 # Stage 1: Generate Wayfinder routes
 # ==============================================================================
@@ -50,8 +52,12 @@ RUN npm install -g pnpm@11.9.0
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies with persistent cache
+# Install dependencies with persistent cache. The Central Icons license key is
+# exposed only for this instruction via a BuildKit secret so it never lands in
+# a layer, the build cache, or `docker history`:
+#   docker build --secret id=central_license_key,env=CENTRAL_LICENSE_KEY .
 RUN --mount=type=cache,target=/pnpm/store \
+    --mount=type=secret,id=central_license_key,env=CENTRAL_LICENSE_KEY \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile
 

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Link, router } from '@inertiajs/react';
+import { IconMinusLarge } from 'central-icons/IconMinusLarge';
+import { IconPlusLarge } from 'central-icons/IconPlusLarge';
 
-import { IconMinus } from '@/components/icons/minus';
-import { IconPlus } from '@/components/icons/plus';
 import { Button } from '@/components/ui/button';
 import { home, logout } from '@/routes';
 import { index as monitorsIndex } from '@/routes/monitors';
@@ -164,7 +164,7 @@ export function Navigation() {
               aria-controls="mobile-menu"
               onClick={toggleMenu}
             >
-              {open ? <IconMinus className="size-4" /> : <IconPlus className="size-4" />}
+              {open ? <IconMinusLarge className="size-4" /> : <IconPlusLarge className="size-4" />}
             </Button>
           </div>
 

@@ -26,6 +26,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      central-icons:
+        specifier: npm:@central-icons-react/square-outlined-radius-0-stroke-2@1.1.305
+        version: '@central-icons-react/square-outlined-radius-0-stroke-2@1.1.305(react@19.2.8)'
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -245,6 +248,11 @@ packages:
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
+
+  '@central-icons-react/square-outlined-radius-0-stroke-2@1.1.305':
+    resolution: {integrity: sha512-olDB3cAkP7K5oUZTuouSeok6gadt/8gCODSbeQZQUSs3s31Gf3lmQIwjvvkQIAkqUzxYTwPFB8yXaXiu0dXskw==}
+    peerDependencies:
+      react: '>=14.0.0 <= 19'
 
   '@csstools/color-helpers@6.1.0':
     resolution: {integrity: sha512-064IFJdjTfUqnjpCVpMOdbr8FLQBhinbZj6yRv2An2E41O/pLEXqfFRWqGq/SxlE5PEUYTlvWsG2r8MswAVvkg==}
@@ -2070,6 +2078,10 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
     optional: true
+
+  '@central-icons-react/square-outlined-radius-0-stroke-2@1.1.305(react@19.2.8)':
+    dependencies:
+      react: 19.2.8
 
   '@csstools/color-helpers@6.1.0':
     optional: true

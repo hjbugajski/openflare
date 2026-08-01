@@ -7,11 +7,11 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { IconChevronDoubleLeft } from '@/components/icons/chevron-double-left';
-import { IconChevronDoubleRight } from '@/components/icons/chevron-double-right';
-import { IconChevronGrabberVertical } from '@/components/icons/chevron-grabber-vertical';
-import { IconChevronLeft } from '@/components/icons/chevron-left';
-import { IconChevronRight } from '@/components/icons/chevron-right';
+import { IconChevronDoubleLeft } from 'central-icons/IconChevronDoubleLeft';
+import { IconChevronDoubleRight } from 'central-icons/IconChevronDoubleRight';
+import { IconChevronGrabberVertical } from 'central-icons/IconChevronGrabberVertical';
+import { IconChevronLeftSmall } from 'central-icons/IconChevronLeftSmall';
+import { IconChevronRightSmall } from 'central-icons/IconChevronRightSmall';
 
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -234,11 +234,11 @@ export function ServerDataTable<TData, TValue>({
               onClick={handlePreviousPage}
             >
               <span className="sr-only">previous</span>
-              <IconChevronLeft />
+              <IconChevronLeftSmall />
             </Button>
             <Button variant="tertiary" size="icon" disabled={!canNextPage} onClick={handleNextPage}>
               <span className="sr-only">next</span>
-              <IconChevronRight />
+              <IconChevronRightSmall />
             </Button>
             <Button variant="tertiary" size="icon" disabled={!canNextPage} onClick={handleLastPage}>
               <span className="sr-only">last</span>

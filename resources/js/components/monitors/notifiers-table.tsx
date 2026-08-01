@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
+import { IconCrossMedium } from 'central-icons/IconCrossMedium';
 
-import { IconClose } from '@/components/icons/close';
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -97,7 +97,7 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
           // oxlint-disable-next-line react-perf/jsx-no-new-function-as-prop -- row-specific callback in column def
           <Button variant="tertiary" size="icon" onClick={() => setNotifierToRemove(row.original)}>
             <span className="sr-only">remove</span>
-            <IconClose className="h-4 w-4" />
+            <IconCrossMedium className="h-4 w-4" />
           </Button>
         ),
         meta: {

@@ -48,6 +48,7 @@ jobs:
         env:
           REVERB_APP_KEY: ci-test-key
           REVERB_APP_SECRET: ci-test-secret
+          CENTRAL_LICENSE_KEY: ${{ secrets.CENTRAL_LICENSE_KEY }}
 
       - name: Run PHP linting
         run: composer run lint:check
@@ -130,6 +131,8 @@ jobs:
       # the job-level DB_* env points them at the postgres service.
       - name: Setup project
         run: composer run setup
+        env:
+          CENTRAL_LICENSE_KEY: ${{ secrets.CENTRAL_LICENSE_KEY }}
 
       - name: Run tests against PostgreSQL
         run: composer run test

@@ -1,8 +1,8 @@
 import { type ColumnDef, type Table, flexRender } from '@tanstack/react-table';
+import { IconArrowDown } from 'central-icons/IconArrowDown';
+import { IconArrowTopBottom } from 'central-icons/IconArrowTopBottom';
+import { IconArrowUp } from 'central-icons/IconArrowUp';
 
-import { IconArrowDown } from '@/components/icons/arrow-down';
-import { IconArrowUp } from '@/components/icons/arrow-up';
-import { IconArrowsSort } from '@/components/icons/arrows-sort';
 import { cn } from '@/lib/cn';
 
 declare module '@tanstack/react-table' {
@@ -65,7 +65,7 @@ export function TableShell<TData, TValue>({ table, columns }: TableShellProps<TD
                           ) : sortDirection === 'desc' ? (
                             <IconArrowDown className="size-3" />
                           ) : (
-                            <IconArrowsSort className="size-3" />
+                            <IconArrowTopBottom className="size-3" />
                           )}
                         </span>
                       </button>

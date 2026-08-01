@@ -1,9 +1,9 @@
 import { type ComponentProps, type ReactNode, createContext, useContext, useMemo } from 'react';
 
 import { Toast as BaseToast } from '@base-ui/react/toast';
+import { IconCrossMedium } from 'central-icons/IconCrossMedium';
 import { type VariantProps, cva } from 'class-variance-authority';
 
-import { IconClose } from '@/components/icons/close';
 import { cn } from '@/lib/cn';
 
 type ToastVariant = 'default' | 'accent' | 'info' | 'warning' | 'success' | 'destructive';
@@ -57,7 +57,7 @@ function ToastList() {
           {toast.title && <Title>{toast.title}</Title>}
           {toast.description && <Description>{toast.description}</Description>}
           <Close aria-label="close">
-            <IconClose className="size-4" />
+            <IconCrossMedium className="size-4" />
           </Close>
         </Content>
       </Root>
