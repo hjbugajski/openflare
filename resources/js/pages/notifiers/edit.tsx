@@ -9,17 +9,23 @@ import { index as notifiersIndex, update } from '@/routes/notifiers';
 import {
   type MonitorSummary,
   type Notifier,
-  type NotifierConfig,
+  type NotifierConfigMeta,
   type NotifierType,
 } from '@/types';
 
 interface Props {
-  notifier: Notifier & { config: NotifierConfig; monitors: MonitorSummary[] };
+  notifier: Notifier & { monitors: MonitorSummary[] };
+  config_meta: NotifierConfigMeta;
   monitors: MonitorSummary[];
   types: NotifierType[];
 }
 
-export default function NotifiersEdit({ notifier, monitors, types }: Props) {
+export default function NotifiersEdit({
+  notifier,
+  config_meta: configMeta,
+  monitors,
+  types,
+}: Props) {
   const defaultValues = useMemo(() => {
     const excludedMonitors = notifier.monitors.filter((monitor) => monitor.pivot?.is_excluded);
     const includedMonitors = notifier.monitors.filter((monitor) => !monitor.pivot?.is_excluded);
@@ -28,8 +34,8 @@ export default function NotifiersEdit({ notifier, monitors, types }: Props) {
       name: notifier.name,
       type: notifier.type,
       config: {
-        webhook_url: notifier.config.webhook_url || '',
-        email: notifier.config.email || '',
+        webhook_url: '',
+        email: configMeta.email || '',
       },
       is_active: notifier.is_active,
       is_default: notifier.is_default,
@@ -37,7 +43,7 @@ export default function NotifiersEdit({ notifier, monitors, types }: Props) {
       monitors: includedMonitors.map((monitor) => monitor.id),
       excluded_monitors: excludedMonitors.map((monitor) => monitor.id),
     };
-  }, [notifier]);
+  }, [notifier, configMeta]);
 
   return (
     <AppLayout size="sm">
@@ -45,6 +51,7 @@ export default function NotifiersEdit({ notifier, monitors, types }: Props) {
       <Heading title="edit notifier" />
       <NotifierForm
         defaultValues={defaultValues}
+        configMeta={configMeta}
         monitors={monitors}
         types={types}
         action={update(notifier.id).url}

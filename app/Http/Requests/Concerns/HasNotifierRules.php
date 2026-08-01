@@ -14,7 +14,7 @@ trait HasNotifierRules
     /**
      * @return array<string, array<mixed>>
      */
-    protected function baseNotifierRules(bool $sometimes, ?string $type): array
+    protected function baseNotifierRules(bool $sometimes, ?string $type = null): array
     {
         $wrap = fn (array $rules) => $sometimes ? ['sometimes', ...$rules] : $rules;
 
@@ -36,19 +36,29 @@ trait HasNotifierRules
                 Rule::exists(Monitor::class, 'id')->where('user_id', Auth::user()->uuid),
             ],
 
-            'config.webhook_url' => [
-                Rule::requiredIf($type === Notifier::TYPE_DISCORD),
-                'nullable',
-                'url',
-                'regex:'.Notifier::DISCORD_WEBHOOK_URL_REGEX,
-            ],
+            /*
+             * On update the client never receives the stored credential, so an
+             * absent key means "keep it". `filled` rejects an explicitly empty
+             * one: clearing a Discord webhook would make CheckMonitor skip the
+             * notifier silently instead of reporting a failure.
+             */
+            'config.webhook_url' => $sometimes
+                ? ['sometimes', 'filled', 'url', 'regex:'.Notifier::DISCORD_WEBHOOK_URL_REGEX]
+                : [
+                    Rule::requiredIf($type === Notifier::TYPE_DISCORD),
+                    'nullable',
+                    'url',
+                    'regex:'.Notifier::DISCORD_WEBHOOK_URL_REGEX,
+                ],
 
-            'config.email' => [
-                Rule::requiredIf($type === Notifier::TYPE_EMAIL),
-                'nullable',
-                'email',
-                'max:255',
-            ],
+            'config.email' => $sometimes
+                ? ['sometimes', 'filled', 'email', 'max:255']
+                : [
+                    Rule::requiredIf($type === Notifier::TYPE_EMAIL),
+                    'nullable',
+                    'email',
+                    'max:255',
+                ],
         ];
     }
 
@@ -59,8 +69,10 @@ trait HasNotifierRules
     {
         return [
             'config.webhook_url.required' => 'A Discord webhook URL is required.',
+            'config.webhook_url.filled' => 'A Discord webhook URL is required.',
             'config.webhook_url.regex' => 'Please enter a valid Discord webhook URL.',
             'config.email.required' => 'An email address is required.',
+            'config.email.filled' => 'An email address is required.',
         ];
     }
 }

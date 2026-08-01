@@ -17,9 +17,12 @@ import {
   configForType,
   notifierSchema,
 } from '@/lib/schemas/notifier';
-import { type MonitorSummary, type NotifierType } from '@/types';
+import { type MonitorSummary, type NotifierConfigMeta, type NotifierType } from '@/types';
 
 export type { NotifierFormValues };
+
+const WEBHOOK_URL_DESCRIPTION =
+  'create a webhook in your Discord server settings under Integrations';
 
 function toPayload(values: NotifierFormValues) {
   return { ...values, config: configForType(values.type, values.config) };
@@ -27,6 +30,8 @@ function toPayload(values: NotifierFormValues) {
 
 export interface NotifierFormProps {
   defaultValues: NotifierFormValues;
+  /** Edit only: what the page knows about the stored config it cannot send back */
+  configMeta?: NotifierConfigMeta;
   monitors: MonitorSummary[];
   types: NotifierType[];
   action: string;
@@ -39,6 +44,7 @@ export interface NotifierFormProps {
 
 export function NotifierForm({
   defaultValues,
+  configMeta,
   monitors,
   types,
   action,
@@ -50,12 +56,20 @@ export function NotifierForm({
 }: NotifierFormProps) {
   const [monitorMode, setMonitorMode] = useState<MonitorMode>(initialMonitorMode);
 
+  /*
+   * A blank webhook keeps the stored one, but only for a notifier that already
+   * has one: switching another type over to Discord must supply a URL.
+   */
+  const keepsStoredWebhookUrl = defaultValues.type === 'discord' && !!configMeta?.has_webhook_url;
+
+  const schema = useMemo(() => notifierSchema({ keepsStoredWebhookUrl }), [keepsStoredWebhookUrl]);
+
   const { form, getServerError } = useInertiaAppForm({
     defaultValues,
     action,
     method,
     validators: {
-      onSubmit: notifierSchema,
+      onSubmit: schema,
     },
     transform: toPayload,
   });
@@ -131,14 +145,21 @@ export function NotifierForm({
               {(field) => (
                 <field.Field
                   label="webhook URL"
-                  description="create a webhook in your Discord server settings under Integrations"
+                  description={
+                    keepsStoredWebhookUrl
+                      ? 'leave blank to keep the current webhook'
+                      : WEBHOOK_URL_DESCRIPTION
+                  }
                   serverError={getServerError('config.webhook_url')}
                 >
                   <div className="flex items-center gap-2">
                     <field.TextInput
-                      required
+                      required={!keepsStoredWebhookUrl}
                       type="url"
-                      placeholder="https://discord.com/api/webhooks/..."
+                      placeholder={
+                        (keepsStoredWebhookUrl && configMeta.webhook_url_preview) ||
+                        'https://discord.com/api/webhooks/...'
+                      }
                     />
                     <Button
                       type="button"

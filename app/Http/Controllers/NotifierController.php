@@ -13,6 +13,7 @@ use App\Models\Monitor;
 use App\Models\Notifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -120,11 +121,41 @@ class NotifierController extends Controller
             ->where('user_id', Auth::user()->uuid)
             ->get(['id', 'name', 'url']);
 
+        $webhookUrl = $notifier->getWebhookUrl();
+
         return Inertia::render('notifiers/edit', [
-            'notifier' => $notifier->makeVisible('config'),
+            'notifier' => $notifier,
+            /*
+             * The webhook URL is a bearer credential — sending it back would put
+             * it in the page props, the `data-page` HTML and window.history,
+             * where it outlives the session. The email address is the account
+             * holder's own, so it stays editable.
+             */
+            'config_meta' => [
+                'has_webhook_url' => filled($webhookUrl),
+                'webhook_url_preview' => filled($webhookUrl) ? '…'.mb_substr($webhookUrl, -4) : null,
+                'email' => $notifier->getEmail(),
+            ],
             'monitors' => $monitors,
             'types' => Notifier::TYPES,
         ]);
+    }
+
+    /**
+     * Absent config keys keep their stored value (the client never receives the
+     * credential to resubmit), and keys the final type does not use are dropped.
+     *
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    private function mergeNotifierConfig(Notifier $notifier, string $type, array $config): array
+    {
+        $keys = match ($type) {
+            Notifier::TYPE_DISCORD => ['webhook_url'],
+            Notifier::TYPE_EMAIL => ['email'],
+        };
+
+        return Arr::only([...($notifier->config ?? []), ...$config], $keys);
     }
 
     public function update(UpdateNotifierRequest $request, Notifier $notifier): RedirectResponse
@@ -132,9 +163,12 @@ class NotifierController extends Controller
         $this->authorize('update', $notifier);
 
         $applyToAll = $request->validated('apply_to_existing', false);
+        $attributes = $request->safe()->except(['monitors', 'apply_to_existing', 'excluded_monitors', 'config']);
+        $type = $attributes['type'] ?? $notifier->type;
 
         $notifier->update([
-            ...$request->safe()->except(['monitors', 'apply_to_existing', 'excluded_monitors']),
+            ...$attributes,
+            'config' => $this->mergeNotifierConfig($notifier, $type, $request->validated('config', [])),
             'apply_to_all' => $applyToAll,
         ]);
 
