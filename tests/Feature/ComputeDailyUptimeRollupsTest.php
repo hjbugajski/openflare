@@ -132,6 +132,33 @@ it('derives the same day window as the per-user recompute for a non-UTC owner', 
     expect((float) $commandThenRecompute['uptime_percentage'])->toBe(100.0);
 });
 
+it('rolls up the last fully elapsed local day for an owner west of the app timezone', function () {
+    // The scheduled run is 00:15 UTC, which is still 17:15 the previous day in
+    // Los Angeles. Deriving the date in the app timezone would target local
+    // 07-31 — a day with 6h45m still to run — and write partial totals that
+    // nothing ever revisits.
+    Carbon::setTestNow(Carbon::parse('2026-08-01 00:15:00', 'UTC'));
+
+    $user = User::factory()->create(['preferences' => ['timezone' => 'America/Los_Angeles']]);
+    $monitor = Monitor::factory()->for($user)->create();
+
+    // All of local 2026-07-30, whose tail runs past UTC midnight into 07-31.
+    MonitorCheck::factory()->for($monitor)->up()->checkedAt(Carbon::parse('2026-07-30 07:30:00', 'UTC'))->create();
+    MonitorCheck::factory()->for($monitor)->up()->checkedAt(Carbon::parse('2026-07-30 19:00:00', 'UTC'))->create();
+    MonitorCheck::factory()->for($monitor)->up()->checkedAt(Carbon::parse('2026-07-31 06:00:00', 'UTC'))->create();
+
+    // Local 2026-07-31, still in progress.
+    MonitorCheck::factory()->for($monitor)->down()->checkedAt(Carbon::parse('2026-07-31 17:00:00', 'UTC'))->create();
+
+    Artisan::call('monitors:compute-rollups');
+
+    $rollups = DailyUptimeRollup::query()->where('monitor_id', $monitor->id)->get();
+
+    expect($rollups)->toHaveCount(1);
+    expect(Carbon::parse($rollups->first()->date)->toDateString())->toBe('2026-07-30');
+    expect($rollups->first()->total_checks)->toBe(3);
+});
+
 it('keeps using the app timezone for owners without a timezone preference', function () {
     Carbon::setTestNow(Carbon::parse('2026-03-15 12:00:00', 'UTC'));
 

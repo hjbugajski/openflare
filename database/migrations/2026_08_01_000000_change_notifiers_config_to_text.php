@@ -22,8 +22,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('notifiers', function (Blueprint $table) {
-            $table->json('config')->change();
-        });
+        // No-op: the stored ciphertext is not valid JSON, so narrowing back to
+        // json would fail the cast on rollback. Leaving the column widened is safe.
     }
 };

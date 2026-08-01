@@ -105,6 +105,12 @@ class Monitor extends Model
      * id breaks ties on identical checked_at values, and uuid7 keys sort by
      * creation time.
      *
+     * A NOT EXISTS anti-join is the faster shape only while each monitor's
+     * history is shallow — measured on Postgres at 216k checks, it beats this
+     * 6x spread over 200 monitors (89ms vs 555ms) but loses 110x when the same
+     * rows are 30 days of one-minute checks on 5 monitors (58s vs 531ms),
+     * because its cost grows with per-monitor depth. Do not "optimize" it.
+     *
      * @return HasOne<MonitorCheck, $this>
      */
     public function latestCheck(): HasOne

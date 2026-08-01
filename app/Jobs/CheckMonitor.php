@@ -43,7 +43,12 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
 
     public int $maxExceptions = 3;
 
-    public int $uniqueFor = 300;
+    /**
+     * Must exceed the worst-case job lifetime — $tries × $timeout plus the
+     * backoff delays. A lock that expires while the job is still running lets
+     * the dispatcher queue a second concurrent check for the same monitor.
+     */
+    public int $uniqueFor = 600;
 
     public static ?Closure $resolveHostIpsOverride = null;
 
@@ -87,10 +92,11 @@ class CheckMonitor implements ShouldBeUnique, ShouldQueue
         // Advance the schedule even though nothing was recorded. The dispatcher
         // selects monitors whose next_check_at is due, so leaving it in the past
         // would re-dispatch a permanently failing job on every scheduler tick.
+        // last_checked_at is deliberately left alone: no monitor_checks row was
+        // written, so touching it would claim a check that latestCheck denies.
         Monitor::query()
             ->whereKey($this->monitor->id)
             ->update([
-                'last_checked_at' => now(),
                 'next_check_at' => now()->addSeconds(max(1, (int) $this->monitor->interval)),
             ]);
     }

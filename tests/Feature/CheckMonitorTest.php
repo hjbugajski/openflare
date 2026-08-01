@@ -1058,8 +1058,10 @@ it('advances the schedule when the job fails permanently so it stops re-dispatch
 
     $monitor->refresh();
 
-    expect($monitor->last_checked_at)->not->toBeNull();
     expect($monitor->next_check_at->isFuture())->toBeTrue();
+    // Nothing was recorded, so last_checked_at must not claim a check happened.
+    expect($monitor->last_checked_at)->toBeNull();
+    expect(MonitorCheck::query()->where('monitor_id', $monitor->id)->exists())->toBeFalse();
 });
 
 it('keeps the job timeout above the worst-case monitor request budget', function () {

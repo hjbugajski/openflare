@@ -25,7 +25,12 @@ class SendMonitorNotification implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 30;
+    /**
+     * Above the worst case a send can take: Discord is given 10s per attempt
+     * across 3 attempts plus retry delays (~30.2s). A lower timeout would
+     * SIGALRM the worker instead of surfacing a catchable RequestException.
+     */
+    public int $timeout = 45;
 
     /**
      * The number of seconds after which the job's unique lock will be released.

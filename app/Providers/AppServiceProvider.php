@@ -121,7 +121,7 @@ class AppServiceProvider extends ServiceProvider
         // Skip during infrastructure commands, including package:discover
         // which runs on every composer install before migrations exist
         $command = $_SERVER['argv'][1] ?? '';
-        $skipCommands = ['migrate', 'package:', 'config:', 'route:', 'view:', 'event:', 'cache:', 'key:', 'storage:'];
+        $skipCommands = ['migrate', 'optimize', 'package:', 'config:', 'route:', 'view:', 'event:', 'cache:', 'key:', 'storage:'];
 
         foreach ($skipCommands as $skip) {
             if (str_starts_with($command, $skip)) {
