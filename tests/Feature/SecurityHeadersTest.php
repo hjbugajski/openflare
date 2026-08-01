@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
+
 test('responses include a report-only content security policy matching the Reverb config', function () {
     $response = $this->get(route('login'));
 
@@ -38,4 +41,45 @@ test('the CSP connect-src matches the Reverb external endpoint, not APP_URL', fu
     // the CSP must reflect the endpoint the browser actually connects to.
     expect($csp)->toContain("connect-src 'self' ws://localhost:8080");
     expect($csp)->not->toContain('ws://localhost:8000');
+});
+
+test('the settings page is not stored by the browser cache', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get(route('settings.show'));
+
+    $response->assertOk();
+    expect($response->headers->get('Cache-Control'))->toContain('no-store');
+});
+
+test('the two factor setup page is not stored by the browser cache', function () {
+    $user = User::factory()->withoutTwoFactor()->create();
+
+    $this->actingAs($user)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->post(route('settings.two-factor.enable'));
+
+    $response = $this->actingAs($user)
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->get(route('settings.two-factor.setup'));
+
+    $response->assertOk();
+    expect($response->headers->get('Cache-Control'))->toContain('no-store');
+});
+
+test('logging out clears the Inertia history state', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('logout'))->assertRedirect('/');
+
+    $this->get(route('login'))
+        ->assertInertia(fn (Assert $page) => expect($page->toArray())->toHaveKey('clearHistory', true));
+});
+
+test('page props are encrypted in the browser history by default', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('settings.show'))
+        ->assertInertia(fn (Assert $page) => expect($page->toArray())->toHaveKey('encryptHistory', true));
 });

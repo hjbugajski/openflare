@@ -6,7 +6,9 @@ use App\Mail\TestNotification;
 use App\Models\Monitor;
 use App\Models\Notifier;
 use App\Models\User;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 beforeEach(function () {
@@ -687,7 +689,53 @@ describe('test', function () {
                 ],
             ])
             ->assertUnprocessable()
-            ->assertJson(['success' => false]);
+            ->assertExactJson([
+                'success' => false,
+                'error' => 'Discord webhook returned status: 400',
+            ]);
+    });
+
+    it('hides transport internals when the discord webhook is unreachable', function () {
+        Log::spy();
+        Http::fake(fn () => throw new ConnectionException('cURL error 6: could not resolve host discord.com'));
+
+        $this->actingAs($this->user)
+            ->postJson(route('notifiers.test'), [
+                'type' => 'discord',
+                'config' => [
+                    'webhook_url' => 'https://discord.com/api/webhooks/123/abc',
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertExactJson([
+                'success' => false,
+                'error' => 'Could not reach the Discord webhook.',
+            ]);
+    });
+
+    it('logs the real error but returns a fixed message when the test email fails', function () {
+        Log::spy();
+        Mail::shouldReceive('to')->andThrow(new RuntimeException('SMTP connect() failed: mailer:1025'));
+
+        $this->actingAs($this->user)
+            ->postJson(route('notifiers.test'), [
+                'type' => 'email',
+                'config' => [
+                    'email' => $this->user->email,
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertExactJson([
+                'success' => false,
+                'error' => 'Could not send the test email.',
+            ]);
+
+        Log::shouldHaveReceived('error')->once()->withArgs(
+            fn (string $message, array $context) => $message === 'Notifier test failed'
+                && $context['type'] === 'email'
+                && $context['exception']->getMessage() === 'SMTP connect() failed: mailer:1025'
+                && ! array_key_exists('config', $context)
+        );
     });
 
     it('validates discord webhook url shape (id/token) on test endpoint', function () {
