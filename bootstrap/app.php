@@ -8,6 +8,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -32,5 +35,25 @@ return Application::configure(basePath: dirname(__DIR__))
             'no-cache' => PreventBackHistory::class,
         ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {})
+    ->withExceptions(function (Exceptions $exceptions): void {
+        /**
+         * Render the branded Inertia error page instead of Laravel's stock one.
+         * 403/404 everywhere; 500/503 only once deployed, so local and testing
+         * keep the debug page. JSON clients keep their JSON error payloads.
+         */
+        $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
+            $status = $response->getStatusCode();
+
+            $branded = in_array($status, [403, 404], true)
+                || (in_array($status, [500, 503], true) && ! app()->environment(['local', 'testing']));
+
+            if (! $branded || $request->expectsJson()) {
+                return $response;
+            }
+
+            return Inertia::render('error', ['status' => $status])
+                ->toResponse($request)
+                ->setStatusCode($status);
+        });
+    })
     ->create();
