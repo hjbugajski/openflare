@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { Link, router } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -15,6 +15,22 @@ interface TwoFactorSectionProps {
 
 export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+
+  const handleEnable = useCallback(() => {
+    setIsToggling(true);
+    router.post(enable().url, undefined, { onFinish: () => setIsToggling(false) });
+  }, []);
+
+  const handleDisable = useCallback(() => {
+    setIsToggling(true);
+    router.delete(disable().url, {
+      onSuccess: () => {
+        toast.success({ title: '2FA disabled' });
+      },
+      onFinish: () => setIsToggling(false),
+    });
+  }, []);
 
   const handleRegenerate = useCallback(() => {
     setIsRegenerating(true);
@@ -40,12 +56,14 @@ export function TwoFactorSection({ enabled }: TwoFactorSectionProps) {
             <Button variant="secondary" disabled={isRegenerating} onClick={handleRegenerate}>
               {isRegenerating ? 'regenerating...' : 'regenerate recovery codes'}
             </Button>
-            <Button variant="destructive" render={<Link href={disable().url} />}>
-              disable 2FA
+            <Button variant="destructive" disabled={isToggling} onClick={handleDisable}>
+              {isToggling ? 'disabling...' : 'disable 2FA'}
             </Button>
           </>
         ) : (
-          <Button render={<Link href={enable().url} />}>enable 2FA</Button>
+          <Button disabled={isToggling} onClick={handleEnable}>
+            {isToggling ? 'enabling...' : 'enable 2FA'}
+          </Button>
         )}
       </Card.Footer>
     </Card.Root>

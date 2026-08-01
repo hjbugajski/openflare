@@ -88,9 +88,15 @@ class FortifyServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+            $email = Str::transliterate(Str::lower((string) $request->input(Fortify::username())));
 
-            return Limit::perMinute(5)->by($throttleKey);
+            // The email-only bucket keeps the limiter effective when the client
+            // IP is attacker-controlled (spoofed X-Forwarded-For behind a
+            // trusted proxy, or a large address pool).
+            return [
+                Limit::perMinute(5)->by($email.'|'.$request->ip()),
+                Limit::perMinutes(15, 20)->by('login-email:'.$email),
+            ];
         });
     }
 

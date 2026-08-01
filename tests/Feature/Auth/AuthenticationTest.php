@@ -93,3 +93,55 @@ test('users are rate limited', function () {
 
     $response->assertTooManyRequests();
 });
+
+test('no proxies are trusted by default', function () {
+    expect(config('trustedproxy.proxies'))->toBeNull();
+});
+
+test('a spoofed x-forwarded-for does not shard the login rate limiter', function () {
+    $user = User::factory()->create();
+
+    RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'wrong-password',
+    ], ['X-Forwarded-For' => '203.0.113.9']);
+
+    $response->assertTooManyRequests();
+});
+
+test('a configured trusted proxy makes x-forwarded-for the client ip', function () {
+    config(['trustedproxy.proxies' => '*']);
+
+    $user = User::factory()->create();
+
+    RateLimiter::increment(md5('login'.implode('|', [$user->email, '203.0.113.9'])), amount: 5);
+
+    $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'wrong-password',
+    ], ['X-Forwarded-For' => '203.0.113.9'])->assertTooManyRequests();
+});
+
+test('login attempts from rotating source ips are rate limited by email', function () {
+    $user = User::factory()->create();
+
+    // Each attempt looks like a different client, so the email|ip bucket never
+    // fills; only the email bucket can stop the spray.
+    foreach (range(1, 20) as $i) {
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.$i])
+            ->post(route('login.store'), [
+                'email' => $user->email,
+                'password' => 'wrong-password',
+            ])->assertStatus(302);
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.21'])
+        ->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ])->assertTooManyRequests();
+
+    $this->assertGuest();
+});

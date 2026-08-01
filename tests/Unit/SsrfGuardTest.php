@@ -37,6 +37,16 @@ describe('SsrfGuard - IPv4 blocked ranges', function () {
         expect(isBlockedIp('224.0.0.1'))->toBeTrue();
         expect(isBlockedIp('240.0.0.1'))->toBeTrue();
     });
+
+    it('blocks benchmarking range (198.18.0.0/15)', function () {
+        expect(isBlockedIp('198.18.0.1'))->toBeTrue();
+        expect(isBlockedIp('198.19.255.255'))->toBeTrue();
+    });
+
+    it('blocks 6to4 relay anycast (192.88.99.0/24)', function () {
+        expect(isBlockedIp('192.88.99.1'))->toBeTrue();
+        expect(isBlockedIp('192.88.99.255'))->toBeTrue();
+    });
 });
 
 describe('SsrfGuard - IPv4 public addresses', function () {
@@ -48,6 +58,8 @@ describe('SsrfGuard - IPv4 public addresses', function () {
     it('allows edge-of-range public addresses', function () {
         expect(isBlockedIp('172.32.0.1'))->toBeFalse(); // just outside 172.16.0.0/12
         expect(isBlockedIp('100.128.0.1'))->toBeFalse(); // just outside 100.64.0.0/10
+        expect(isBlockedIp('198.20.0.1'))->toBeFalse(); // just outside 198.18.0.0/15
+        expect(isBlockedIp('192.88.100.1'))->toBeFalse(); // just outside 192.88.99.0/24
     });
 });
 
@@ -96,6 +108,20 @@ describe('SsrfGuard - IPv6', function () {
     it('allows NAT64 addresses embedding a public IPv4', function () {
         // 64:ff9b::808:808 embeds 8.8.8.8
         expect(isBlockedIp('64:ff9b::808:808'))->toBeFalse();
+    });
+
+    it('blocks deprecated site-local (fec0::/10)', function () {
+        expect(isBlockedIp('fec0::1'))->toBeTrue();
+        expect(isBlockedIp('feff:ffff::1'))->toBeTrue();
+    });
+
+    it('blocks IPv4-compatible addresses embedding a blocked IPv4', function () {
+        expect(isBlockedIp('::127.0.0.1'))->toBeTrue();
+        expect(isBlockedIp('::169.254.169.254'))->toBeTrue();
+    });
+
+    it('allows IPv4-compatible addresses embedding a public IPv4', function () {
+        expect(isBlockedIp('::8.8.8.8'))->toBeFalse();
     });
 });
 
