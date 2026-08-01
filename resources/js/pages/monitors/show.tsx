@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Head, Link, router, usePage } from '@inertiajs/react';
 
@@ -64,9 +64,18 @@ export default function MonitorsShow({
 
   // Track what needs reloading, then batch into single request
   const pendingReloads = useRef<Set<string>>(new Set());
+  const navigationsInFlight = useRef(0);
 
   const flushReloads = useDebouncedCallback(() => {
-    if (pendingReloads.current.size === 0) {
+    /*
+     * A partial reload resolves against the url as it was when the request went
+     * out and Inertia does not cancel it against an in-flight navigation, so
+     * firing now would rewind the table props to the page the reader just left.
+     * Inertia forces `async: true` on reloads, so anything synchronous in
+     * flight is a real navigation — the `finish` listener below flushes once it
+     * lands.
+     */
+    if (navigationsInFlight.current > 0 || pendingReloads.current.size === 0) {
       return;
     }
 
@@ -75,6 +84,31 @@ export default function MonitorsShow({
 
     router.reload({ only });
   }, RELOAD_DEBOUNCE_MS);
+
+  useEffect(() => {
+    const stopListeningToStart = router.on('start', ({ detail }) => {
+      if (!detail.visit.async) {
+        navigationsInFlight.current += 1;
+      }
+    });
+
+    const stopListeningToFinish = router.on('finish', ({ detail }) => {
+      if (detail.visit.async) {
+        return;
+      }
+
+      navigationsInFlight.current = Math.max(0, navigationsInFlight.current - 1);
+
+      if (navigationsInFlight.current === 0 && pendingReloads.current.size > 0) {
+        flushReloads();
+      }
+    });
+
+    return () => {
+      stopListeningToStart();
+      stopListeningToFinish();
+    };
+  }, [flushReloads]);
 
   const scheduleReload = useCallback(
     (key: string) => {

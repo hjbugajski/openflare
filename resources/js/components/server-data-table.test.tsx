@@ -7,8 +7,13 @@ import type { Paginated } from '@/types';
 
 const visit = vi.hoisted(() => vi.fn());
 
+/*
+ * Inertia keeps `page.url` in sync with the address bar, so the mock reads it
+ * back from `window.location` and `setUrl` stays the single lever for both.
+ */
 vi.mock('@inertiajs/react', () => ({
   router: { visit },
+  usePage: () => ({ url: window.location.pathname + window.location.search }),
 }));
 
 interface Row {
@@ -51,6 +56,24 @@ function firstVisit(): [string, Record<string, unknown>] {
 
 function visitedSearch() {
   return new URL(firstVisit()[0], 'http://localhost').searchParams;
+}
+
+function pageSelect() {
+  return screen.getByRole('combobox', { name: 'go to page' });
+}
+
+async function selectPage(label: string) {
+  fireEvent.click(pageSelect());
+
+  const option = await screen.findByRole('option', { name: label });
+
+  // Base UI only commits a mouse click that started on the item
+  fireEvent.pointerDown(option);
+  fireEvent.click(option);
+}
+
+function header() {
+  return screen.getByRole('columnheader');
 }
 
 describe('ServerDataTable', () => {
@@ -167,13 +190,14 @@ describe('ServerDataTable', () => {
       />,
     );
 
-    expect(screen.getByText('page 2 of 5')).toBeInTheDocument();
+    expect(pageSelect()).toHaveTextContent('2');
+    expect(screen.getByText('of 5')).toBeInTheDocument();
 
     // Repeated clicks without a server response must not desync the label.
     fireEvent.click(screen.getByRole('button', { name: 'next' }));
     fireEvent.click(screen.getByRole('button', { name: 'next' }));
 
-    expect(screen.getByText('page 2 of 5')).toBeInTheDocument();
+    expect(pageSelect()).toHaveTextContent('2');
 
     rerender(
       <ServerDataTable
@@ -183,6 +207,153 @@ describe('ServerDataTable', () => {
       />,
     );
 
-    expect(screen.getByText('page 3 of 5')).toBeInTheDocument();
+    expect(pageSelect()).toHaveTextContent('3');
+  });
+
+  it('keeps the pager reachable when the page is past the last page', () => {
+    setUrl('?checks_page=2');
+
+    render(
+      <ServerDataTable
+        columns={columns}
+        paginated={page([], { current_page: 2, last_page: 1, total: 2 })}
+        {...params}
+      />,
+    );
+
+    const previous = screen.getByRole('button', { name: 'previous' });
+
+    expect(previous).toBeEnabled();
+    // No item matches a page beyond the last one, so the trigger reads blank.
+    expect(pageSelect()).toHaveTextContent(/^$/);
+
+    fireEvent.click(previous);
+
+    expect(visit).toHaveBeenCalledWith('/monitors/m1', expect.anything());
+  });
+
+  it('reads the sort direction back out of the url', () => {
+    setUrl('?checks_sort=name&checks_direction=desc');
+
+    render(<ServerDataTable columns={columns} paginated={page(['alpha', 'bravo'])} {...params} />);
+
+    expect(header()).toHaveAttribute('aria-sort', 'descending');
+  });
+
+  it('forgets sorting when a navigation strips the sort params', () => {
+    setUrl('?checks_sort=name&checks_direction=desc');
+
+    const { rerender } = render(
+      <ServerDataTable columns={columns} paginated={page(['alpha', 'bravo'])} {...params} />,
+    );
+
+    // A redirect after a non-GET request lands on the bare index.
+    setUrl('');
+    rerender(
+      <ServerDataTable columns={columns} paginated={page(['alpha', 'bravo'])} {...params} />,
+    );
+
+    // The header icon is driven by the same value as `aria-sort`, so its
+    // absence is also the neutral icon.
+    expect(header()).not.toHaveAttribute('aria-sort');
+
+    fireEvent.click(screen.getByRole('button', { name: 'next' }));
+
+    expect(visitedSearch().has('checks_sort')).toBe(false);
+    expect(visitedSearch().has('checks_direction')).toBe(false);
+  });
+
+  it('keeps a direction on the third header click instead of clearing the sort', () => {
+    setUrl('?checks_sort=name&checks_direction=desc');
+
+    render(<ServerDataTable columns={columns} paginated={page(['alpha', 'bravo'])} {...params} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'name' }));
+
+    expect(visitedSearch().get('checks_sort')).toBe('name');
+    expect(visitedSearch().get('checks_direction')).toBe('asc');
+  });
+
+  it('jumps to the last page and back to the first, keeping the sort params', () => {
+    setUrl('?checks_sort=name&checks_direction=desc');
+
+    const { rerender } = render(
+      <ServerDataTable
+        columns={columns}
+        paginated={page(['alpha', 'bravo'], { last_page: 5 })}
+        {...params}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'last' }));
+
+    expect(visitedSearch().get('checks_page')).toBe('5');
+    expect(visitedSearch().get('checks_sort')).toBe('name');
+    expect(visitedSearch().get('checks_direction')).toBe('desc');
+
+    visit.mockClear();
+    setUrl('?checks_sort=name&checks_direction=desc&checks_page=5');
+    rerender(
+      <ServerDataTable
+        columns={columns}
+        paginated={page(['yankee', 'zulu'], { current_page: 5, last_page: 5 })}
+        {...params}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'first' }));
+
+    expect(visitedSearch().has('checks_page')).toBe(false);
+    expect(visitedSearch().get('checks_sort')).toBe('name');
+  });
+
+  it('disables the edge buttons at each end of the range', () => {
+    const { rerender } = render(
+      <ServerDataTable
+        columns={columns}
+        paginated={page(['alpha', 'bravo'], { last_page: 3 })}
+        {...params}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'first' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'last' })).toBeEnabled();
+
+    rerender(
+      <ServerDataTable
+        columns={columns}
+        paginated={page(['echo', 'foxtrot'], { current_page: 3, last_page: 3 })}
+        {...params}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'first' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'last' })).toBeDisabled();
+  });
+
+  it('jumps to a page picked from the select', async () => {
+    render(
+      <ServerDataTable
+        columns={columns}
+        paginated={page(['alpha', 'bravo'], { last_page: 4 })}
+        {...params}
+      />,
+    );
+
+    await selectPage('3');
+
+    expect(visitedSearch().get('checks_page')).toBe('3');
+  });
+
+  it('disables the page select when there is only one page', () => {
+    render(
+      <ServerDataTable
+        columns={columns}
+        paginated={page(['alpha', 'bravo'], { last_page: 1, total: 2 })}
+        {...params}
+      />,
+    );
+
+    expect(pageSelect()).toBeDisabled();
   });
 });
