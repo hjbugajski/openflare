@@ -15,6 +15,7 @@ function Trigger({ className, ...props }: ComponentProps<typeof BaseSelect.Trigg
         'flex h-9 w-full items-center justify-between border border-border bg-background py-2 pr-2 pl-3 text-sm text-foreground transition outline-none',
         'focus-visible:border-muted-foreground focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background',
         'data-disabled:cursor-not-allowed data-disabled:opacity-50',
+        'aria-invalid:border-danger',
         className,
       )}
       {...props}

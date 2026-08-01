@@ -6,6 +6,7 @@ use App\Models\Monitor;
 use App\Models\MonitorCheck;
 use App\Models\Notifier;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->user = User::factory()->create();
@@ -195,6 +196,26 @@ describe('store', function () {
         $monitor = Monitor::where('name', 'Test Monitor')->first();
         expect($monitor->notifiers)->toHaveCount(1);
         expect((string) $monitor->notifiers->first()->id)->toBe((string) $applyToAllNotifier->id);
+    });
+
+    it('rejects a notifier that does not exist without leaking the array key', function () {
+        $data = [
+            'name' => 'Test Monitor',
+            'url' => 'https://example.com',
+            'method' => 'GET',
+            'interval' => 300,
+            'timeout' => 30,
+            'expected_status_code' => 200,
+            'failure_confirmation_threshold' => 3,
+            'recovery_confirmation_threshold' => 3,
+            'notifiers' => [(string) Str::uuid()],
+        ];
+
+        $this->actingAs($this->user)
+            ->post(route('monitors.store'), $data)
+            ->assertSessionHasErrors([
+                'notifiers.0' => 'One of the selected notifiers is no longer available.',
+            ]);
     });
 
     it('validates required fields', function () {
@@ -435,6 +456,20 @@ describe('update', function () {
 
         $monitor->refresh();
         expect($monitor->notifiers->pluck('id')->map(fn ($id) => (string) $id)->toArray())->toBe([(string) $newNotifier->id]);
+    });
+
+    it('rejects syncing a notifier that no longer exists', function () {
+        $monitor = Monitor::factory()->create(['user_id' => $this->user->uuid]);
+        $notifier = Notifier::factory()->create(['user_id' => $this->user->uuid]);
+        $monitor->notifiers()->attach($notifier);
+
+        $this->actingAs($this->user)
+            ->put(route('monitors.update', $monitor), [
+                'notifiers' => [(string) $notifier->id, (string) Str::uuid()],
+            ])
+            ->assertSessionHasErrors([
+                'notifiers.1' => 'One of the selected notifiers is no longer available.',
+            ]);
     });
 
     it('denies access to other users monitors', function () {

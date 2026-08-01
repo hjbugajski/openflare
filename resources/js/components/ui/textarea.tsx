@@ -10,7 +10,7 @@ function Textarea({ className, ...props }: Omit<ComponentProps<'textarea'>, 'siz
         'placeholder:text-muted-foreground',
         'focus-visible:border-accent focus-visible:outline-none',
         'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-        'aria-invalid:border-destructive',
+        'aria-invalid:border-danger',
         className,
       )}
       {...props}

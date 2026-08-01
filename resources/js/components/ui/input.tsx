@@ -23,6 +23,7 @@ function Input({ className, type, inputSize = 'default', ...props }: InputProps)
         'placeholder:text-muted-foreground',
         'focus-visible:border-muted-foreground focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-background',
         'disabled:cursor-not-allowed disabled:opacity-50',
+        'aria-invalid:border-danger',
         className,
       )}
       {...props}

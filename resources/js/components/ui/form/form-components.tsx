@@ -1,10 +1,32 @@
-import { type ComponentProps, useCallback } from 'react';
+import { type ComponentProps, useCallback, useId } from 'react';
 
 import { useStore } from '@tanstack/react-form';
 
 import { Button } from '@/components/ui/button';
 import { useFormContext } from '@/components/ui/form/form-context';
 import { cn } from '@/lib/cn';
+
+const formIds = new WeakMap<object, string>();
+
+/**
+ * Ties a submit button to its `<form>` by id, so the two can live in separate
+ * subtrees (the button usually sits in a card footer outside the form, where
+ * context from `FormRoot` could never reach it). Keyed on the form instance
+ * both components read from context: whichever renders first — always the
+ * `<form>` in practice — donates its `useId` to the other.
+ */
+function useFormId(form: object): string {
+  const ownId = useId();
+  const sharedId = formIds.get(form);
+
+  if (sharedId) {
+    return sharedId;
+  }
+
+  formIds.set(form, ownId);
+
+  return ownId;
+}
 
 interface SubmitButtonProps extends ComponentProps<typeof Button> {
   submittingText?: string;
@@ -18,23 +40,20 @@ export function SubmitButton({
   ...props
 }: SubmitButtonProps) {
   const form = useFormContext();
+  const formId = useFormId(form);
 
   const [isSubmitting, canSubmit] = useStore(form.store, (state) => [
     state.isSubmitting,
     state.canSubmit,
   ]);
 
-  const handleClick = useCallback(() => {
-    void form.handleSubmit();
-  }, [form]);
-
   return (
     <Button
       {...props}
-      type="button"
+      type="submit"
+      form={formId}
       className={className}
       disabled={!canSubmit || isSubmitting || disabled}
-      onClick={handleClick}
     >
       {isSubmitting ? submittingText : children}
     </Button>
@@ -43,6 +62,7 @@ export function SubmitButton({
 
 export function FormRoot({ className, ...props }: Omit<ComponentProps<'form'>, 'onSubmit'>) {
   const form = useFormContext();
+  const formId = useFormId(form);
 
   const onSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
@@ -56,6 +76,7 @@ export function FormRoot({ className, ...props }: Omit<ComponentProps<'form'>, '
   return (
     <form
       {...props}
+      id={formId}
       noValidate
       className={cn('flex w-full flex-col gap-4', className)}
       onSubmit={onSubmit}

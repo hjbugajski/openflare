@@ -82,9 +82,10 @@ export function DeleteAccountSection() {
             </Dialog.Header>
             <Dialog.Body>
               <p>this action cannot be undone. enter your password to confirm.</p>
-              <Field label="password">
+              <Field label="password" htmlFor="delete-account-password">
                 <Input
                   autoFocus
+                  id="delete-account-password"
                   type="password"
                   autoComplete="current-password"
                   value={password}
