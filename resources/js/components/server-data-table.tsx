@@ -18,9 +18,14 @@ import type { CursorPaginated } from '@/types';
 interface ServerDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   paginated: CursorPaginated<TData>;
-  cursorParam?: string;
-  sortParam?: string;
-  directionParam?: string;
+  /*
+   * Param names are required so every table states the contract its server
+   * controller reads — a defaulted name that disagrees with the backend
+   * makes pagination a silent no-op.
+   */
+  cursorParam: string;
+  sortParam: string;
+  directionParam: string;
   reloadOnly?: string[];
   initialSorting?: SortingState;
 }
@@ -28,9 +33,9 @@ interface ServerDataTableProps<TData, TValue> {
 export function ServerDataTable<TData, TValue>({
   columns,
   paginated,
-  cursorParam = 'cursor',
-  sortParam = 'sort',
-  directionParam = 'direction',
+  cursorParam,
+  sortParam,
+  directionParam,
   reloadOnly,
   initialSorting = [],
 }: ServerDataTableProps<TData, TValue>) {

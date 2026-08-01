@@ -25,6 +25,7 @@ interface Props {
 const deleteDialog = Dialog.createHandle<Notifier>();
 
 const INITIAL_SORTING = [{ id: 'name', desc: false }];
+const RELOAD_ONLY = ['notifiers'];
 
 const columns: ColumnDef<Notifier>[] = [
   {
@@ -130,6 +131,10 @@ export default function NotifiersIndex({ notifiers }: Props) {
           <ServerDataTable
             columns={columns}
             paginated={notifiers}
+            cursorParam="notifiers_cursor"
+            sortParam="sort"
+            directionParam="direction"
+            reloadOnly={RELOAD_ONLY}
             initialSorting={INITIAL_SORTING}
           />
         </Card.Root>

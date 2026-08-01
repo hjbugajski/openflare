@@ -33,6 +33,7 @@ interface Props {
 
 const RELOAD_DEBOUNCE_MS = 2000;
 const INITIAL_SORTING = [{ id: 'started_at', desc: true }];
+const RELOAD_ONLY = ['incidents'];
 
 const getIncidentDurationMs = (incident: IncidentWithMonitor) => {
   const start = new Date(incident.started_at).getTime();
@@ -201,6 +202,10 @@ export default function DashboardIndex({ counts, incidents }: Props) {
           <ServerDataTable
             columns={columns}
             paginated={incidents}
+            cursorParam="incidents_cursor"
+            sortParam="sort"
+            directionParam="direction"
+            reloadOnly={RELOAD_ONLY}
             initialSorting={INITIAL_SORTING}
           />
         )}

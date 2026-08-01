@@ -18,6 +18,12 @@ interface Row {
 
 const columns: ColumnDef<Row>[] = [{ accessorKey: 'name', header: 'name' }];
 
+const params = {
+  cursorParam: 'checks_cursor',
+  sortParam: 'checks_sort',
+  directionParam: 'checks_direction',
+};
+
 function page(names: string[], overrides: Partial<CursorPaginated<Row>> = {}): CursorPaginated<Row> {
   return {
     data: names.map((name) => ({ id: name, name })),
@@ -38,14 +44,14 @@ describe('ServerDataTable', () => {
 
   it('renders new rows when the paginated prop changes', () => {
     const { rerender } = render(
-      <ServerDataTable columns={columns} paginated={page(['alpha', 'bravo'], { next_cursor: 'c1' })} />,
+      <ServerDataTable columns={columns} paginated={page(['alpha', 'bravo'], { next_cursor: 'c1' })} {...params} />,
     );
 
     expect(screen.getByText('alpha')).toBeInTheDocument();
     expect(screen.getByText('bravo')).toBeInTheDocument();
 
     rerender(
-      <ServerDataTable columns={columns} paginated={page(['charlie', 'delta'], { prev_cursor: 'c0' })} />,
+      <ServerDataTable columns={columns} paginated={page(['charlie', 'delta'], { prev_cursor: 'c0' })} {...params} />,
     );
 
     expect(screen.getByText('charlie')).toBeInTheDocument();
@@ -58,7 +64,7 @@ describe('ServerDataTable', () => {
       <ServerDataTable
         columns={columns}
         paginated={page(['alpha', 'bravo'], { next_cursor: 'c1' })}
-        cursorParam="checks_cursor"
+        {...params}
       />,
     );
 
@@ -71,7 +77,7 @@ describe('ServerDataTable', () => {
   });
 
   it('disables previous on the first page and next on the last', () => {
-    render(<ServerDataTable columns={columns} paginated={page(['alpha', 'bravo'], { next_cursor: 'c1' })} />);
+    render(<ServerDataTable columns={columns} paginated={page(['alpha', 'bravo'], { next_cursor: 'c1' })} {...params} />);
 
     expect(screen.getByRole('button', { name: 'previous' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'next' })).toBeEnabled();
