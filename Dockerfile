@@ -40,7 +40,7 @@ FROM node:26-alpine AS frontend
 WORKDIR /app
 
 # corepack is no longer bundled with Node >= 25
-RUN npm install -g pnpm@11.9.0
+RUN npm install -g pnpm@11.22.0
 
 # pnpm-workspace.yaml carries the allowBuilds entry for the Central Icons
 # license check and its minimumReleaseAge exemption — without it the install
