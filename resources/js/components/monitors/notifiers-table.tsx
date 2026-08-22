@@ -7,6 +7,7 @@ import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
+import type { TableFeatures } from '@/components/ui/table-features';
 import { inertiaDelete } from '@/lib/http/inertia-delete';
 import { detach } from '@/routes/monitors/notifiers';
 import type { NotifierSummary, Paginated } from '@/types';
@@ -36,7 +37,7 @@ export function NotifiersTable({ monitorId, notifiers }: NotifiersTableProps) {
 
   const handleOpenChange = useCallback((open: boolean) => !open && setNotifierToRemove(null), []);
 
-  const columns = useMemo<ColumnDef<NotifierSummary>[]>(
+  const columns = useMemo<ColumnDef<TableFeatures, NotifierSummary>[]>(
     () => [
       {
         accessorKey: 'name',

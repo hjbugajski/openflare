@@ -3,13 +3,14 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { DataTable } from '@/components/ui/data-table';
+import type { TableFeatures } from '@/components/ui/table-features';
 
 interface Row {
   id: string;
   name: string;
 }
 
-const columns: ColumnDef<Row>[] = [{ accessorKey: 'name', header: 'name' }];
+const columns: ColumnDef<TableFeatures, Row>[] = [{ accessorKey: 'name', header: 'name' }];
 
 const rows: Row[] = [
   { id: '1', name: 'bravo' },
@@ -18,7 +19,7 @@ const rows: Row[] = [
 
 const emptyRows: Row[] = [];
 
-const unsortableColumns: ColumnDef<Row>[] = [
+const unsortableColumns: ColumnDef<TableFeatures, Row>[] = [
   { accessorKey: 'name', header: 'name', enableSorting: false },
 ];
 

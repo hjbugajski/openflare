@@ -2,6 +2,7 @@ import type { ColumnDef, SortingState } from '@tanstack/react-table';
 
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
+import type { TableFeatures } from '@/components/ui/table-features';
 import { ValueUnit } from '@/components/ui/value-unit';
 import { formatDateTime } from '@/lib/format/date-time';
 import type { MonitorCheck, Paginated } from '@/types';
@@ -9,7 +10,7 @@ import type { MonitorCheck, Paginated } from '@/types';
 const RELOAD_ONLY = ['checks'];
 const INITIAL_SORTING: SortingState = [{ id: 'checked_at', desc: true }];
 
-const columns: ColumnDef<MonitorCheck>[] = [
+const columns: ColumnDef<TableFeatures, MonitorCheck>[] = [
   {
     accessorKey: 'status',
     header: 'status',

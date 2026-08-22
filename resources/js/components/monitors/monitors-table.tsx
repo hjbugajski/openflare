@@ -7,6 +7,7 @@ import { MonitorStatusBadge } from '@/components/monitors/monitor-status-badge';
 import { UptimePercentage } from '@/components/monitors/uptime-percentage';
 import { UptimeSparkline } from '@/components/monitors/uptime-sparkline';
 import { DataTable } from '@/components/ui/data-table';
+import type { TableFeatures } from '@/components/ui/table-features';
 import { ValueUnit } from '@/components/ui/value-unit';
 import { formatInterval } from '@/lib/format/interval';
 import { formatRelativeTime } from '@/lib/format/relative-time';
@@ -42,7 +43,7 @@ const getMonitorUptimeAverage = (monitor: Monitor) => {
   return total / rollups.length;
 };
 
-const getColumns = (timezone: string): ColumnDef<Monitor>[] => [
+const getColumns = (timezone: string): ColumnDef<TableFeatures, Monitor>[] => [
   {
     accessorKey: 'name',
     header: 'name',
