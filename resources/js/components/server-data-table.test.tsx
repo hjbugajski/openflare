@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ServerDataTable } from '@/components/server-data-table';
+import type { TableFeatures } from '@/components/ui/table-features';
 import type { Paginated } from '@/types';
 
 const visit = vi.hoisted(() => vi.fn());
@@ -21,7 +22,7 @@ interface Row {
   name: string;
 }
 
-const columns: ColumnDef<Row>[] = [{ accessorKey: 'name', header: 'name' }];
+const columns: ColumnDef<TableFeatures, Row>[] = [{ accessorKey: 'name', header: 'name' }];
 
 const params = {
   pageParam: 'checks_page',

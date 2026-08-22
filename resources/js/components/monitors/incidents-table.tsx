@@ -2,6 +2,7 @@ import type { ColumnDef, SortingState } from '@tanstack/react-table';
 
 import { ServerDataTable } from '@/components/server-data-table';
 import { Badge } from '@/components/ui/badge';
+import type { TableFeatures } from '@/components/ui/table-features';
 import { ValueUnit } from '@/components/ui/value-unit';
 import { formatDateTime } from '@/lib/format/date-time';
 import { formatDurationParts } from '@/lib/format/duration';
@@ -17,7 +18,7 @@ const getIncidentDurationMs = (incident: Incident) => {
   return end - start;
 };
 
-const columns: ColumnDef<Incident>[] = [
+const columns: ColumnDef<TableFeatures, Incident>[] = [
   {
     id: 'status',
     accessorFn: (incident) => (incident.ended_at ? 'resolved' : 'active'),

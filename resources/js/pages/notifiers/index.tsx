@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Heading } from '@/components/ui/heading';
+import type { TableFeatures } from '@/components/ui/table-features';
 import { toast } from '@/components/ui/toast';
 import AppLayout from '@/layouts/app-layout';
 import { formatNumber } from '@/lib/format/number';
@@ -26,7 +27,7 @@ const deleteDialog = Dialog.createHandle<Notifier>();
 const INITIAL_SORTING = [{ id: 'name', desc: false }];
 const RELOAD_ONLY = ['notifiers'];
 
-const columns: ColumnDef<Notifier>[] = [
+const columns: ColumnDef<TableFeatures, Notifier>[] = [
   {
     accessorKey: 'name',
     header: 'name',

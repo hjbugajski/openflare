@@ -3,7 +3,7 @@ allowBuilds:
   # CENTRAL_LICENSE_KEY in the environment at install time
   '@central-icons-react/square-outlined-radius-0-stroke-2': true
 minimumReleaseAgeExclude:
-  - '@central-icons-react/square-outlined-radius-0-stroke-2@1.1.305'
+  - '@central-icons-react/square-outlined-radius-0-stroke-2@1.1.315'
 onlyBuiltDependencies:
   - esbuild
   - unrs-resolver

@@ -1,12 +1,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { router, usePage } from '@inertiajs/react';
-import {
-  type ColumnDef,
-  type SortingState,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { type ColumnDef, type RowData, type SortingState, useTable } from '@tanstack/react-table';
 import { IconChevronDoubleLeft } from 'central-icons/IconChevronDoubleLeft';
 import { IconChevronDoubleRight } from 'central-icons/IconChevronDoubleRight';
 import { IconChevronGrabberVertical } from 'central-icons/IconChevronGrabberVertical';
@@ -15,6 +10,7 @@ import { IconChevronRightSmall } from 'central-icons/IconChevronRightSmall';
 
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { type TableFeatures, features } from '@/components/ui/table-features';
 import { TableShell } from '@/components/ui/table-shell';
 import { formatNumber } from '@/lib/format/number';
 import type { Paginated } from '@/types';
@@ -22,8 +18,8 @@ import type { Paginated } from '@/types';
 // `page.url` is path-relative; the base exists only to make it parseable.
 const URL_BASE = 'http://localhost';
 
-interface ServerDataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+interface ServerDataTableProps<TData extends RowData> {
+  columns: ColumnDef<TableFeatures, TData>[];
   paginated: Paginated<TData>;
   /*
    * Param names are required so every table states the contract its server
@@ -37,7 +33,7 @@ interface ServerDataTableProps<TData, TValue> {
   initialSorting?: SortingState;
 }
 
-export function ServerDataTable<TData, TValue>({
+export function ServerDataTable<TData extends RowData>({
   columns,
   paginated,
   pageParam,
@@ -45,7 +41,7 @@ export function ServerDataTable<TData, TValue>({
   directionParam,
   reloadOnly,
   initialSorting = [],
-}: ServerDataTableProps<TData, TValue>) {
+}: ServerDataTableProps<TData>) {
   /*
    * Sort is derived from the Inertia page url on every navigation, never held
    * in local state: a non-GET redirect (a row delete landing back on the bare
@@ -148,11 +144,10 @@ export function ServerDataTable<TData, TValue>({
     goToPage(1, typeof nextSorting === 'function' ? nextSorting(sorting) : nextSorting);
   };
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: paginated.data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
     /*

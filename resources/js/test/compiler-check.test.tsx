@@ -35,7 +35,7 @@ describe('react compiler transform', () => {
 
   /*
    * Load-bearing: the compiler bails out of `ServerDataTable` because of
-   * `useReactTable`. Were it compiled, the `TableShell` element it builds would
+   * `useTable`. Were it compiled, the `TableShell` element it builds would
    * be memo-cached on the referentially stable table instance and table-shell's
    * own directive would no longer save it.
    */

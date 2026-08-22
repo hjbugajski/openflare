@@ -1,23 +1,17 @@
-import { type ColumnDef, type Table, flexRender } from '@tanstack/react-table';
+import { type ColumnDef, type RowData, type Table, flexRender } from '@tanstack/react-table';
 import { IconArrowDown } from 'central-icons/IconArrowDown';
 import { IconArrowTopBottom } from 'central-icons/IconArrowTopBottom';
 import { IconArrowUp } from 'central-icons/IconArrowUp';
 
+import type { TableFeatures } from '@/components/ui/table-features';
 import { cn } from '@/lib/cn';
 
-declare module '@tanstack/react-table' {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface ColumnMeta<TData, TValue> {
-    className?: string;
-  }
+interface TableShellProps<TData extends RowData> {
+  table: Table<TableFeatures, TData>;
+  columns: ColumnDef<TableFeatures, TData>[];
 }
 
-interface TableShellProps<TData, TValue> {
-  table: Table<TData>;
-  columns: ColumnDef<TData, TValue>[];
-}
-
-export function TableShell<TData, TValue>({ table, columns }: TableShellProps<TData, TValue>) {
+export function TableShell<TData extends RowData>({ table, columns }: TableShellProps<TData>) {
   /*
    * The TanStack table instance is referentially stable and mutates internally,
    * so the React Compiler must not memoize this component on it — memoized

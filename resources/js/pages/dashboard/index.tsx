@@ -10,6 +10,7 @@ import { Divider } from '@/components/ui/divider';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Heading } from '@/components/ui/heading';
 import { Stats } from '@/components/ui/stats';
+import type { TableFeatures } from '@/components/ui/table-features';
 import { ValueUnit } from '@/components/ui/value-unit';
 import AppLayout from '@/layouts/app-layout';
 import { formatDateTime } from '@/lib/format/date-time';
@@ -42,7 +43,7 @@ const getIncidentDurationMs = (incident: IncidentWithMonitor) => {
   return end - start;
 };
 
-const columns: ColumnDef<IncidentWithMonitor>[] = [
+const columns: ColumnDef<TableFeatures, IncidentWithMonitor>[] = [
   {
     id: 'monitor',
     accessorFn: (incident) => incident.monitor.name,
