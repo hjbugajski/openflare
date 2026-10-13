@@ -24,7 +24,7 @@
     "central-icons": "npm:@central-icons-react/square-outlined-radius-0-stroke-2@1.1.315",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dompurify": "^3.4.14",
+    "dompurify": "^3.4.16",
     "pusher-js": "^8.6.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
